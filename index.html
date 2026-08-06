@@ -25,7 +25,6 @@
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
     font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
     -webkit-font-smoothing:antialiased;}
-  body{padding-bottom:env(safe-area-inset-bottom,20px);}
 
   .topbar{
     position:sticky;top:0;z-index:10;
@@ -34,7 +33,15 @@
   }
   .topbar h1{
     font-size:16px;font-weight:700;letter-spacing:.3px;color:var(--gold);
-    margin:0 0 12px 2px;
+    margin:0;
+  }
+
+  main{padding:6px 14px 0;padding-bottom:88px;}
+
+  .bottombar{
+    position:fixed;left:0;right:0;bottom:0;z-index:10;
+    background:linear-gradient(0deg,var(--bg) 82%,transparent);
+    padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 14px);
   }
   .input-row{display:flex;gap:8px;}
   #noteInput{
@@ -49,8 +56,6 @@
     display:flex;align-items:center;justify-content:center;flex-shrink:0;
   }
   #addBtn:active{transform:scale(.94);}
-
-  main{padding:6px 14px 0;}
 
   .day-block{margin-top:20px;}
   .day-label{
@@ -130,30 +135,23 @@
   details.archive > summary::-webkit-details-marker{display:none;}
   details.archive > summary .chev{transition:transform .15s;}
   details.archive[open] > summary .chev{transform:rotate(90deg);}
-
-  details.year, details.month, details.week{margin:4px 0 4px 6px;}
-  details.year > summary, details.month > summary, details.week > summary{
-    list-style:none;cursor:pointer;font-size:12.5px;font-weight:600;
-    color:var(--text-dim);padding:7px 4px;
-  }
-  details.year > summary::-webkit-details-marker,
-  details.month > summary::-webkit-details-marker,
-  details.week > summary::-webkit-details-marker{display:none;}
-  details.week{margin-left:10px;}
 </style>
 </head>
 <body>
 
 <div class="topbar">
   <h1>IForget</h1>
+</div>
+
+<main id="activeArea"></main>
+<div id="archiveArea"></div>
+
+<div class="bottombar">
   <div class="input-row">
     <input id="noteInput" type="text" placeholder="Нова бележка..." maxlength="500">
     <button id="addBtn">+</button>
   </div>
 </div>
-
-<main id="activeArea"></main>
-<div id="archiveArea"></div>
 
 <script>
 const STORAGE_KEY = 'notes';
@@ -166,14 +164,6 @@ const monthNames = ['Януари','Февруари','Март','Април','�
 
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 function dateStr(ts){ return new Date(ts).toISOString().slice(0,10); }
-
-function isoWeek(d){
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const dayNum = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
-  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
-}
 
 function dayLabel(ts){
   const d = new Date(ts);
@@ -329,37 +319,24 @@ function render(){
   });
   document.getElementById('activeArea').innerHTML = html;
 
-  const byYear = {};
-  done.forEach(n=>{
-    const d = new Date(n.createdAt);
-    const y = d.getFullYear(), m = d.getMonth(), w = isoWeek(d), day = dateStr(n.createdAt);
-    byYear[y] = byYear[y] || {};
-    byYear[y][m] = byYear[y][m] || {};
-    byYear[y][m][w] = byYear[y][m][w] || {};
-    byYear[y][m][w][day] = byYear[y][m][w][day] || [];
-    byYear[y][m][w][day].push(n);
-  });
-
+  // Архив на приключени бележки: скрит зад едно "Приключени (N)" копче,
+  // и вътре — плосък хронологичен списък по дни (без вложени година/месец/седмица,
+  // за да не се налагат по няколко клика, за да ги видиш).
   let archHtml = '';
   if(done.length){
+    const byDayDone = {};
+    done.forEach(n=>{
+      const k = dateStr(n.createdAt);
+      (byDayDone[k] = byDayDone[k] || []).push(n);
+    });
+    const doneDayKeys = Object.keys(byDayDone).sort().reverse();
+
     archHtml += `<details class="archive"><summary>Приключени (${done.length}) <span class="chev">&#8250;</span></summary>`;
-    Object.keys(byYear).sort().reverse().forEach(y=>{
-      archHtml += `<details class="year"><summary>${y}</summary>`;
-      Object.keys(byYear[y]).sort((a,b)=>b-a).forEach(m=>{
-        archHtml += `<details class="month"><summary>${monthNames[m]}</summary>`;
-        Object.keys(byYear[y][m]).sort((a,b)=>b-a).forEach(w=>{
-          archHtml += `<details class="week"><summary>Седмица ${w}</summary>`;
-          Object.keys(byYear[y][m][w]).sort().reverse().forEach(day=>{
-            archHtml += `<div class="day-block" style="margin-top:8px;">
-              <div class="day-label">${dayLabel(day+'T00:00:00')}</div>
-              ${byYear[y][m][w][day].map(n=>itemRow(n, n.id, false)).join('')}
-            </div>`;
-          });
-          archHtml += `</details>`;
-        });
-        archHtml += `</details>`;
-      });
-      archHtml += `</details>`;
+    doneDayKeys.forEach(k=>{
+      archHtml += `<div class="day-block" style="margin-top:12px;">
+        <div class="day-label">${dayLabel(k+'T00:00:00')}</div>
+        ${byDayDone[k].map(n=>itemRow(n, n.id, false)).join('')}
+      </div>`;
     });
     archHtml += `</details>`;
   }
