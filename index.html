@@ -137,12 +137,12 @@
   #addBtn:active{transform:scale(.94);}
 
   /* Малки бутони "Запази"/"Откажи" при редакция на бележка — заместват
-     лентата за нова бележка, докато редактираме. Позиционирани долу вляво,
-     точно срещу "+" бутона за нова бележка (който е вдясно) — компактни,
-     не разтегнати през целия екран. Следват клавиатурата на iOS Safari
-     по същия начин като .bottombar (виж handleViewportResize по-долу). */
+     лентата за нова бележка, докато редактираме. Позиционирани долу вдясно
+     (на мястото на "+" бутона), компактни, не разтегнати през целия екран.
+     Следват клавиатурата на iOS Safari по същия начин като .bottombar
+     (виж handleViewportResize по-долу). */
   .editbar{
-    display:none;position:fixed;left:16px;
+    display:none;position:fixed;right:16px;
     bottom:calc(env(safe-area-inset-bottom,0px) + 14px);
     z-index:12;transition:transform .12s ease-out;gap:8px;
   }
@@ -538,7 +538,7 @@ function itemRow(item, noteId, isSub){
 
   if(editingKey === key){
     // Бележката просто показва текстовото поле — малките бутони "Запази"/
-    // "Откажи" са долу вляво на екрана (виж #editBar), а не тук.
+    // "Откажи" са долу вдясно на екрана (виж #editBar), а не тук.
     return `<div class="note-wrap">
       <div class="note ${item.status}">
         <div class="dot">${icon}</div>
