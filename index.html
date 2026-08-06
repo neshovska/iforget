@@ -135,6 +135,28 @@
   }
   #addBtn:active{transform:scale(.94);}
 
+  /* Лента със "Запази"/"Откажи", която сменя обичайната лента за нова
+     бележка, докато редактираме съществуваща бележка — по-удобно е
+     потвърждението да е винаги в долната част на екрана, до палеца,
+     вместо под самия текст. Следва същата логика за клавиатурата като
+     .bottombar (виж handleViewportResize по-долу). */
+  .editbar{
+    display:none;position:fixed;left:0;right:0;bottom:0;z-index:12;
+    transition:transform .12s ease-out;
+    background:linear-gradient(0deg,var(--bg) 88%,transparent);
+    padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 14px);
+    gap:10px;
+  }
+  .editbar.show{display:flex;}
+  .editbar-btn{
+    flex:1;height:46px;border-radius:14px;border:none;
+    font-size:15px;font-weight:600;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .editbar-btn.cancel{background:var(--card-2);color:var(--text-dim);border:1px solid var(--border);}
+  .editbar-btn.save{background:var(--accent);color:var(--bg);}
+  .editbar-btn:active{transform:scale(.97);}
+
   /* Заглавието на деня е "залепено" точно под topbar-а, докато скролваш —
      така винаги се вижда в коя дата от хронологията се намираш. */
   .day-block{margin-top:20px;}
@@ -185,15 +207,6 @@
     color:var(--text);border-radius:10px;padding:8px 10px;font-size:15px;
     outline:none;font-family:inherit;resize:none;
   }
-  /* Явни бутони за запазване/отказ при редакция на бележка — вместо да се
-     разчита само на Enter/blur, за да е ясно как се потвърждава промяната. */
-  .edit-actions{display:flex;gap:6px;margin-top:6px;}
-  .edit-actions button{
-    border:none;border-radius:10px;font-size:13px;font-weight:600;
-    display:flex;align-items:center;justify-content:center;
-  }
-  .edit-actions button.save{background:var(--accent);color:var(--bg);width:32px;height:30px;}
-  .edit-actions button.cancel{background:none;color:var(--text-dim);padding:0 10px;font-weight:400;}
 
   .subs{margin:8px 0 0 20px;padding-left:12px;border-left:2px solid var(--border);}
   .subs .note{padding:8px 10px;background:var(--card-2);}
@@ -256,11 +269,16 @@
 
 <button class="jump-btn" id="jumpBtn"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg><span id="jumpLabel">Най-нови</span></button>
 
-<div class="bottombar">
+<div class="bottombar" id="bottomBar">
   <div class="input-row">
     <input id="noteInput" type="text" placeholder="Нова бележка..." maxlength="500">
     <button id="addBtn"><svg class="ic" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
   </div>
+</div>
+
+<div class="editbar" id="editBar">
+  <button class="editbar-btn cancel" id="editCancelBtn"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg><span id="editCancelLabel">Откажи</span></button>
+  <button class="editbar-btn save" id="editSaveBtn"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg><span id="editSaveLabel">Запази</span></button>
 </div>
 
 <script>
@@ -406,6 +424,8 @@ function applyStaticText(){
   document.getElementById('themeBtn').setAttribute('aria-label', s.themeAria);
   document.getElementById('langBtn').setAttribute('aria-label', s.langAria);
   document.getElementById('langBtn').textContent = s.langToggle;
+  document.getElementById('editCancelLabel').textContent = s.cancelAria;
+  document.getElementById('editSaveLabel').textContent = s.saveAria;
 }
 
 function load(){
@@ -425,6 +445,16 @@ function scrollToBottom(smooth){
 function updateTopbarHeight(){
   const tb = document.querySelector('.topbar');
   if(tb) document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight + 'px');
+}
+
+// Докато редактираме бележка, лентата за нова бележка отстъпва мястото си на
+// лентата "Запази"/"Откажи" — само една долна лента се вижда наведнъж.
+function syncBottomBars(){
+  const bottomBar = document.getElementById('bottomBar');
+  const editBar = document.getElementById('editBar');
+  const editing = editingKey !== null;
+  bottomBar.style.display = editing ? 'none' : '';
+  editBar.classList.toggle('show', editing);
 }
 
 function save(){
@@ -507,17 +537,13 @@ function itemRow(item, noteId, isSub){
   const tagText = item.status === 'progress' ? t().tagProgress : item.status === 'done' ? t().tagDone : '';
 
   if(editingKey === key){
-    // Явни бутони "Запази" (отметка) и "Откажи" — освен Enter/Escape/blur,
-    // за да е недвусмислено ясно как се потвърждава или отменя редакцията.
+    // Бележката просто показва текстовото поле — бутоните "Запази"/"Откажи"
+    // са в постоянната лента най-долу на екрана (виж #editBar), а не тук.
     return `<div class="note-wrap">
       <div class="note ${item.status}">
         <div class="dot">${icon}</div>
         <div class="body">
           <textarea class="edit-input" rows="2" data-editkey="${key}">${escapeHtml(item.text)}</textarea>
-          <div class="edit-actions">
-            <button class="save" data-action="edit-save" data-editkey="${key}" aria-label="${t().saveAria}">${ICONS.check}</button>
-            <button class="cancel" data-action="edit-cancel" aria-label="${t().cancelAria}">${ICONS.close}</button>
-          </div>
         </div>
       </div>
     </div>`;
@@ -616,6 +642,7 @@ function render(){
 
     document.getElementById('activeArea').innerHTML = html;
     updateTopbarHeight();
+    syncBottomBars();
     attachHandlers();
     return;
   }
@@ -634,6 +661,7 @@ function render(){
 
   document.getElementById('activeArea').innerHTML = html;
   updateTopbarHeight();
+  syncBottomBars();
   attachHandlers();
 }
 
@@ -670,22 +698,6 @@ function attachHandlers(){
       const [noteId, subId] = el.dataset.editkey.split('::');
       commitEdit(noteId, subId||null, el.value);
     });
-  });
-  document.querySelectorAll('[data-action="edit-save"]').forEach(el=>{
-    // mousedown, не click — за да се задейства преди textarea да загуби
-    // фокус (blur вече записва стойността, но явният бутон трябва да е
-    // надежден дори ако blur-логиката бъде пропусната).
-    el.addEventListener('mousedown', e=>{
-      e.preventDefault();
-      const ta = document.querySelector('.edit-input[data-editkey="'+el.dataset.editkey+'"]');
-      if(ta){
-        const [noteId, subId] = el.dataset.editkey.split('::');
-        commitEdit(noteId, subId||null, ta.value);
-      }
-    });
-  });
-  document.querySelectorAll('[data-action="edit-cancel"]').forEach(el=>{
-    el.addEventListener('mousedown', e=>{ e.preventDefault(); cancelEdit(); });
   });
   document.querySelectorAll('[data-action="sub-open"]').forEach(el=>{
     el.addEventListener('click', ()=>{
@@ -731,6 +743,24 @@ document.getElementById('noteInput').addEventListener('keydown', e=>{
   }
 });
 
+// Долната лента "Запази"/"Откажи" при редакция — статични бутони извън
+// activeArea, слушателите се закачат само веднъж. mousedown вместо click, за
+// да сработят преди textarea да загуби фокус (blur-ът иначе би "изпреварил"
+// Откажи и да запази текста автоматично).
+document.getElementById('editSaveBtn').addEventListener('mousedown', e=>{
+  e.preventDefault();
+  if(editingKey === null) return;
+  const ta = document.querySelector('.edit-input[data-editkey="'+editingKey+'"]');
+  if(ta){
+    const [noteId, subId] = editingKey.split('::');
+    commitEdit(noteId, subId||null, ta.value);
+  }
+});
+document.getElementById('editCancelBtn').addEventListener('mousedown', e=>{
+  e.preventDefault();
+  cancelEdit();
+});
+
 const searchBtn = document.getElementById('searchBtn');
 const searchRow = document.getElementById('searchRow');
 const searchInput = document.getElementById('searchInput');
@@ -771,14 +801,18 @@ window.addEventListener('resize', updateTopbarHeight);
 
 // iOS Safari премества/"вдига" position:fixed елементи неточно, когато се
 // покаже клавиатурата (класически бъг) — вместо да разчитаме на fixed
-// самичко, следим visualViewport и изтласкваме лентата за писане точно над
+// самичко, следим visualViewport и изтласкваме активната долна лента
+// (за нова бележка или за редакция, която и да е видима) точно над
 // клавиатурата ръчно, без скок.
 function handleViewportResize(){
   if(!window.visualViewport) return;
   const vv = window.visualViewport;
   const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-  const bar = document.querySelector('.bottombar');
-  if(bar) bar.style.transform = offset ? `translateY(-${offset}px)` : '';
+  const tr = offset ? `translateY(-${offset}px)` : '';
+  const bar = document.getElementById('bottomBar');
+  if(bar) bar.style.transform = tr;
+  const editBar = document.getElementById('editBar');
+  if(editBar) editBar.style.transform = tr;
 }
 if(window.visualViewport){
   window.visualViewport.addEventListener('resize', handleViewportResize);
