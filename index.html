@@ -24,10 +24,11 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
     font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
-    -webkit-font-smoothing:antialiased;}
+    -webkit-font-smoothing:antialiased;height:100%;}
+  body{display:flex;flex-direction:column;min-height:100vh;}
 
   .topbar{
-    position:sticky;top:0;z-index:10;
+    position:sticky;top:0;z-index:10;flex-shrink:0;
     background:linear-gradient(180deg,var(--bg) 82%,transparent);
     padding:calc(env(safe-area-inset-top,0px) + 14px) 16px 10px;
   }
@@ -36,7 +37,15 @@
     margin:0;
   }
 
-  main{padding:6px 14px 0;padding-bottom:88px;}
+  /* Активната зона запълва останалото пространство и подрежда съдържанието
+     си долу (justify-content:flex-end) — така при малко бележки те стоят
+     залепени до полето за писане, а не окачени горе с празно място под тях.
+     Когато бележките станат повече от наличното място, изтласкват се нагоре
+     естествено, както в чат приложение. */
+  main{
+    padding:6px 14px 0;padding-bottom:88px;
+    flex:1 0 auto;display:flex;flex-direction:column;justify-content:flex-end;
+  }
 
   .bottombar{
     position:fixed;left:0;right:0;bottom:0;z-index:10;
