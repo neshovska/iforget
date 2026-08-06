@@ -22,6 +22,7 @@
     --accent-dim:#3568B8;
     --green:#4FAE72;
     --danger:#E0574C;
+    --topbar-h:56px;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
@@ -30,13 +31,29 @@
   body{display:flex;flex-direction:column;min-height:100vh;}
 
   .topbar{
-    position:sticky;top:0;z-index:10;flex-shrink:0;
-    background:linear-gradient(180deg,var(--bg) 82%,transparent);
+    position:sticky;top:0;z-index:20;flex-shrink:0;
+    background:var(--bg);
     padding:calc(env(safe-area-inset-top,0px) + 14px) 16px 10px;
   }
+  .topbar-row{display:flex;align-items:center;justify-content:space-between;}
   .topbar h1{
     font-size:16px;font-weight:700;letter-spacing:.3px;color:var(--accent);
     margin:0;
+  }
+  #searchBtn{
+    background:none;border:none;color:var(--text-dim);font-size:17px;
+    padding:2px 6px;line-height:1;
+  }
+  #searchBtn.active{color:var(--accent);}
+  .search-row{display:none;gap:8px;margin-top:10px;}
+  .search-row.open{display:flex;}
+  .search-row input{
+    flex:1;background:var(--card);border:1px solid var(--border);
+    color:var(--text);border-radius:12px;padding:9px 12px;font-size:14px;outline:none;
+  }
+  .search-row input:focus{border-color:var(--accent-dim);}
+  .search-row button{
+    background:none;border:none;color:var(--text-dim);font-size:13px;padding:4px 8px;
   }
 
   /* Активната зона запълва останалото пространство и подрежда съдържанието
@@ -68,10 +85,14 @@
   }
   #addBtn:active{transform:scale(.94);}
 
+  /* Заглавието на деня е "залепено" точно под topbar-а, докато скролваш —
+     така винаги се вижда в коя дата от хронологията се намираш. */
   .day-block{margin-top:20px;}
   .day-label{
+    position:sticky;top:var(--topbar-h);z-index:5;background:var(--bg);
     font-size:12px;font-weight:600;color:var(--text-dim);
     text-transform:uppercase;letter-spacing:.6px;margin:0 0 8px 4px;
+    padding:4px 0;
     display:flex;align-items:center;gap:8px;
   }
   .day-label .count{
@@ -94,12 +115,14 @@
   .note .body{flex:1;min-width:0;}
   .note .txt{font-size:15px;line-height:1.4;word-break:break-word;}
   .note.done .txt{color:var(--text-dim);text-decoration:line-through;}
+  .note .meta{display:flex;align-items:center;gap:6px;margin-top:4px;}
   .note .tag{
-    display:inline-block;margin-top:4px;font-size:11px;font-weight:600;
+    display:inline-block;font-size:11px;font-weight:600;
     padding:1px 7px;border-radius:7px;letter-spacing:.3px;
   }
   .note.progress .tag{background:rgba(201,162,39,.18);color:var(--gold);}
   .note.done .tag{background:rgba(93,160,107,.18);color:var(--green);}
+  .note .time{font-size:11px;color:var(--text-dim);}
 
   .note-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0;}
   .note-actions button{
@@ -136,15 +159,35 @@
     text-align:center;color:var(--text-dim);font-size:13px;
     padding:30px 10px;
   }
+
+  /* Плаващо копче "най-нови", когато потребителят е скролнал нагоре
+     (напр. след търсене) — за бързо връщане в края на хронологията. */
+  .jump-btn{
+    display:none;position:fixed;right:16px;z-index:11;
+    bottom:calc(env(safe-area-inset-bottom,0px) + 78px);
+    background:var(--accent);color:var(--bg);border:none;border-radius:20px;
+    padding:9px 16px;font-size:13px;font-weight:600;
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+  }
+  .jump-btn.show{display:block;}
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <h1>IForget</h1>
+  <div class="topbar-row">
+    <h1>IForget</h1>
+    <button id="searchBtn" aria-label="Търсене">&#128269;</button>
+  </div>
+  <div class="search-row" id="searchRow">
+    <input id="searchInput" type="text" placeholder="Търси в бележките...">
+    <button id="searchClear">&#10005;</button>
+  </div>
 </div>
 
 <main id="activeArea"></main>
+
+<button class="jump-btn" id="jumpBtn">&#8595; Най-нови</button>
 
 <div class="bottombar">
   <div class="input-row">
@@ -158,6 +201,7 @@ const STORAGE_KEY = 'notes';
 let notes = [];
 let editingKey = null;
 let addingSubFor = null;
+let searchQuery = '';
 
 const dayNames = ['Неделя','Понеделник','Вторник','Сряда','Четвъртък','Петък','Събота'];
 const monthNames = ['Януари','Февруари','Март','Април','Май','Юни','Юли','Август','Септември','Октомври','Ноември','Декември'];
@@ -175,6 +219,11 @@ function dayLabel(ts){
   return dayNames[d.getDay()] + ', ' + d.getDate() + ' ' + monthNames[d.getMonth()];
 }
 
+function timeLabel(ts){
+  const d = new Date(ts);
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+
 function load(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -187,6 +236,11 @@ function load(){
 
 function scrollToBottom(smooth){
   window.scrollTo({top: document.documentElement.scrollHeight, behavior: smooth ? 'smooth' : 'auto'});
+}
+
+function updateTopbarHeight(){
+  const tb = document.querySelector('.topbar');
+  if(tb) document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight + 'px');
 }
 
 function save(){
@@ -274,7 +328,10 @@ function itemRow(item, noteId, isSub){
       <div class="dot" data-action="cycle" data-note="${noteId}" data-sub="${isSub?item.id:''}"></div>
       <div class="body">
         <div class="txt" data-action="edit" data-note="${noteId}" data-sub="${isSub?item.id:''}">${escapeHtml(item.text)}</div>
-        ${tagText ? `<span class="tag">${tagText}</span>` : ''}
+        <div class="meta">
+          ${tagText ? `<span class="tag">${tagText}</span>` : ''}
+          <span class="time">${timeLabel(item.createdAt)}</span>
+        </div>
       </div>
       <div class="note-actions">
         <button data-action="edit" data-note="${noteId}" data-sub="${isSub?item.id:''}">&#9998;</button>
@@ -306,9 +363,17 @@ function subsBlock(note){
 function render(){
   // Всички бележки (активни и приключени) растат надолу като съобщения в чат:
   // най-старите горе, най-новите долу до полето за писане — възходяща подредба
-  // по време, без отделно скрито "Приключени" копче. Приключените си остават
-  // видимо различими (зачертан текст, зелена точка, таг "завършено").
-  const all = notes.slice().sort((a,b)=>a.createdAt-b.createdAt);
+  // по време. Приключените си остават видимо различими (зачертан текст, зелена
+  // точка, таг "завършено"). Всяка бележка носи и часа си (timeLabel), а
+  // заглавието на деня се лепи под topbar-а, докато скролваш.
+  const q = searchQuery.trim().toLowerCase();
+  let all = notes.slice().sort((a,b)=>a.createdAt-b.createdAt);
+  if(q){
+    all = all.filter(n =>
+      n.text.toLowerCase().includes(q) ||
+      (n.subs||[]).some(s=>s.text.toLowerCase().includes(q))
+    );
+  }
 
   const byDay = {};
   all.forEach(n=>{
@@ -316,18 +381,23 @@ function render(){
     (byDay[k] = byDay[k] || []).push(n);
   });
   const dayKeys = Object.keys(byDay).sort();
-  if(!dayKeys.includes(todayStr())) dayKeys.push(todayStr());
+  if(!q && !dayKeys.includes(todayStr())) dayKeys.push(todayStr());
 
   let html = '';
-  dayKeys.forEach(k=>{
-    const items = byDay[k] || [];
-    html += `<div class="day-block">
-      <div class="day-label">${dayLabel(k+'T00:00:00')}${items.length?`<span class="count">${items.length}</span>`:''}</div>
-      ${items.length ? items.map(n=>itemRow(n, n.id, false)).join('') : `<div class="empty">Няма бележки</div>`}
-    </div>`;
-  });
+  if(q && all.length === 0){
+    html = `<div class="empty">Няма намерени бележки за "${escapeHtml(searchQuery.trim())}"</div>`;
+  }else{
+    dayKeys.forEach(k=>{
+      const items = byDay[k] || [];
+      html += `<div class="day-block">
+        <div class="day-label">${dayLabel(k+'T00:00:00')}${items.length?`<span class="count">${items.length}</span>`:''}</div>
+        ${items.length ? items.map(n=>itemRow(n, n.id, false)).join('') : `<div class="empty">Няма бележки</div>`}
+      </div>`;
+    });
+  }
   document.getElementById('activeArea').innerHTML = html;
 
+  updateTopbarHeight();
   attachHandlers();
 }
 
@@ -397,6 +467,32 @@ document.getElementById('noteInput').addEventListener('keydown', e=>{
     e.target.value = '';
   }
 });
+
+const searchBtn = document.getElementById('searchBtn');
+const searchRow = document.getElementById('searchRow');
+const searchInput = document.getElementById('searchInput');
+searchBtn.addEventListener('click', ()=>{
+  const open = searchRow.classList.toggle('open');
+  searchBtn.classList.toggle('active', open);
+  updateTopbarHeight();
+  if(open){ searchInput.focus(); }
+  else{ searchQuery=''; searchInput.value=''; render(); }
+});
+searchInput.addEventListener('input', e=>{ searchQuery = e.target.value; render(); });
+document.getElementById('searchClear').addEventListener('click', ()=>{
+  searchQuery=''; searchInput.value=''; searchInput.focus(); render();
+});
+
+// Плаващо копче "най-нови" — появява се, ако потребителят е скролнал далеч
+// от дъното на страницата (напр. докато преглежда резултати от търсене).
+const jumpBtn = document.getElementById('jumpBtn');
+window.addEventListener('scroll', ()=>{
+  const fromBottom = document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
+  jumpBtn.classList.toggle('show', fromBottom > 300);
+});
+jumpBtn.addEventListener('click', ()=>scrollToBottom(true));
+
+window.addEventListener('resize', updateTopbarHeight);
 
 load();
 </script>
