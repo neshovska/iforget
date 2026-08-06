@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="IForget">
+<meta name="theme-color" content="#15130F">
+<title>IForget</title>
+<style>
+  :root{
+    --bg:#15130F;
+    --card:#1E1B15;
+    --card-2:#26221A;
+    --border:#332E24;
+    --text:#F2ECE0;
+    --text-dim:#9C9483;
+    --gold:#C9A227;
+    --gold-dim:#8A7420;
+    --green:#5DA06B;
+    --danger:#B5544A;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  body{padding-bottom:env(safe-area-inset-bottom,20px);}
+
+  .topbar{
+    position:sticky;top:0;z-index:10;
+    background:linear-gradient(180deg,var(--bg) 82%,transparent);
+    padding:calc(env(safe-area-inset-top,0px) + 14px) 16px 10px;
+  }
+  .topbar h1{
+    font-size:16px;font-weight:700;letter-spacing:.3px;color:var(--gold);
+    margin:0 0 12px 2px;
+  }
+  .input-row{display:flex;gap:8px;}
+  #noteInput{
+    flex:1;background:var(--card);border:1px solid var(--border);
+    color:var(--text);border-radius:14px;padding:12px 14px;font-size:16px;
+    outline:none;
+  }
+  #noteInput:focus{border-color:var(--gold-dim);}
+  #addBtn{
+    width:44px;height:44px;border-radius:14px;border:none;
+    background:var(--gold);color:#1A1608;font-size:22px;font-weight:600;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  #addBtn:active{transform:scale(.94);}
+
+  main{padding:6px 14px 0;}
+
+  .day-block{margin-top:20px;}
+  .day-label{
+    font-size:12px;font-weight:600;color:var(--text-dim);
+    text-transform:uppercase;letter-spacing:.6px;margin:0 0 8px 4px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .day-label .count{
+    background:var(--card-2);color:var(--gold);border-radius:8px;
+    padding:1px 7px;font-size:11px;font-weight:600;
+  }
+
+  .note-wrap{margin-bottom:8px;}
+  .note{
+    background:var(--card);border:1px solid var(--border);border-radius:14px;
+    padding:11px 12px;display:flex;align-items:flex-start;gap:10px;
+  }
+  .note .dot{
+    width:22px;height:22px;border-radius:50%;flex-shrink:0;margin-top:1px;
+    border:2px solid var(--text-dim);display:flex;align-items:center;justify-content:center;
+    font-size:12px;color:transparent;
+  }
+  .note.progress .dot{border-color:var(--gold);background:rgba(201,162,39,.15);}
+  .note.done .dot{border-color:var(--green);background:var(--green);color:#0E1A10;}
+  .note .body{flex:1;min-width:0;}
+  .note .txt{font-size:15px;line-height:1.4;word-break:break-word;}
+  .note.done .txt{color:var(--text-dim);text-decoration:line-through;}
+  .note .tag{
+    display:inline-block;margin-top:4px;font-size:11px;font-weight:600;
+    padding:1px 7px;border-radius:7px;letter-spacing:.3px;
+  }
+  .note.progress .tag{background:rgba(201,162,39,.18);color:var(--gold);}
+  .note.done .tag{background:rgba(93,160,107,.18);color:var(--green);}
+
+  .note-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0;}
+  .note-actions button{
+    width:26px;height:26px;border:none;background:none;
+    color:var(--text-dim);font-size:14px;display:flex;align-items:center;justify-content:center;
+  }
+  .note-actions button.del{color:var(--danger);}
+
+  .edit-input{
+    width:100%;background:var(--card-2);border:1px solid var(--gold-dim);
+    color:var(--text);border-radius:10px;padding:8px 10px;font-size:15px;
+    outline:none;font-family:inherit;resize:none;
+  }
+
+  .subs{margin:8px 0 0 20px;padding-left:12px;border-left:2px solid var(--border);}
+  .subs .note{padding:8px 10px;background:var(--card-2);}
+  .subs .note-wrap{margin-bottom:6px;}
+  .add-sub-row{margin-top:6px;}
+  .add-sub-link{
+    background:none;border:none;color:var(--gold-dim);font-size:12.5px;
+    font-weight:600;padding:2px 4px;
+  }
+  .add-sub-input-row{display:flex;gap:6px;margin-top:6px;}
+  .add-sub-input-row input{
+    flex:1;background:var(--card-2);border:1px solid var(--border);
+    color:var(--text);border-radius:10px;padding:8px 10px;font-size:14px;outline:none;
+  }
+  .add-sub-input-row button{
+    background:var(--gold);color:#1A1608;border:none;border-radius:10px;
+    padding:0 12px;font-size:13px;font-weight:600;
+  }
+
+  .empty{
+    text-align:center;color:var(--text-dim);font-size:13px;
+    padding:30px 10px;
+  }
+
+  details.archive{margin-top:26px;}
+  details.archive > summary{
+    list-style:none;cursor:pointer;font-size:13px;font-weight:600;
+    color:var(--text-dim);padding:10px 4px;border-top:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  details.archive > summary::-webkit-details-marker{display:none;}
+  details.archive > summary .chev{transition:transform .15s;}
+  details.archive[open] > summary .chev{transform:rotate(90deg);}
+
+  details.year, details.month, details.week{margin:4px 0 4px 6px;}
+  details.year > summary, details.month > summary, details.week > summary{
+    list-style:none;cursor:pointer;font-size:12.5px;font-weight:600;
+    color:var(--text-dim);padding:7px 4px;
+  }
+  details.year > summary::-webkit-details-marker,
+  details.month > summary::-webkit-details-marker,
+  details.week > summary::-webkit-details-marker{display:none;}
+  details.week{margin-left:10px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>IForget</h1>
+  <div class="input-row">
+    <input id="noteInput" type="text" placeholder="Нова бележка..." maxlength="500">
+    <button id="addBtn">+</button>
+  </div>
+</div>
+
+<main id="activeArea"></main>
+<div id="archiveArea"></div>
+
+<script>
+const STORAGE_KEY = 'notes';
+let notes = [];
+let editingKey = null;
+let addingSubFor = null;
+
+const dayNames = ['Неделя','Понеделник','Вторник','Сряда','Четвъртък','Петък','Събота'];
+const monthNames = ['Януари','Февруари','Март','Април','Май','Юни','Юли','Август','Септември','Октомври','Ноември','Декември'];
+
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function dateStr(ts){ return new Date(ts).toISOString().slice(0,10); }
+
+function isoWeek(d){
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+}
+
+function dayLabel(ts){
+  const d = new Date(ts);
+  const t = new Date(); t.setHours(0,0,0,0);
+  const y = new Date(t); y.setDate(y.getDate()-1);
+  const dd = new Date(d); dd.setHours(0,0,0,0);
+  if(dd.getTime() === t.getTime()) return 'Днес';
+  if(dd.getTime() === y.getTime()) return 'Вчера';
+  return dayNames[d.getDay()] + ', ' + d.getDate() + ' ' + monthNames[d.getMonth()];
+}
+
+async function load(){
+  try{
+    const res = await window.storage.get(STORAGE_KEY, false);
+    notes = res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){ notes = []; }
+  notes.forEach(n=>{ if(!n.subs) n.subs = []; });
+  render();
+}
+
+async function save(){
+  try{ await window.storage.set(STORAGE_KEY, JSON.stringify(notes), false); }
+  catch(e){ console.error('save failed', e); }
+}
+
+function findNote(id){ return notes.find(n=>n.id===id); }
+function findSub(noteId, subId){
+  const n = findNote(noteId);
+  return n ? n.subs.find(s=>s.id===subId) : null;
+}
+
+function addNote(text){
+  text = text.trim();
+  if(!text) return;
+  notes.unshift({
+    id: 'n'+Date.now()+Math.random().toString(36).slice(2,6),
+    text, createdAt: Date.now(), status: 'open', subs: []
+  });
+  save(); render();
+}
+
+function addSub(noteId, text){
+  text = text.trim();
+  if(!text) return;
+  const n = findNote(noteId);
+  if(!n) return;
+  n.subs.push({
+    id: 's'+Date.now()+Math.random().toString(36).slice(2,6),
+    text, createdAt: Date.now(), status: 'open'
+  });
+  addingSubFor = null;
+  save(); render();
+}
+
+function cycleStatus(noteId, subId){
+  const target = subId ? findSub(noteId, subId) : findNote(noteId);
+  if(!target) return;
+  target.status = target.status === 'open' ? 'progress' : target.status === 'progress' ? 'done' : 'open';
+  save(); render();
+}
+
+function removeItem(noteId, subId){
+  if(subId){
+    const n = findNote(noteId);
+    if(n) n.subs = n.subs.filter(s=>s.id!==subId);
+  }else{
+    notes = notes.filter(n=>n.id!==noteId);
+  }
+  save(); render();
+}
+
+function commitEdit(noteId, subId, value){
+  const target = subId ? findSub(noteId, subId) : findNote(noteId);
+  const v = value.trim();
+  if(target && v) target.text = v;
+  editingKey = null;
+  save(); render();
+}
+
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function itemRow(item, noteId, isSub){
+  const key = isSub ? noteId+'::'+item.id : item.id;
+  const icon = item.status === 'done' ? '&#10003;' : '';
+  const tagText = item.status === 'progress' ? 'в прогрес' : item.status === 'done' ? 'завършено' : '';
+
+  if(editingKey === key){
+    return `<div class="note-wrap">
+      <div class="note ${item.status}">
+        <div class="dot">${icon}</div>
+        <div class="body">
+          <textarea class="edit-input" rows="2" data-editkey="${key}">${escapeHtml(item.text)}</textarea>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  return `<div class="note-wrap">
+    <div class="note ${item.status}">
+      <div class="dot" data-action="cycle" data-note="${noteId}" data-sub="${isSub?item.id:''}"></div>
+      <div class="body">
+        <div class="txt" data-action="edit" data-note="${noteId}" data-sub="${isSub?item.id:''}">${escapeHtml(item.text)}</div>
+        ${tagText ? `<span class="tag">${tagText}</span>` : ''}
+      </div>
+      <div class="note-actions">
+        <button data-action="edit" data-note="${noteId}" data-sub="${isSub?item.id:''}">&#9998;</button>
+        <button class="del" data-action="del" data-note="${noteId}" data-sub="${isSub?item.id:''}">&#10005;</button>
+      </div>
+    </div>
+    ${!isSub ? subsBlock(item) : ''}
+  </div>`;
+}
+
+function subsBlock(note){
+  let html = '';
+  if(note.subs && note.subs.length){
+    html += `<div class="subs">${note.subs.map(s=>itemRow(s, note.id, true)).join('')}</div>`;
+  }
+  html += `<div class="add-sub-row" style="margin-left:20px;">`;
+  if(addingSubFor === note.id){
+    html += `<div class="add-sub-input-row">
+      <input type="text" class="sub-input" data-note="${note.id}" placeholder="Подбележка..." maxlength="300">
+      <button data-action="sub-save" data-note="${note.id}">OK</button>
+    </div>`;
+  }else{
+    html += `<button class="add-sub-link" data-action="sub-open" data-note="${note.id}">+ подбележка</button>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+function render(){
+  const active = notes.filter(n => n.status !== 'done').sort((a,b)=>b.createdAt-a.createdAt);
+  const done = notes.filter(n => n.status === 'done').sort((a,b)=>b.createdAt-a.createdAt);
+
+  const byDayActive = {};
+  active.forEach(n=>{
+    const k = dateStr(n.createdAt);
+    (byDayActive[k] = byDayActive[k] || []).push(n);
+  });
+  const dayKeys = Object.keys(byDayActive).sort().reverse();
+  if(!dayKeys.includes(todayStr())) dayKeys.unshift(todayStr());
+
+  let html = '';
+  dayKeys.forEach(k=>{
+    const items = byDayActive[k] || [];
+    html += `<div class="day-block">
+      <div class="day-label">${dayLabel(k+'T00:00:00')}${items.length?`<span class="count">${items.length}</span>`:''}</div>
+      ${items.length ? items.map(n=>itemRow(n, n.id, false)).join('') : `<div class="empty">Няма активни бележки</div>`}
+    </div>`;
+  });
+  document.getElementById('activeArea').innerHTML = html;
+
+  const byYear = {};
+  done.forEach(n=>{
+    const d = new Date(n.createdAt);
+    const y = d.getFullYear(), m = d.getMonth(), w = isoWeek(d), day = dateStr(n.createdAt);
+    byYear[y] = byYear[y] || {};
+    byYear[y][m] = byYear[y][m] || {};
+    byYear[y][m][w] = byYear[y][m][w] || {};
+    byYear[y][m][w][day] = byYear[y][m][w][day] || [];
+    byYear[y][m][w][day].push(n);
+  });
+
+  let archHtml = '';
+  if(done.length){
+    archHtml += `<details class="archive"><summary>Приключени (${done.length}) <span class="chev">&#8250;</span></summary>`;
+    Object.keys(byYear).sort().reverse().forEach(y=>{
+      archHtml += `<details class="year"><summary>${y}</summary>`;
+      Object.keys(byYear[y]).sort((a,b)=>b-a).forEach(m=>{
+        archHtml += `<details class="month"><summary>${monthNames[m]}</summary>`;
+        Object.keys(byYear[y][m]).sort((a,b)=>b-a).forEach(w=>{
+          archHtml += `<details class="week"><summary>Седмица ${w}</summary>`;
+          Object.keys(byYear[y][m][w]).sort().reverse().forEach(day=>{
+            archHtml += `<div class="day-block" style="margin-top:8px;">
+              <div class="day-label">${dayLabel(day+'T00:00:00')}</div>
+              ${byYear[y][m][w][day].map(n=>itemRow(n, n.id, false)).join('')}
+            </div>`;
+          });
+          archHtml += `</details>`;
+        });
+        archHtml += `</details>`;
+      });
+      archHtml += `</details>`;
+    });
+    archHtml += `</details>`;
+  }
+  document.getElementById('archiveArea').innerHTML = archHtml;
+
+  attachHandlers();
+}
+
+function attachHandlers(){
+  document.querySelectorAll('[data-action="cycle"]').forEach(el=>{
+    el.addEventListener('click', ()=>cycleStatus(el.dataset.note, el.dataset.sub||null));
+  });
+  document.querySelectorAll('[data-action="del"]').forEach(el=>{
+    el.addEventListener('click', ()=>removeItem(el.dataset.note, el.dataset.sub||null));
+  });
+  document.querySelectorAll('[data-action="edit"]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const noteId = el.dataset.note, subId = el.dataset.sub || null;
+      editingKey = subId ? noteId+'::'+subId : noteId;
+      addingSubFor = null;
+      render();
+    });
+  });
+  document.querySelectorAll('.edit-input').forEach(el=>{
+    setTimeout(()=>{ el.focus(); el.selectionStart = el.value.length; }, 0);
+    el.addEventListener('keydown', e=>{
+      if(e.key === 'Enter' && !e.shiftKey){
+        e.preventDefault();
+        const [noteId, subId] = el.dataset.editkey.split('::');
+        commitEdit(noteId, subId||null, el.value);
+      }
+      if(e.key === 'Escape'){ editingKey = null; render(); }
+    });
+    el.addEventListener('blur', ()=>{
+      if(editingKey === null) return;
+      const [noteId, subId] = el.dataset.editkey.split('::');
+      commitEdit(noteId, subId||null, el.value);
+    });
+  });
+  document.querySelectorAll('[data-action="sub-open"]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      addingSubFor = el.dataset.note;
+      editingKey = null;
+      render();
+      setTimeout(()=>{
+        const inp = document.querySelector('.sub-input[data-note="'+el.dataset.note+'"]');
+        if(inp) inp.focus();
+      },0);
+    });
+  });
+  document.querySelectorAll('[data-action="sub-save"]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const inp = document.querySelector('.sub-input[data-note="'+el.dataset.note+'"]');
+      if(inp) addSub(el.dataset.note, inp.value);
+    });
+  });
+  document.querySelectorAll('.sub-input').forEach(el=>{
+    el.addEventListener('keydown', e=>{
+      if(e.key === 'Enter'){ addSub(el.dataset.note, el.value); }
+    });
+  });
+}
+
+document.getElementById('addBtn').addEventListener('click', ()=>{
+  addNote(document.getElementById('noteInput').value);
+  document.getElementById('noteInput').value = '';
+  document.getElementById('noteInput').focus();
+});
+document.getElementById('noteInput').addEventListener('keydown', e=>{
+  if(e.key === 'Enter'){
+    addNote(e.target.value);
+    e.target.value = '';
+  }
+});
+
+load();
+</script>
+</body>
+</html>
