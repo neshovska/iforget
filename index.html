@@ -155,6 +155,9 @@
     background:var(--accent);color:var(--bg);border:none;border-radius:10px;
     padding:0 12px;font-size:13px;font-weight:600;
   }
+  .add-sub-input-row button.cancel{
+    background:none;color:var(--text-dim);padding:0 8px;font-weight:400;
+  }
 
   .empty{
     text-align:center;color:var(--text-dim);font-size:13px;
@@ -279,6 +282,11 @@ function addSub(noteId, text){
   save(); render();
 }
 
+function cancelSub(){
+  addingSubFor = null;
+  render();
+}
+
 function cycleStatus(noteId, subId){
   const target = subId ? findSub(noteId, subId) : findNote(noteId);
   if(!target) return;
@@ -353,6 +361,7 @@ function subsBlock(note){
     html += `<div class="add-sub-input-row">
       <input type="text" class="sub-input" data-note="${note.id}" placeholder="Подбележка..." maxlength="300">
       <button data-action="sub-save" data-note="${note.id}">OK</button>
+      <button class="cancel" data-action="sub-cancel" data-note="${note.id}" aria-label="Откажи">&#10005;</button>
     </div>`;
   }else{
     html += `<button class="add-sub-link" data-action="sub-open" data-note="${note.id}">+ подбележка</button>`;
@@ -468,9 +477,13 @@ function attachHandlers(){
       if(inp) addSub(el.dataset.note, inp.value);
     });
   });
+  document.querySelectorAll('[data-action="sub-cancel"]').forEach(el=>{
+    el.addEventListener('click', ()=>cancelSub());
+  });
   document.querySelectorAll('.sub-input').forEach(el=>{
     el.addEventListener('keydown', e=>{
       if(e.key === 'Enter'){ addSub(el.dataset.note, el.value); }
+      if(e.key === 'Escape'){ cancelSub(); }
     });
   });
 }
@@ -484,6 +497,10 @@ document.getElementById('noteInput').addEventListener('keydown', e=>{
   if(e.key === 'Enter'){
     addNote(e.target.value);
     e.target.value = '';
+  }
+  if(e.key === 'Escape'){
+    e.target.value = '';
+    e.target.blur();
   }
 });
 
