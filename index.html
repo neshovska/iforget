@@ -55,13 +55,16 @@
     font-size:16px;font-weight:700;letter-spacing:.3px;color:var(--accent);
     margin:0;
   }
-  .topbar-actions{display:flex;align-items:center;gap:2px;}
+  /* Бутоните за език/тема/търсене са ясно видими "чипове" с фон и рамка,
+     не просто тих текст — за да се забелязват веднага в топбара. */
+  .topbar-actions{display:flex;align-items:center;gap:6px;}
   .icon-btn{
-    background:none;border:none;color:var(--text-dim);font-size:15px;
-    padding:4px 7px;line-height:1;border-radius:8px;
+    background:var(--card-2);border:1px solid var(--border);color:var(--text-dim);
+    font-size:14px;padding:6px 9px;line-height:1;border-radius:10px;
   }
-  #langBtn{font-size:12px;font-weight:700;letter-spacing:.3px;}
-  #searchBtn.active{color:var(--accent);}
+  .icon-btn:active{opacity:.7;}
+  #langBtn{font-size:12px;font-weight:700;letter-spacing:.3px;min-width:28px;}
+  #searchBtn.active{color:var(--accent);border-color:var(--accent-dim);background:rgba(76,141,255,.12);}
   .search-row{display:none;gap:8px;margin-top:10px;}
   .search-row.open{display:flex;}
   .search-row input{
@@ -175,6 +178,15 @@
     color:var(--text);border-radius:10px;padding:8px 10px;font-size:15px;
     outline:none;font-family:inherit;resize:none;
   }
+  /* Явни бутони за запазване/отказ при редакция на бележка — вместо да се
+     разчита само на Enter/blur, за да е ясно как се потвърждава промяната. */
+  .edit-actions{display:flex;gap:6px;margin-top:6px;}
+  .edit-actions button{
+    border:none;border-radius:10px;font-size:13px;font-weight:600;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .edit-actions button.save{background:var(--accent);color:var(--bg);width:32px;height:30px;}
+  .edit-actions button.cancel{background:none;color:var(--text-dim);padding:0 10px;font-weight:400;}
 
   .subs{margin:8px 0 0 20px;padding-left:12px;border-left:2px solid var(--border);}
   .subs .note{padding:8px 10px;background:var(--card-2);}
@@ -189,12 +201,12 @@
     flex:1;background:var(--card-2);border:1px solid var(--border);
     color:var(--text);border-radius:10px;padding:8px 10px;font-size:14px;outline:none;
   }
-  .add-sub-input-row button{
+  .add-sub-input-row button.save{
     background:var(--accent);color:var(--bg);border:none;border-radius:10px;
-    padding:0 12px;font-size:13px;font-weight:600;
+    width:34px;font-size:14px;font-weight:600;
   }
   .add-sub-input-row button.cancel{
-    background:none;color:var(--text-dim);padding:0 8px;font-weight:400;
+    background:none;border:none;color:var(--text-dim);padding:0 8px;font-weight:400;
   }
 
   .empty{
@@ -260,12 +272,13 @@ const STRINGS = {
   bg: {
     searchAria: 'Търсене', searchPlaceholder: 'Търси по текст или дата (напр. 06.08, вторник)...',
     notePlaceholder: 'Нова бележка...', subPlaceholder: 'Подбележка...',
-    addSubLink: '+ подбележка', cancelAria: 'Откажи',
+    addSubLink: '+ подбележка', cancelAria: 'Откажи', saveAria: 'Запази',
     jumpLatest: '↓ Най-нови',
     today: 'Днес', yesterday: 'Вчера', noNotes: 'Няма бележки',
     results: 'Резултати', noResultsFor: q => `Няма намерени бележки за "${q}"`,
     tagProgress: 'в прогрес', tagDone: 'завършено',
     sectionDone: 'Приключени', sectionProgress: 'В прогрес', sectionActive: 'Активни',
+    confirmDelete: 'Да изтрия ли тази бележка?',
     dayNames: ['Неделя','Понеделник','Вторник','Сряда','Четвъртък','Петък','Събота'],
     monthNames: ['Януари','Февруари','Март','Април','Май','Юни','Юли','Август','Септември','Октомври','Ноември','Декември'],
     langToggle: 'EN', themeAria: 'Тема', langAria: 'Език'
@@ -273,12 +286,13 @@ const STRINGS = {
   en: {
     searchAria: 'Search', searchPlaceholder: 'Search text or date (e.g. 06.08, tuesday)...',
     notePlaceholder: 'New note...', subPlaceholder: 'Sub-note...',
-    addSubLink: '+ sub-note', cancelAria: 'Cancel',
+    addSubLink: '+ sub-note', cancelAria: 'Cancel', saveAria: 'Save',
     jumpLatest: '↓ Latest',
     today: 'Today', yesterday: 'Yesterday', noNotes: 'No notes',
     results: 'Results', noResultsFor: q => `No notes found for "${q}"`,
     tagProgress: 'in progress', tagDone: 'done',
     sectionDone: 'Completed', sectionProgress: 'In progress', sectionActive: 'Active',
+    confirmDelete: 'Delete this note?',
     dayNames: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
     monthNames: ['January','February','March','April','May','June','July','August','September','October','November','December'],
     langToggle: 'BG', themeAria: 'Theme', langAria: 'Language'
@@ -458,6 +472,11 @@ function commitEdit(noteId, subId, value){
   save(); render();
 }
 
+function cancelEdit(){
+  editingKey = null;
+  render();
+}
+
 function escapeHtml(s){
   return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -468,11 +487,17 @@ function itemRow(item, noteId, isSub){
   const tagText = item.status === 'progress' ? t().tagProgress : item.status === 'done' ? t().tagDone : '';
 
   if(editingKey === key){
+    // Явни бутони "Запази" (отметка) и "Откажи" — освен Enter/Escape/blur,
+    // за да е недвусмислено ясно как се потвърждава или отменя редакцията.
     return `<div class="note-wrap">
       <div class="note ${item.status}">
         <div class="dot">${icon}</div>
         <div class="body">
           <textarea class="edit-input" rows="2" data-editkey="${key}">${escapeHtml(item.text)}</textarea>
+          <div class="edit-actions">
+            <button class="save" data-action="edit-save" data-editkey="${key}" aria-label="${t().saveAria}">&#10003;</button>
+            <button class="cancel" data-action="edit-cancel" aria-label="${t().cancelAria}">&#10005;</button>
+          </div>
         </div>
       </div>
     </div>`;
@@ -506,7 +531,7 @@ function subsBlock(note){
   if(addingSubFor === note.id){
     html += `<div class="add-sub-input-row">
       <input type="text" class="sub-input" data-note="${note.id}" placeholder="${t().subPlaceholder}" maxlength="300">
-      <button data-action="sub-save" data-note="${note.id}">OK</button>
+      <button class="save" data-action="sub-save" data-note="${note.id}" aria-label="${t().saveAria}">&#10003;</button>
       <button class="cancel" data-action="sub-cancel" data-note="${note.id}" aria-label="${t().cancelAria}">&#10005;</button>
     </div>`;
   }else{
@@ -596,8 +621,11 @@ function attachHandlers(){
   document.querySelectorAll('[data-action="cycle"]').forEach(el=>{
     el.addEventListener('click', ()=>cycleStatus(el.dataset.note, el.dataset.sub||null));
   });
+  // Изтриването вече иска потвърждение — предпазва от случаен допир.
   document.querySelectorAll('[data-action="del"]').forEach(el=>{
-    el.addEventListener('click', ()=>removeItem(el.dataset.note, el.dataset.sub||null));
+    el.addEventListener('click', ()=>{
+      if(window.confirm(t().confirmDelete)) removeItem(el.dataset.note, el.dataset.sub||null);
+    });
   });
   document.querySelectorAll('[data-action="edit"]').forEach(el=>{
     el.addEventListener('click', ()=>{
@@ -615,13 +643,29 @@ function attachHandlers(){
         const [noteId, subId] = el.dataset.editkey.split('::');
         commitEdit(noteId, subId||null, el.value);
       }
-      if(e.key === 'Escape'){ editingKey = null; render(); }
+      if(e.key === 'Escape'){ cancelEdit(); }
     });
     el.addEventListener('blur', ()=>{
       if(editingKey === null) return;
       const [noteId, subId] = el.dataset.editkey.split('::');
       commitEdit(noteId, subId||null, el.value);
     });
+  });
+  document.querySelectorAll('[data-action="edit-save"]').forEach(el=>{
+    // mousedown, не click — за да се задейства преди textarea да загуби
+    // фокус (blur вече записва стойността, но явният бутон трябва да е
+    // надежден дори ако blur-логиката бъде пропусната).
+    el.addEventListener('mousedown', e=>{
+      e.preventDefault();
+      const ta = document.querySelector('.edit-input[data-editkey="'+el.dataset.editkey+'"]');
+      if(ta){
+        const [noteId, subId] = el.dataset.editkey.split('::');
+        commitEdit(noteId, subId||null, ta.value);
+      }
+    });
+  });
+  document.querySelectorAll('[data-action="edit-cancel"]').forEach(el=>{
+    el.addEventListener('mousedown', e=>{ e.preventDefault(); cancelEdit(); });
   });
   document.querySelectorAll('[data-action="sub-open"]').forEach(el=>{
     el.addEventListener('click', ()=>{
