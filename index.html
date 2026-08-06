@@ -24,14 +24,15 @@
     --danger:#E0574C;
     --topbar-h:56px;
   }
-  /* Светла тема — превключва се с бутона до търсачката; пази се в localStorage. */
+  /* Светла тема — топъл бежов тон вместо студено бяло; превключва се с
+     бутона до търсачката и се пази в localStorage. */
   :root[data-theme="light"]{
-    --bg:#F4F6FB;
-    --card:#FFFFFF;
-    --card-2:#EAEFF8;
-    --border:#D8E0EE;
-    --text:#16223B;
-    --text-dim:#6A7690;
+    --bg:#F3ECDE;
+    --card:#FBF7EE;
+    --card-2:#EBE1CC;
+    --border:#DDCDA9;
+    --text:#2B2318;
+    --text-dim:#8A7B63;
     --gold:#A6790B;
     --gold-dim:#8C6A12;
     --accent:#2F6FE0;
@@ -44,6 +45,11 @@
     font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
     -webkit-font-smoothing:antialiased;height:100%;}
   body{display:flex;flex-direction:column;min-height:100vh;transition:background-color .15s ease,color .15s ease;}
+
+  /* Всички икони в приложението са монохромни inline SVG (stroke=currentColor)
+     вместо емоджита — така никога не изкарват цветни глифове и винаги пасват
+     на текущата тема. */
+  svg.ic{display:block;flex-shrink:0;}
 
   .topbar{
     position:sticky;top:0;z-index:20;flex-shrink:0;
@@ -61,6 +67,7 @@
   .icon-btn{
     background:var(--card-2);border:1px solid var(--border);color:var(--text-dim);
     font-size:14px;padding:6px 9px;line-height:1;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
   }
   .icon-btn:active{opacity:.7;}
   #langBtn{font-size:12px;font-weight:700;letter-spacing:.3px;min-width:28px;}
@@ -73,7 +80,8 @@
   }
   .search-row input:focus{border-color:var(--accent-dim);}
   .search-row button{
-    background:none;border:none;color:var(--text-dim);font-size:13px;padding:4px 8px;
+    background:none;border:none;color:var(--text-dim);padding:4px 8px;
+    display:flex;align-items:center;justify-content:center;
   }
 
   /* Активната зона запълва останалото пространство и подрежда съдържанието
@@ -122,7 +130,7 @@
   #noteInput:focus{border-color:var(--accent-dim);}
   #addBtn{
     width:44px;height:44px;border-radius:14px;border:none;
-    background:var(--accent);color:var(--bg);font-size:22px;font-weight:600;
+    background:var(--accent);color:var(--bg);
     display:flex;align-items:center;justify-content:center;flex-shrink:0;
   }
   #addBtn:active{transform:scale(.94);}
@@ -150,7 +158,6 @@
   .note .dot{
     width:22px;height:22px;border-radius:50%;flex-shrink:0;margin-top:1px;
     border:2px solid var(--text-dim);display:flex;align-items:center;justify-content:center;
-    font-size:12px;color:transparent;
   }
   .note.progress .dot{border-color:var(--gold);background:rgba(201,162,39,.15);}
   .note.done .dot{border-color:var(--green);background:var(--green);color:#0E1A10;}
@@ -169,7 +176,7 @@
   .note-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0;}
   .note-actions button{
     width:26px;height:26px;border:none;background:none;
-    color:var(--text-dim);font-size:14px;display:flex;align-items:center;justify-content:center;
+    color:var(--text-dim);display:flex;align-items:center;justify-content:center;
   }
   .note-actions button.del{color:var(--danger);}
 
@@ -203,10 +210,11 @@
   }
   .add-sub-input-row button.save{
     background:var(--accent);color:var(--bg);border:none;border-radius:10px;
-    width:34px;font-size:14px;font-weight:600;
+    width:34px;display:flex;align-items:center;justify-content:center;
   }
   .add-sub-input-row button.cancel{
-    background:none;border:none;color:var(--text-dim);padding:0 8px;font-weight:400;
+    background:none;border:none;color:var(--text-dim);padding:0 8px;
+    display:flex;align-items:center;justify-content:center;
   }
 
   .empty{
@@ -220,10 +228,11 @@
     display:none;position:fixed;right:16px;z-index:11;
     bottom:calc(env(safe-area-inset-bottom,0px) + 78px);
     background:var(--accent);color:var(--bg);border:none;border-radius:20px;
-    padding:9px 16px;font-size:13px;font-weight:600;
+    padding:9px 14px;font-size:13px;font-weight:600;
     box-shadow:0 4px 14px rgba(0,0,0,.35);
+    display:flex;align-items:center;gap:6px;
   }
-  .jump-btn.show{display:block;}
+  .jump-btn.show{display:flex;}
 </style>
 </head>
 <body>
@@ -233,24 +242,24 @@
     <h1>IForget</h1>
     <div class="topbar-actions">
       <button id="langBtn" class="icon-btn" aria-label="Език">EN</button>
-      <button id="themeBtn" class="icon-btn" aria-label="Тема">&#127769;</button>
-      <button id="searchBtn" class="icon-btn" aria-label="Търсене">&#128269;</button>
+      <button id="themeBtn" class="icon-btn" aria-label="Тема"></button>
+      <button id="searchBtn" class="icon-btn" aria-label="Търсене"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
     </div>
   </div>
   <div class="search-row" id="searchRow">
     <input id="searchInput" type="text" placeholder="Търси в бележките...">
-    <button id="searchClear">&#10005;</button>
+    <button id="searchClear"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg></button>
   </div>
 </div>
 
 <main id="activeArea"></main>
 
-<button class="jump-btn" id="jumpBtn">&#8595; Най-нови</button>
+<button class="jump-btn" id="jumpBtn"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg><span id="jumpLabel">Най-нови</span></button>
 
 <div class="bottombar">
   <div class="input-row">
     <input id="noteInput" type="text" placeholder="Нова бележка..." maxlength="500">
-    <button id="addBtn">+</button>
+    <button id="addBtn"><svg class="ic" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
   </div>
 </div>
 
@@ -265,6 +274,17 @@ let searchQuery = '';
 let theme = localStorage.getItem(THEME_KEY) || 'dark';
 let lang = localStorage.getItem(LANG_KEY) || 'bg';
 
+// Монохромни SVG иконки (stroke=currentColor) — използвани навсякъде вместо
+// цветни емоджита, за да пасват винаги на текущата тема/цвят на бутона.
+const ICONS = {
+  moon: '<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>',
+  sun: '<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>',
+  close: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg>',
+  check: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>',
+  checkSmall: '<svg class="ic" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>',
+  pencil: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>'
+};
+
 // Текстове за двата езика — БГ (по подразбиране) и EN. t() връща обекта за
 // текущо избрания език; при смяна презаписваме статичните надписи и
 // презентираме бележките наново.
@@ -273,7 +293,7 @@ const STRINGS = {
     searchAria: 'Търсене', searchPlaceholder: 'Търси по текст или дата (напр. 06.08, вторник)...',
     notePlaceholder: 'Нова бележка...', subPlaceholder: 'Подбележка...',
     addSubLink: '+ подбележка', cancelAria: 'Откажи', saveAria: 'Запази',
-    jumpLatest: '↓ Най-нови',
+    jumpLatest: 'Най-нови',
     today: 'Днес', yesterday: 'Вчера', noNotes: 'Няма бележки',
     results: 'Резултати', noResultsFor: q => `Няма намерени бележки за "${q}"`,
     tagProgress: 'в прогрес', tagDone: 'завършено',
@@ -287,7 +307,7 @@ const STRINGS = {
     searchAria: 'Search', searchPlaceholder: 'Search text or date (e.g. 06.08, tuesday)...',
     notePlaceholder: 'New note...', subPlaceholder: 'Sub-note...',
     addSubLink: '+ sub-note', cancelAria: 'Cancel', saveAria: 'Save',
-    jumpLatest: '↓ Latest',
+    jumpLatest: 'Latest',
     today: 'Today', yesterday: 'Yesterday', noNotes: 'No notes',
     results: 'Results', noResultsFor: q => `No notes found for "${q}"`,
     tagProgress: 'in progress', tagDone: 'done',
@@ -371,9 +391,9 @@ function timeLabel(ts){
 function applyTheme(){
   document.documentElement.setAttribute('data-theme', theme);
   const meta = document.querySelector('meta[name="theme-color"]');
-  if(meta) meta.setAttribute('content', theme === 'light' ? '#F4F6FB' : '#0B1220');
+  if(meta) meta.setAttribute('content', theme === 'light' ? '#F3ECDE' : '#0B1220');
   const btn = document.getElementById('themeBtn');
-  if(btn) btn.innerHTML = theme === 'light' ? '&#9728;&#65039;' : '&#127769;';
+  if(btn) btn.innerHTML = theme === 'light' ? ICONS.sun : ICONS.moon;
 }
 
 function applyStaticText(){
@@ -382,7 +402,7 @@ function applyStaticText(){
   document.getElementById('searchBtn').setAttribute('aria-label', s.searchAria);
   document.getElementById('searchInput').setAttribute('placeholder', s.searchPlaceholder);
   document.getElementById('noteInput').setAttribute('placeholder', s.notePlaceholder);
-  document.getElementById('jumpBtn').innerHTML = s.jumpLatest;
+  document.getElementById('jumpLabel').textContent = s.jumpLatest;
   document.getElementById('themeBtn').setAttribute('aria-label', s.themeAria);
   document.getElementById('langBtn').setAttribute('aria-label', s.langAria);
   document.getElementById('langBtn').textContent = s.langToggle;
@@ -483,7 +503,7 @@ function escapeHtml(s){
 
 function itemRow(item, noteId, isSub){
   const key = isSub ? noteId+'::'+item.id : item.id;
-  const icon = item.status === 'done' ? '&#10003;' : '';
+  const icon = item.status === 'done' ? ICONS.checkSmall : '';
   const tagText = item.status === 'progress' ? t().tagProgress : item.status === 'done' ? t().tagDone : '';
 
   if(editingKey === key){
@@ -495,8 +515,8 @@ function itemRow(item, noteId, isSub){
         <div class="body">
           <textarea class="edit-input" rows="2" data-editkey="${key}">${escapeHtml(item.text)}</textarea>
           <div class="edit-actions">
-            <button class="save" data-action="edit-save" data-editkey="${key}" aria-label="${t().saveAria}">&#10003;</button>
-            <button class="cancel" data-action="edit-cancel" aria-label="${t().cancelAria}">&#10005;</button>
+            <button class="save" data-action="edit-save" data-editkey="${key}" aria-label="${t().saveAria}">${ICONS.check}</button>
+            <button class="cancel" data-action="edit-cancel" aria-label="${t().cancelAria}">${ICONS.close}</button>
           </div>
         </div>
       </div>
@@ -505,7 +525,7 @@ function itemRow(item, noteId, isSub){
 
   return `<div class="note-wrap">
     <div class="note ${item.status}">
-      <div class="dot" data-action="cycle" data-note="${noteId}" data-sub="${isSub?item.id:''}"></div>
+      <div class="dot" data-action="cycle" data-note="${noteId}" data-sub="${isSub?item.id:''}">${icon}</div>
       <div class="body">
         <div class="txt" data-action="edit" data-note="${noteId}" data-sub="${isSub?item.id:''}">${escapeHtml(item.text)}</div>
         <div class="meta">
@@ -514,8 +534,8 @@ function itemRow(item, noteId, isSub){
         </div>
       </div>
       <div class="note-actions">
-        <button data-action="edit" data-note="${noteId}" data-sub="${isSub?item.id:''}">&#9998;</button>
-        <button class="del" data-action="del" data-note="${noteId}" data-sub="${isSub?item.id:''}">&#10005;</button>
+        <button data-action="edit" data-note="${noteId}" data-sub="${isSub?item.id:''}">${ICONS.pencil}</button>
+        <button class="del" data-action="del" data-note="${noteId}" data-sub="${isSub?item.id:''}">${ICONS.close}</button>
       </div>
     </div>
     ${!isSub ? subsBlock(item) : ''}
@@ -531,8 +551,8 @@ function subsBlock(note){
   if(addingSubFor === note.id){
     html += `<div class="add-sub-input-row">
       <input type="text" class="sub-input" data-note="${note.id}" placeholder="${t().subPlaceholder}" maxlength="300">
-      <button class="save" data-action="sub-save" data-note="${note.id}" aria-label="${t().saveAria}">&#10003;</button>
-      <button class="cancel" data-action="sub-cancel" data-note="${note.id}" aria-label="${t().cancelAria}">&#10005;</button>
+      <button class="save" data-action="sub-save" data-note="${note.id}" aria-label="${t().saveAria}">${ICONS.check}</button>
+      <button class="cancel" data-action="sub-cancel" data-note="${note.id}" aria-label="${t().cancelAria}">${ICONS.close}</button>
     </div>`;
   }else{
     html += `<button class="add-sub-link" data-action="sub-open" data-note="${note.id}">${t().addSubLink}</button>`;
