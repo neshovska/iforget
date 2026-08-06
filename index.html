@@ -210,6 +210,27 @@ let searchQuery = '';
 const dayNames = ['Неделя','Понеделник','Вторник','Сряда','Четвъртък','Петък','Събота'];
 const monthNames = ['Януари','Февруари','Март','Април','Май','Юни','Юли','Август','Септември','Октомври','Ноември','Декември'];
 
+// Мап за транслитерация Кирилица→Латиница (официалната БГ транслитерационна
+// схема) — с него търсенето намира бележки без значение от езика/писмеността
+// на заявката: "shte se obadya" намира "ще се обадя" и обратно.
+const CYR_TO_LAT = {
+  'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ж':'zh','з':'z','и':'i',
+  'й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s',
+  'т':'t','у':'u','ф':'f','х':'h','ц':'ts','ч':'ch','ш':'sh','щ':'sht',
+  'ъ':'a','ь':'y','ю':'yu','я':'ya'
+};
+function toLatin(str){
+  let out = '';
+  for(const ch of str.toLowerCase()) out += CYR_TO_LAT[ch] !== undefined ? CYR_TO_LAT[ch] : ch;
+  return out;
+}
+function textMatches(text, q, qLatin){
+  const t = (text||'').toLowerCase();
+  if(!t) return false;
+  if(t.includes(q)) return true;
+  return toLatin(t).includes(qLatin);
+}
+
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 function dateStr(ts){ return new Date(ts).toISOString().slice(0,10); }
 
@@ -395,36 +416,48 @@ function statusGroupHtml(items, forceTodayIfEmpty){
 
 function render(){
   const q = searchQuery.trim().toLowerCase();
-  let pool = notes.slice();
+
+  // Докато търсим: показваме плосък списък с "предложения" веднага, докато
+  // потребителят пише — всички съвпадащи бележки, без значение от статуса
+  // им, сортирани по последна активност (най-скорошните най-горе), без
+  // разделяне по статус/дни. Съвпадението работи и през писменост
+  // (кирилица ⇄ латиница) чрез транслитерация. Щом полето се изчисти, се
+  // връщаме към нормалния изглед, групиран по статус.
   if(q){
-    pool = pool.filter(n =>
-      n.text.toLowerCase().includes(q) ||
-      (n.subs||[]).some(s=>s.text.toLowerCase().includes(q))
-    );
+    const qLatin = toLatin(q);
+    const results = notes.filter(n =>
+      textMatches(n.text, q, qLatin) ||
+      (n.subs||[]).some(s=>textMatches(s.text, q, qLatin))
+    ).sort((a,b)=>b.createdAt-a.createdAt);
+
+    const html = results.length
+      ? `<div class="day-block">
+          <div class="day-label">Резултати<span class="count">${results.length}</span></div>
+          ${results.map(n=>itemRow(n, n.id, false)).join('')}
+        </div>`
+      : `<div class="empty">Няма намерени бележки за "${escapeHtml(searchQuery.trim())}"</div>`;
+
+    document.getElementById('activeArea').innerHTML = html;
+    updateTopbarHeight();
+    attachHandlers();
+    return;
   }
 
-  const byStatus = status => pool.filter(n => (n.status||'open') === status).sort((a,b)=>a.createdAt-b.createdAt);
+  const byStatus = status => notes.filter(n => (n.status||'open') === status).sort((a,b)=>a.createdAt-b.createdAt);
   const done = byStatus('done');
   const progress = byStatus('progress');
   const open = byStatus('open');
 
   let html = '';
-  let shown = 0;
   [done, progress].forEach(items=>{
     if(!items.length) return;
-    shown += items.length;
     html += statusGroupHtml(items, false);
   });
   // "Активни" секцията винаги се показва (най-близо до лентата), с "Днес"
   // блок дори когато е празна — покана да напишеш нещо.
-  shown += open.length;
-  html += statusGroupHtml(open, !q);
+  html += statusGroupHtml(open, true);
 
-  if(q && shown === 0){
-    html = `<div class="empty">Няма намерени бележки за "${escapeHtml(searchQuery.trim())}"</div>`;
-  }
   document.getElementById('activeArea').innerHTML = html;
-
   updateTopbarHeight();
   attachHandlers();
 }
