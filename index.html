@@ -175,10 +175,10 @@ function dayLabel(ts){
   return dayNames[d.getDay()] + ', ' + d.getDate() + ' ' + monthNames[d.getMonth()];
 }
 
-async function load(){
+function load(){
   try{
-    const res = await window.storage.get(STORAGE_KEY, false);
-    notes = res && res.value ? JSON.parse(res.value) : [];
+    const raw = localStorage.getItem(STORAGE_KEY);
+    notes = raw ? JSON.parse(raw) : [];
   }catch(e){ notes = []; }
   notes.forEach(n=>{ if(!n.subs) n.subs = []; });
   render();
@@ -189,8 +189,8 @@ function scrollToBottom(smooth){
   window.scrollTo({top: document.documentElement.scrollHeight, behavior: smooth ? 'smooth' : 'auto'});
 }
 
-async function save(){
-  try{ await window.storage.set(STORAGE_KEY, JSON.stringify(notes), false); }
+function save(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); }
   catch(e){ console.error('save failed', e); }
 }
 
