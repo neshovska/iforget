@@ -136,16 +136,6 @@
     text-align:center;color:var(--text-dim);font-size:13px;
     padding:30px 10px;
   }
-
-  details.archive{margin-top:26px;}
-  details.archive > summary{
-    list-style:none;cursor:pointer;font-size:13px;font-weight:600;
-    color:var(--text-dim);padding:10px 4px;border-top:1px solid var(--border);
-    display:flex;align-items:center;justify-content:space-between;
-  }
-  details.archive > summary::-webkit-details-marker{display:none;}
-  details.archive > summary .chev{transition:transform .15s;}
-  details.archive[open] > summary .chev{transform:rotate(90deg);}
 </style>
 </head>
 <body>
@@ -155,7 +145,6 @@
 </div>
 
 <main id="activeArea"></main>
-<div id="archiveArea"></div>
 
 <div class="bottombar">
   <div class="input-row">
@@ -315,51 +304,29 @@ function subsBlock(note){
 }
 
 function render(){
-  // Активните бележки растат надолу като съобщения в чат: най-старите горе,
-  // най-новите долу до полето за писане (затова — възходяща подредба по време).
-  const active = notes.filter(n => n.status !== 'done').sort((a,b)=>a.createdAt-b.createdAt);
-  const done = notes.filter(n => n.status === 'done').sort((a,b)=>b.createdAt-a.createdAt);
+  // Всички бележки (активни и приключени) растат надолу като съобщения в чат:
+  // най-старите горе, най-новите долу до полето за писане — възходяща подредба
+  // по време, без отделно скрито "Приключени" копче. Приключените си остават
+  // видимо различими (зачертан текст, зелена точка, таг "завършено").
+  const all = notes.slice().sort((a,b)=>a.createdAt-b.createdAt);
 
-  const byDayActive = {};
-  active.forEach(n=>{
+  const byDay = {};
+  all.forEach(n=>{
     const k = dateStr(n.createdAt);
-    (byDayActive[k] = byDayActive[k] || []).push(n);
+    (byDay[k] = byDay[k] || []).push(n);
   });
-  const dayKeys = Object.keys(byDayActive).sort();
+  const dayKeys = Object.keys(byDay).sort();
   if(!dayKeys.includes(todayStr())) dayKeys.push(todayStr());
 
   let html = '';
   dayKeys.forEach(k=>{
-    const items = byDayActive[k] || [];
+    const items = byDay[k] || [];
     html += `<div class="day-block">
       <div class="day-label">${dayLabel(k+'T00:00:00')}${items.length?`<span class="count">${items.length}</span>`:''}</div>
-      ${items.length ? items.map(n=>itemRow(n, n.id, false)).join('') : `<div class="empty">Няма активни бележки</div>`}
+      ${items.length ? items.map(n=>itemRow(n, n.id, false)).join('') : `<div class="empty">Няма бележки</div>`}
     </div>`;
   });
   document.getElementById('activeArea').innerHTML = html;
-
-  // Архив на приключени бележки: скрит зад едно "Приключени (N)" копче,
-  // и вътре — плосък хронологичен списък по дни (без вложени година/месец/седмица,
-  // за да не се налагат по няколко клика, за да ги видиш).
-  let archHtml = '';
-  if(done.length){
-    const byDayDone = {};
-    done.forEach(n=>{
-      const k = dateStr(n.createdAt);
-      (byDayDone[k] = byDayDone[k] || []).push(n);
-    });
-    const doneDayKeys = Object.keys(byDayDone).sort().reverse();
-
-    archHtml += `<details class="archive"><summary>Приключени (${done.length}) <span class="chev">&#8250;</span></summary>`;
-    doneDayKeys.forEach(k=>{
-      archHtml += `<div class="day-block" style="margin-top:12px;">
-        <div class="day-label">${dayLabel(k+'T00:00:00')}</div>
-        ${byDayDone[k].map(n=>itemRow(n, n.id, false)).join('')}
-      </div>`;
-    });
-    archHtml += `</details>`;
-  }
-  document.getElementById('archiveArea').innerHTML = archHtml;
 
   attachHandlers();
 }
