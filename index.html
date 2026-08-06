@@ -68,6 +68,7 @@
 
   .bottombar{
     position:fixed;left:0;right:0;bottom:0;z-index:10;
+    transition:transform .12s ease-out;
     background:linear-gradient(0deg,var(--bg) 82%,transparent);
     padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 14px);
   }
@@ -360,40 +361,58 @@ function subsBlock(note){
   return html;
 }
 
+// Всеки статус е отделен блок, подреден отгоре надолу: Приключени → В прогрес
+// → Активни (най-близо до лентата за писане). Вътре във всеки блок бележките
+// вървят хронологично по дни (най-старите горе), точно както преди.
+function statusGroupHtml(items, forceTodayIfEmpty){
+  const byDay = {};
+  items.forEach(n=>{
+    const k = dateStr(n.createdAt);
+    (byDay[k] = byDay[k] || []).push(n);
+  });
+  const dayKeys = Object.keys(byDay).sort();
+  if(forceTodayIfEmpty && !dayKeys.includes(todayStr())) dayKeys.push(todayStr());
+
+  let html = '';
+  dayKeys.forEach(k=>{
+    const dayItems = byDay[k] || [];
+    html += `<div class="day-block">
+      <div class="day-label">${dayLabel(k+'T00:00:00')}${dayItems.length?`<span class="count">${dayItems.length}</span>`:''}</div>
+      ${dayItems.length ? dayItems.map(n=>itemRow(n, n.id, false)).join('') : `<div class="empty">Няма бележки</div>`}
+    </div>`;
+  });
+  return html;
+}
+
 function render(){
-  // Всички бележки (активни и приключени) растат надолу като съобщения в чат:
-  // най-старите горе, най-новите долу до полето за писане — възходяща подредба
-  // по време. Приключените си остават видимо различими (зачертан текст, зелена
-  // точка, таг "завършено"). Всяка бележка носи и часа си (timeLabel), а
-  // заглавието на деня се лепи под topbar-а, докато скролваш.
   const q = searchQuery.trim().toLowerCase();
-  let all = notes.slice().sort((a,b)=>a.createdAt-b.createdAt);
+  let pool = notes.slice();
   if(q){
-    all = all.filter(n =>
+    pool = pool.filter(n =>
       n.text.toLowerCase().includes(q) ||
       (n.subs||[]).some(s=>s.text.toLowerCase().includes(q))
     );
   }
 
-  const byDay = {};
-  all.forEach(n=>{
-    const k = dateStr(n.createdAt);
-    (byDay[k] = byDay[k] || []).push(n);
-  });
-  const dayKeys = Object.keys(byDay).sort();
-  if(!q && !dayKeys.includes(todayStr())) dayKeys.push(todayStr());
+  const byStatus = status => pool.filter(n => (n.status||'open') === status).sort((a,b)=>a.createdAt-b.createdAt);
+  const done = byStatus('done');
+  const progress = byStatus('progress');
+  const open = byStatus('open');
 
   let html = '';
-  if(q && all.length === 0){
+  let shown = 0;
+  [done, progress].forEach(items=>{
+    if(!items.length) return;
+    shown += items.length;
+    html += statusGroupHtml(items, false);
+  });
+  // "Активни" секцията винаги се показва (най-близо до лентата), с "Днес"
+  // блок дори когато е празна — покана да напишеш нещо.
+  shown += open.length;
+  html += statusGroupHtml(open, !q);
+
+  if(q && shown === 0){
     html = `<div class="empty">Няма намерени бележки за "${escapeHtml(searchQuery.trim())}"</div>`;
-  }else{
-    dayKeys.forEach(k=>{
-      const items = byDay[k] || [];
-      html += `<div class="day-block">
-        <div class="day-label">${dayLabel(k+'T00:00:00')}${items.length?`<span class="count">${items.length}</span>`:''}</div>
-        ${items.length ? items.map(n=>itemRow(n, n.id, false)).join('') : `<div class="empty">Няма бележки</div>`}
-      </div>`;
-    });
   }
   document.getElementById('activeArea').innerHTML = html;
 
@@ -493,6 +512,22 @@ window.addEventListener('scroll', ()=>{
 jumpBtn.addEventListener('click', ()=>scrollToBottom(true));
 
 window.addEventListener('resize', updateTopbarHeight);
+
+// iOS Safari премества/"вдига" position:fixed елементи неточно, когато се
+// покаже клавиатурата (класически бъг) — вместо да разчитаме на fixed
+// самичко, следим visualViewport и изтласкваме лентата за писане точно над
+// клавиатурата ръчно, без скок.
+function handleViewportResize(){
+  if(!window.visualViewport) return;
+  const vv = window.visualViewport;
+  const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+  const bar = document.querySelector('.bottombar');
+  if(bar) bar.style.transform = offset ? `translateY(-${offset}px)` : '';
+}
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', handleViewportResize);
+  window.visualViewport.addEventListener('scroll', handleViewportResize);
+}
 
 load();
 </script>
