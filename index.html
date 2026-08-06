@@ -24,11 +24,26 @@
     --danger:#E0574C;
     --topbar-h:56px;
   }
+  /* Светла тема — превключва се с бутона до търсачката; пази се в localStorage. */
+  :root[data-theme="light"]{
+    --bg:#F4F6FB;
+    --card:#FFFFFF;
+    --card-2:#EAEFF8;
+    --border:#D8E0EE;
+    --text:#16223B;
+    --text-dim:#6A7690;
+    --gold:#A6790B;
+    --gold-dim:#8C6A12;
+    --accent:#2F6FE0;
+    --accent-dim:#1F4FA8;
+    --green:#2C8C55;
+    --danger:#C93B30;
+  }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
     font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
     -webkit-font-smoothing:antialiased;height:100%;}
-  body{display:flex;flex-direction:column;min-height:100vh;}
+  body{display:flex;flex-direction:column;min-height:100vh;transition:background-color .15s ease,color .15s ease;}
 
   .topbar{
     position:sticky;top:0;z-index:20;flex-shrink:0;
@@ -40,10 +55,12 @@
     font-size:16px;font-weight:700;letter-spacing:.3px;color:var(--accent);
     margin:0;
   }
-  #searchBtn{
-    background:none;border:none;color:var(--text-dim);font-size:17px;
-    padding:2px 6px;line-height:1;
+  .topbar-actions{display:flex;align-items:center;gap:2px;}
+  .icon-btn{
+    background:none;border:none;color:var(--text-dim);font-size:15px;
+    padding:4px 7px;line-height:1;border-radius:8px;
   }
+  #langBtn{font-size:12px;font-weight:700;letter-spacing:.3px;}
   #searchBtn.active{color:var(--accent);}
   .search-row{display:none;gap:8px;margin-top:10px;}
   .search-row.open{display:flex;}
@@ -64,6 +81,27 @@
   main{
     padding:6px 14px 0;padding-bottom:88px;
     flex:1 0 auto;display:flex;flex-direction:column;justify-content:flex-end;
+  }
+
+  /* Заглавие на статус-секция — стои над всички дневни блокове с дадения
+     статус, за да личи ясно разделението Приключени / В прогрес / Активни,
+     отделно от групирането по дата вътре във всяка секция. */
+  .status-section{
+    display:flex;align-items:center;gap:8px;margin:22px 4px 2px;
+    font-size:12.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+    color:var(--text-dim);
+  }
+  .status-section:first-child{margin-top:4px;}
+  .status-section-dot{width:8px;height:8px;border-radius:50%;background:var(--text-dim);flex-shrink:0;}
+  .status-section.done{color:var(--green);}
+  .status-section.done .status-section-dot{background:var(--green);}
+  .status-section.progress{color:var(--gold);}
+  .status-section.progress .status-section-dot{background:var(--gold);}
+  .status-section.active{color:var(--accent);}
+  .status-section.active .status-section-dot{background:var(--accent);}
+  .status-section-count{
+    background:var(--card-2);color:inherit;border-radius:8px;
+    padding:1px 7px;font-size:11px;font-weight:600;
   }
 
   .bottombar{
@@ -181,7 +219,11 @@
 <div class="topbar">
   <div class="topbar-row">
     <h1>IForget</h1>
-    <button id="searchBtn" aria-label="Търсене">&#128269;</button>
+    <div class="topbar-actions">
+      <button id="langBtn" class="icon-btn" aria-label="Език">EN</button>
+      <button id="themeBtn" class="icon-btn" aria-label="Тема">&#127769;</button>
+      <button id="searchBtn" class="icon-btn" aria-label="Търсене">&#128269;</button>
+    </div>
   </div>
   <div class="search-row" id="searchRow">
     <input id="searchInput" type="text" placeholder="Търси в бележките...">
@@ -202,13 +244,47 @@
 
 <script>
 const STORAGE_KEY = 'notes';
+const THEME_KEY = 'theme';
+const LANG_KEY = 'lang';
 let notes = [];
 let editingKey = null;
 let addingSubFor = null;
 let searchQuery = '';
+let theme = localStorage.getItem(THEME_KEY) || 'dark';
+let lang = localStorage.getItem(LANG_KEY) || 'bg';
 
-const dayNames = ['Неделя','Понеделник','Вторник','Сряда','Четвъртък','Петък','Събота'];
-const monthNames = ['Януари','Февруари','Март','Април','Май','Юни','Юли','Август','Септември','Октомври','Ноември','Декември'];
+// Текстове за двата езика — БГ (по подразбиране) и EN. t() връща обекта за
+// текущо избрания език; при смяна презаписваме статичните надписи и
+// презентираме бележките наново.
+const STRINGS = {
+  bg: {
+    searchAria: 'Търсене', searchPlaceholder: 'Търси в бележките...',
+    notePlaceholder: 'Нова бележка...', subPlaceholder: 'Подбележка...',
+    addSubLink: '+ подбележка', cancelAria: 'Откажи',
+    jumpLatest: '↓ Най-нови',
+    today: 'Днес', yesterday: 'Вчера', noNotes: 'Няма бележки',
+    results: 'Резултати', noResultsFor: q => `Няма намерени бележки за "${q}"`,
+    tagProgress: 'в прогрес', tagDone: 'завършено',
+    sectionDone: 'Приключени', sectionProgress: 'В прогрес', sectionActive: 'Активни',
+    dayNames: ['Неделя','Понеделник','Вторник','Сряда','Четвъртък','Петък','Събота'],
+    monthNames: ['Януари','Февруари','Март','Април','Май','Юни','Юли','Август','Септември','Октомври','Ноември','Декември'],
+    langToggle: 'EN', themeAria: 'Тема', langAria: 'Език'
+  },
+  en: {
+    searchAria: 'Search', searchPlaceholder: 'Search notes...',
+    notePlaceholder: 'New note...', subPlaceholder: 'Sub-note...',
+    addSubLink: '+ sub-note', cancelAria: 'Cancel',
+    jumpLatest: '↓ Latest',
+    today: 'Today', yesterday: 'Yesterday', noNotes: 'No notes',
+    results: 'Results', noResultsFor: q => `No notes found for "${q}"`,
+    tagProgress: 'in progress', tagDone: 'done',
+    sectionDone: 'Completed', sectionProgress: 'In progress', sectionActive: 'Active',
+    dayNames: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
+    monthNames: ['January','February','March','April','May','June','July','August','September','October','November','December'],
+    langToggle: 'BG', themeAria: 'Theme', langAria: 'Language'
+  }
+};
+function t(){ return STRINGS[lang]; }
 
 // Мап за транслитерация Кирилица→Латиница (официалната БГ транслитерационна
 // схема) — с него търсенето намира бележки без значение от езика/писмеността
@@ -225,10 +301,10 @@ function toLatin(str){
   return out;
 }
 function textMatches(text, q, qLatin){
-  const t = (text||'').toLowerCase();
-  if(!t) return false;
-  if(t.includes(q)) return true;
-  return toLatin(t).includes(qLatin);
+  const tx = (text||'').toLowerCase();
+  if(!tx) return false;
+  if(tx.includes(q)) return true;
+  return toLatin(tx).includes(qLatin);
 }
 
 function todayStr(){ return new Date().toISOString().slice(0,10); }
@@ -236,17 +312,37 @@ function dateStr(ts){ return new Date(ts).toISOString().slice(0,10); }
 
 function dayLabel(ts){
   const d = new Date(ts);
-  const t = new Date(); t.setHours(0,0,0,0);
-  const y = new Date(t); y.setDate(y.getDate()-1);
+  const now = new Date(); now.setHours(0,0,0,0);
+  const y = new Date(now); y.setDate(y.getDate()-1);
   const dd = new Date(d); dd.setHours(0,0,0,0);
-  if(dd.getTime() === t.getTime()) return 'Днес';
-  if(dd.getTime() === y.getTime()) return 'Вчера';
-  return dayNames[d.getDay()] + ', ' + d.getDate() + ' ' + monthNames[d.getMonth()];
+  if(dd.getTime() === now.getTime()) return t().today;
+  if(dd.getTime() === y.getTime()) return t().yesterday;
+  return t().dayNames[d.getDay()] + ', ' + d.getDate() + ' ' + t().monthNames[d.getMonth()];
 }
 
 function timeLabel(ts){
   const d = new Date(ts);
   return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+
+function applyTheme(){
+  document.documentElement.setAttribute('data-theme', theme);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.setAttribute('content', theme === 'light' ? '#F4F6FB' : '#0B1220');
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.innerHTML = theme === 'light' ? '&#9728;&#65039;' : '&#127769;';
+}
+
+function applyStaticText(){
+  const s = t();
+  document.documentElement.setAttribute('lang', lang);
+  document.getElementById('searchBtn').setAttribute('aria-label', s.searchAria);
+  document.getElementById('searchInput').setAttribute('placeholder', s.searchPlaceholder);
+  document.getElementById('noteInput').setAttribute('placeholder', s.notePlaceholder);
+  document.getElementById('jumpBtn').innerHTML = s.jumpLatest;
+  document.getElementById('themeBtn').setAttribute('aria-label', s.themeAria);
+  document.getElementById('langBtn').setAttribute('aria-label', s.langAria);
+  document.getElementById('langBtn').textContent = s.langToggle;
 }
 
 function load(){
@@ -340,7 +436,7 @@ function escapeHtml(s){
 function itemRow(item, noteId, isSub){
   const key = isSub ? noteId+'::'+item.id : item.id;
   const icon = item.status === 'done' ? '&#10003;' : '';
-  const tagText = item.status === 'progress' ? 'в прогрес' : item.status === 'done' ? 'завършено' : '';
+  const tagText = item.status === 'progress' ? t().tagProgress : item.status === 'done' ? t().tagDone : '';
 
   if(editingKey === key){
     return `<div class="note-wrap">
@@ -380,20 +476,21 @@ function subsBlock(note){
   html += `<div class="add-sub-row" style="margin-left:20px;">`;
   if(addingSubFor === note.id){
     html += `<div class="add-sub-input-row">
-      <input type="text" class="sub-input" data-note="${note.id}" placeholder="Подбележка..." maxlength="300">
+      <input type="text" class="sub-input" data-note="${note.id}" placeholder="${t().subPlaceholder}" maxlength="300">
       <button data-action="sub-save" data-note="${note.id}">OK</button>
-      <button class="cancel" data-action="sub-cancel" data-note="${note.id}" aria-label="Откажи">&#10005;</button>
+      <button class="cancel" data-action="sub-cancel" data-note="${note.id}" aria-label="${t().cancelAria}">&#10005;</button>
     </div>`;
   }else{
-    html += `<button class="add-sub-link" data-action="sub-open" data-note="${note.id}">+ подбележка</button>`;
+    html += `<button class="add-sub-link" data-action="sub-open" data-note="${note.id}">${t().addSubLink}</button>`;
   }
   html += `</div>`;
   return html;
 }
 
-// Всеки статус е отделен блок, подреден отгоре надолу: Приключени → В прогрес
-// → Активни (най-близо до лентата за писане). Вътре във всеки блок бележките
-// вървят хронологично по дни (най-старите горе), точно както преди.
+// Всеки статус е отделен блок с ясно заглавие (status-section), подреден
+// отгоре надолу: Приключени → В прогрес → Активни (най-близо до лентата за
+// писане). Вътре във всеки блок бележките вървят хронологично по дни
+// (най-старите горе).
 function statusGroupHtml(items, forceTodayIfEmpty){
   const byDay = {};
   items.forEach(n=>{
@@ -408,10 +505,14 @@ function statusGroupHtml(items, forceTodayIfEmpty){
     const dayItems = byDay[k] || [];
     html += `<div class="day-block">
       <div class="day-label">${dayLabel(k+'T00:00:00')}${dayItems.length?`<span class="count">${dayItems.length}</span>`:''}</div>
-      ${dayItems.length ? dayItems.map(n=>itemRow(n, n.id, false)).join('') : `<div class="empty">Няма бележки</div>`}
+      ${dayItems.length ? dayItems.map(n=>itemRow(n, n.id, false)).join('') : `<div class="empty">${t().noNotes}</div>`}
     </div>`;
   });
   return html;
+}
+
+function sectionHeader(label, count, cls){
+  return `<div class="status-section ${cls}"><span class="status-section-dot"></span>${label}<span class="status-section-count">${count}</span></div>`;
 }
 
 function render(){
@@ -432,10 +533,10 @@ function render(){
 
     const html = results.length
       ? `<div class="day-block">
-          <div class="day-label">Резултати<span class="count">${results.length}</span></div>
+          <div class="day-label">${t().results}<span class="count">${results.length}</span></div>
           ${results.map(n=>itemRow(n, n.id, false)).join('')}
         </div>`
-      : `<div class="empty">Няма намерени бележки за "${escapeHtml(searchQuery.trim())}"</div>`;
+      : `<div class="empty">${t().noResultsFor(escapeHtml(searchQuery.trim()))}</div>`;
 
     document.getElementById('activeArea').innerHTML = html;
     updateTopbarHeight();
@@ -449,13 +550,11 @@ function render(){
   const open = byStatus('open');
 
   let html = '';
-  [done, progress].forEach(items=>{
-    if(!items.length) return;
-    html += statusGroupHtml(items, false);
-  });
+  if(done.length) html += sectionHeader(t().sectionDone, done.length, 'done') + statusGroupHtml(done, false);
+  if(progress.length) html += sectionHeader(t().sectionProgress, progress.length, 'progress') + statusGroupHtml(progress, false);
   // "Активни" секцията винаги се показва (най-близо до лентата), с "Днес"
   // блок дори когато е празна — покана да напишеш нещо.
-  html += statusGroupHtml(open, true);
+  html += sectionHeader(t().sectionActive, open.length, 'active') + statusGroupHtml(open, true);
 
   document.getElementById('activeArea').innerHTML = html;
   updateTopbarHeight();
@@ -552,6 +651,18 @@ document.getElementById('searchClear').addEventListener('click', ()=>{
   searchQuery=''; searchInput.value=''; searchInput.focus(); render();
 });
 
+document.getElementById('themeBtn').addEventListener('click', ()=>{
+  theme = theme === 'light' ? 'dark' : 'light';
+  localStorage.setItem(THEME_KEY, theme);
+  applyTheme();
+});
+document.getElementById('langBtn').addEventListener('click', ()=>{
+  lang = lang === 'bg' ? 'en' : 'bg';
+  localStorage.setItem(LANG_KEY, lang);
+  applyStaticText();
+  render();
+});
+
 // Плаващо копче "най-нови" — появява се, ако потребителят е скролнал далеч
 // от дъното на страницата (напр. докато преглежда резултати от търсене).
 const jumpBtn = document.getElementById('jumpBtn');
@@ -579,6 +690,8 @@ if(window.visualViewport){
   window.visualViewport.addEventListener('scroll', handleViewportResize);
 }
 
+applyTheme();
+applyStaticText();
 load();
 </script>
 </body>
