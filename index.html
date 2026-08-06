@@ -24,21 +24,22 @@
     --danger:#E0574C;
     --topbar-h:56px;
   }
-  /* Светла тема — топъл бежов тон вместо студено бяло; превключва се с
-     бутона до търсачката и се пази в localStorage. */
+  /* Светла тема — палитра "Linen": сиво-бежова основа, приглушен синьо-сив
+     акцент вместо ярко синьо; превключва се с бутона до търсачката и се
+     пази в localStorage. */
   :root[data-theme="light"]{
-    --bg:#F3ECDE;
-    --card:#FBF7EE;
-    --card-2:#EBE1CC;
-    --border:#DDCDA9;
-    --text:#2B2318;
-    --text-dim:#8A7B63;
-    --gold:#A6790B;
-    --gold-dim:#8C6A12;
-    --accent:#2F6FE0;
-    --accent-dim:#1F4FA8;
-    --green:#2C8C55;
-    --danger:#C93B30;
+    --bg:#F2EEE4;
+    --card:#FAF8F2;
+    --card-2:#E9E3D3;
+    --border:#DCD3BE;
+    --text:#3A342A;
+    --text-dim:#948A76;
+    --gold:#A98A4A;
+    --gold-dim:#8A6E38;
+    --accent:#6B8CAE;
+    --accent-dim:#4F6C8A;
+    --green:#6B9A7C;
+    --danger:#C4746A;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
@@ -135,27 +136,25 @@
   }
   #addBtn:active{transform:scale(.94);}
 
-  /* Лента със "Запази"/"Откажи", която сменя обичайната лента за нова
-     бележка, докато редактираме съществуваща бележка — по-удобно е
-     потвърждението да е винаги в долната част на екрана, до палеца,
-     вместо под самия текст. Следва същата логика за клавиатурата като
-     .bottombar (виж handleViewportResize по-долу). */
+  /* Малки бутони "Запази"/"Откажи" при редакция на бележка — заместват
+     лентата за нова бележка, докато редактираме. Позиционирани долу вляво,
+     точно срещу "+" бутона за нова бележка (който е вдясно) — компактни,
+     не разтегнати през целия екран. Следват клавиатурата на iOS Safari
+     по същия начин като .bottombar (виж handleViewportResize по-долу). */
   .editbar{
-    display:none;position:fixed;left:0;right:0;bottom:0;z-index:12;
-    transition:transform .12s ease-out;
-    background:linear-gradient(0deg,var(--bg) 88%,transparent);
-    padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 14px);
-    gap:10px;
+    display:none;position:fixed;left:16px;
+    bottom:calc(env(safe-area-inset-bottom,0px) + 14px);
+    z-index:12;transition:transform .12s ease-out;gap:8px;
   }
   .editbar.show{display:flex;}
-  .editbar-btn{
-    flex:1;height:46px;border-radius:14px;border:none;
-    font-size:15px;font-weight:600;
-    display:flex;align-items:center;justify-content:center;gap:8px;
+  .editbar button{
+    width:40px;height:40px;border-radius:12px;border:none;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    box-shadow:0 4px 14px rgba(0,0,0,.25);
   }
-  .editbar-btn.cancel{background:var(--card-2);color:var(--text-dim);border:1px solid var(--border);}
-  .editbar-btn.save{background:var(--accent);color:var(--bg);}
-  .editbar-btn:active{transform:scale(.97);}
+  .editbar button.cancel{background:var(--card-2);color:var(--text-dim);border:1px solid var(--border);}
+  .editbar button.save{background:var(--accent);color:var(--bg);}
+  .editbar button:active{transform:scale(.94);}
 
   /* Заглавието на деня е "залепено" точно под topbar-а, докато скролваш —
      така винаги се вижда в коя дата от хронологията се намираш. */
@@ -277,8 +276,8 @@
 </div>
 
 <div class="editbar" id="editBar">
-  <button class="editbar-btn cancel" id="editCancelBtn"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg><span id="editCancelLabel">Откажи</span></button>
-  <button class="editbar-btn save" id="editSaveBtn"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg><span id="editSaveLabel">Запази</span></button>
+  <button class="cancel" id="editCancelBtn" aria-label="Откажи"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg></button>
+  <button class="save" id="editSaveBtn" aria-label="Запази"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></button>
 </div>
 
 <script>
@@ -409,7 +408,7 @@ function timeLabel(ts){
 function applyTheme(){
   document.documentElement.setAttribute('data-theme', theme);
   const meta = document.querySelector('meta[name="theme-color"]');
-  if(meta) meta.setAttribute('content', theme === 'light' ? '#F3ECDE' : '#0B1220');
+  if(meta) meta.setAttribute('content', theme === 'light' ? '#F2EEE4' : '#0B1220');
   const btn = document.getElementById('themeBtn');
   if(btn) btn.innerHTML = theme === 'light' ? ICONS.sun : ICONS.moon;
 }
@@ -424,8 +423,8 @@ function applyStaticText(){
   document.getElementById('themeBtn').setAttribute('aria-label', s.themeAria);
   document.getElementById('langBtn').setAttribute('aria-label', s.langAria);
   document.getElementById('langBtn').textContent = s.langToggle;
-  document.getElementById('editCancelLabel').textContent = s.cancelAria;
-  document.getElementById('editSaveLabel').textContent = s.saveAria;
+  document.getElementById('editCancelBtn').setAttribute('aria-label', s.cancelAria);
+  document.getElementById('editSaveBtn').setAttribute('aria-label', s.saveAria);
 }
 
 function load(){
@@ -448,7 +447,8 @@ function updateTopbarHeight(){
 }
 
 // Докато редактираме бележка, лентата за нова бележка отстъпва мястото си на
-// лентата "Запази"/"Откажи" — само една долна лента се вижда наведнъж.
+// малките бутони "Запази"/"Откажи" — само една долна лента/чифт бутони се
+// вижда наведнъж.
 function syncBottomBars(){
   const bottomBar = document.getElementById('bottomBar');
   const editBar = document.getElementById('editBar');
@@ -537,8 +537,8 @@ function itemRow(item, noteId, isSub){
   const tagText = item.status === 'progress' ? t().tagProgress : item.status === 'done' ? t().tagDone : '';
 
   if(editingKey === key){
-    // Бележката просто показва текстовото поле — бутоните "Запази"/"Откажи"
-    // са в постоянната лента най-долу на екрана (виж #editBar), а не тук.
+    // Бележката просто показва текстовото поле — малките бутони "Запази"/
+    // "Откажи" са долу вляво на екрана (виж #editBar), а не тук.
     return `<div class="note-wrap">
       <div class="note ${item.status}">
         <div class="dot">${icon}</div>
@@ -743,7 +743,7 @@ document.getElementById('noteInput').addEventListener('keydown', e=>{
   }
 });
 
-// Долната лента "Запази"/"Откажи" при редакция — статични бутони извън
+// Малките бутони "Запази"/"Откажи" при редакция — статични, извън
 // activeArea, слушателите се закачат само веднъж. mousedown вместо click, за
 // да сработят преди textarea да загуби фокус (blur-ът иначе би "изпреварил"
 // Откажи и да запази текста автоматично).
@@ -801,9 +801,9 @@ window.addEventListener('resize', updateTopbarHeight);
 
 // iOS Safari премества/"вдига" position:fixed елементи неточно, когато се
 // покаже клавиатурата (класически бъг) — вместо да разчитаме на fixed
-// самичко, следим visualViewport и изтласкваме активната долна лента
-// (за нова бележка или за редакция, която и да е видима) точно над
-// клавиатурата ръчно, без скок.
+// самичко, следим visualViewport и изтласкваме активната долна лента/бутони
+// (за нова бележка или за редакция, което е видимо) точно над клавиатурата
+// ръчно, без скок.
 function handleViewportResize(){
   if(!window.visualViewport) return;
   const vv = window.visualViewport;
