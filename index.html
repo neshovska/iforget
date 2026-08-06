@@ -258,7 +258,7 @@ let lang = localStorage.getItem(LANG_KEY) || 'bg';
 // презентираме бележките наново.
 const STRINGS = {
   bg: {
-    searchAria: 'Търсене', searchPlaceholder: 'Търси в бележките...',
+    searchAria: 'Търсене', searchPlaceholder: 'Търси по текст или дата (напр. 06.08, вторник)...',
     notePlaceholder: 'Нова бележка...', subPlaceholder: 'Подбележка...',
     addSubLink: '+ подбележка', cancelAria: 'Откажи',
     jumpLatest: '↓ Най-нови',
@@ -271,7 +271,7 @@ const STRINGS = {
     langToggle: 'EN', themeAria: 'Тема', langAria: 'Език'
   },
   en: {
-    searchAria: 'Search', searchPlaceholder: 'Search notes...',
+    searchAria: 'Search', searchPlaceholder: 'Search text or date (e.g. 06.08, tuesday)...',
     notePlaceholder: 'New note...', subPlaceholder: 'Sub-note...',
     addSubLink: '+ sub-note', cancelAria: 'Cancel',
     jumpLatest: '↓ Latest',
@@ -305,6 +305,35 @@ function textMatches(text, q, qLatin){
   if(!tx) return false;
   if(tx.includes(q)) return true;
   return toLatin(tx).includes(qLatin);
+}
+
+// Генерира различни форми на датата на дадена бележка (ISO, дд.мм.гггг,
+// дд.мм, ден+месец на кирилица/латиница, ден от седмицата на двата езика,
+// "днес"/"вчера" при съвпадение), за да могат бележките да се търсят и по
+// дата, не само по текст.
+function dateSearchStrings(ts){
+  const d = new Date(ts);
+  const iso = dateStr(ts);
+  const day = d.getDate(), month = d.getMonth()+1, year = d.getFullYear();
+  const dd = String(day).padStart(2,'0'), mm = String(month).padStart(2,'0');
+  const strs = [
+    iso,
+    `${dd}.${mm}.${year}`, `${dd}.${mm}`, `${day}.${month}`,
+    `${dd}/${mm}/${year}`, `${dd}/${mm}`, `${day}/${month}`,
+    `${day} ${STRINGS.bg.monthNames[d.getMonth()]}`, `${day} ${STRINGS.en.monthNames[d.getMonth()]}`,
+    STRINGS.bg.monthNames[d.getMonth()], STRINGS.en.monthNames[d.getMonth()],
+    STRINGS.bg.dayNames[d.getDay()], STRINGS.en.dayNames[d.getDay()],
+    String(year)
+  ];
+  const now = new Date(); now.setHours(0,0,0,0);
+  const y = new Date(now); y.setDate(y.getDate()-1);
+  const dd0 = new Date(d); dd0.setHours(0,0,0,0);
+  if(dd0.getTime() === now.getTime()) strs.push('днес','today');
+  if(dd0.getTime() === y.getTime()) strs.push('вчера','yesterday');
+  return strs.map(s=>s.toLowerCase());
+}
+function dateMatches(ts, q, qLatin){
+  return dateSearchStrings(ts).some(s => textMatches(s, q, qLatin));
 }
 
 function todayStr(){ return new Date().toISOString().slice(0,10); }
@@ -521,15 +550,17 @@ function render(){
   // Докато търсим: показваме плосък списък с "предложения" веднага, докато
   // потребителят пише — всички съвпадащи бележки, без значение от статуса
   // им, сортирани по последна активност (най-скорошните най-горе), без
-  // разделяне по статус/дни. Съвпадението работи и през писменост
-  // (кирилица ⇄ латиница) чрез транслитерация. Щом полето се изчисти, се
-  // връщаме към нормалния изглед, групиран по статус.
+  // разделяне по статус/дни. Съвпадението работи по текст (кирилица ⇄
+  // латиница чрез транслитерация) и по дата (ISO, дд.мм, ден от седмицата,
+  // месец, "днес"/"вчера" и т.н.). Щом полето се изчисти, се връщаме към
+  // нормалния изглед, групиран по статус.
   if(q){
     const qLatin = toLatin(q);
-    const results = notes.filter(n =>
+    const noteHit = n =>
       textMatches(n.text, q, qLatin) ||
-      (n.subs||[]).some(s=>textMatches(s.text, q, qLatin))
-    ).sort((a,b)=>b.createdAt-a.createdAt);
+      dateMatches(n.createdAt, q, qLatin) ||
+      (n.subs||[]).some(s => textMatches(s.text, q, qLatin) || dateMatches(s.createdAt, q, qLatin));
+    const results = notes.filter(noteHit).sort((a,b)=>b.createdAt-a.createdAt);
 
     const html = results.length
       ? `<div class="day-block">
