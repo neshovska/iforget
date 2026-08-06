@@ -182,6 +182,11 @@ async function load(){
   }catch(e){ notes = []; }
   notes.forEach(n=>{ if(!n.subs) n.subs = []; });
   render();
+  setTimeout(()=>scrollToBottom(false), 0);
+}
+
+function scrollToBottom(smooth){
+  window.scrollTo({top: document.documentElement.scrollHeight, behavior: smooth ? 'smooth' : 'auto'});
 }
 
 async function save(){
@@ -198,11 +203,12 @@ function findSub(noteId, subId){
 function addNote(text){
   text = text.trim();
   if(!text) return;
-  notes.unshift({
+  notes.push({
     id: 'n'+Date.now()+Math.random().toString(36).slice(2,6),
     text, createdAt: Date.now(), status: 'open', subs: []
   });
   save(); render();
+  setTimeout(()=>scrollToBottom(true), 0);
 }
 
 function addSub(noteId, text){
@@ -298,7 +304,9 @@ function subsBlock(note){
 }
 
 function render(){
-  const active = notes.filter(n => n.status !== 'done').sort((a,b)=>b.createdAt-a.createdAt);
+  // Активните бележки растат надолу като съобщения в чат: най-старите горе,
+  // най-новите долу до полето за писане (затова — възходяща подредба по време).
+  const active = notes.filter(n => n.status !== 'done').sort((a,b)=>a.createdAt-b.createdAt);
   const done = notes.filter(n => n.status === 'done').sort((a,b)=>b.createdAt-a.createdAt);
 
   const byDayActive = {};
@@ -306,8 +314,8 @@ function render(){
     const k = dateStr(n.createdAt);
     (byDayActive[k] = byDayActive[k] || []).push(n);
   });
-  const dayKeys = Object.keys(byDayActive).sort().reverse();
-  if(!dayKeys.includes(todayStr())) dayKeys.unshift(todayStr());
+  const dayKeys = Object.keys(byDayActive).sort();
+  if(!dayKeys.includes(todayStr())) dayKeys.push(todayStr());
 
   let html = '';
   dayKeys.forEach(k=>{
