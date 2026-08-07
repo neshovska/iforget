@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+&lt;!DOCTYPE html&gt;
 <html lang="bg">
 <head>
 <meta charset="UTF-8">
@@ -24,22 +24,22 @@
     --danger:#E0574C;
     --topbar-h:56px;
   }
-  /* Светла тема — палитра "Linen": сиво-бежова основа, приглушен синьо-сив
-     акцент вместо ярко синьо; превключва се с бутона до търсачката и се
-     пази в localStorage. */
+  /* Светла тема — палитра "Лавандула": бледо лилав фон, синьото остава
+     истинско (не приглушено), за да пасва на тъмната тема; превключва се
+     с бутона до търсачката и се пази в localStorage. */
   :root[data-theme="light"]{
-    --bg:#F2EEE4;
-    --card:#FAF8F2;
-    --card-2:#E9E3D3;
-    --border:#DCD3BE;
-    --text:#3A342A;
-    --text-dim:#948A76;
-    --gold:#A98A4A;
-    --gold-dim:#8A6E38;
-    --accent:#6B8CAE;
-    --accent-dim:#4F6C8A;
-    --green:#6B9A7C;
-    --danger:#C4746A;
+    --bg:#EFEAF8;
+    --card:#FBF8FE;
+    --card-2:#E1D6F0;
+    --border:#CCB9E6;
+    --text:#241A38;
+    --text-dim:#786A93;
+    --gold:#A9812A;
+    --gold-dim:#836420;
+    --accent:#3B6EFF;
+    --accent-dim:#2C52C7;
+    --green:#4C8F63;
+    --danger:#C2503F;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
@@ -145,7 +145,7 @@
 
   /* Заглавието на деня е "залепено" точно под topbar-а, докато скролваш —
      така винаги се вижда в коя дата от хронологията се намираш. */
-  .day-block{margin-top:20px;}
+  .day-block{margin-top:14px;}
   .day-label{
     position:sticky;top:var(--topbar-h);z-index:5;background:var(--bg);
     font-size:12px;font-weight:600;color:var(--text-dim);
@@ -158,24 +158,24 @@
     padding:1px 7px;font-size:11px;font-weight:600;
   }
 
-  .note-wrap{margin-bottom:8px;}
+  .note-wrap{margin-bottom:6px;}
   .note{
-    background:var(--card);border:1px solid var(--border);border-radius:14px;
-    padding:11px 12px;display:flex;align-items:flex-start;gap:10px;
+    background:var(--card);border:1px solid var(--border);border-radius:11px;
+    padding:8px 10px;display:flex;align-items:flex-start;gap:8px;
   }
   .note .dot{
-    width:22px;height:22px;border-radius:50%;flex-shrink:0;margin-top:1px;
-    border:2px solid var(--text-dim);display:flex;align-items:center;justify-content:center;
+    width:17px;height:17px;border-radius:50%;flex-shrink:0;margin-top:2px;
+    border:1.5px solid var(--text-dim);display:flex;align-items:center;justify-content:center;
   }
   .note.progress .dot{border-color:var(--gold);background:rgba(201,162,39,.15);}
   .note.done .dot{border-color:var(--green);background:var(--green);color:#0E1A10;}
   .note .body{flex:1;min-width:0;}
-  .note .txt{font-size:15px;line-height:1.4;word-break:break-word;}
+  .note .txt{font-size:14px;line-height:1.35;word-break:break-word;}
   .note.done .txt{color:var(--text-dim);text-decoration:line-through;}
-  .note .meta{display:flex;align-items:center;gap:6px;margin-top:4px;}
+  .note .meta{display:flex;align-items:center;gap:6px;margin-top:3px;}
   .note .tag{
-    display:inline-block;font-size:11px;font-weight:600;
-    padding:1px 7px;border-radius:7px;letter-spacing:.3px;
+    display:inline-block;font-size:10px;font-weight:600;
+    padding:0 6px;border-radius:7px;letter-spacing:.3px;
   }
   .note.progress .tag{background:rgba(201,162,39,.18);color:var(--gold);}
   .note.done .tag{background:rgba(93,160,107,.18);color:var(--green);}
@@ -183,7 +183,7 @@
 
   .note-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0;}
   .note-actions button{
-    width:26px;height:26px;border:none;background:none;
+    width:21px;height:21px;border:none;background:none;
     color:var(--text-dim);display:flex;align-items:center;justify-content:center;
   }
   .note-actions button.del{color:var(--danger);}
@@ -205,9 +205,9 @@
   .edit-actions button.save{background:var(--accent);color:var(--bg);}
   .edit-actions button:active{transform:scale(.94);}
 
-  .subs{margin:8px 0 0 20px;padding-left:12px;border-left:2px solid var(--border);}
-  .subs .note{padding:8px 10px;background:var(--card-2);}
-  .subs .note-wrap{margin-bottom:6px;}
+  .subs{margin:6px 0 0 15px;padding-left:9px;border-left:2px solid var(--border);}
+  .subs .note{padding:6px 8px;background:var(--card-2);}
+  .subs .note-wrap{margin-bottom:4px;}
   .add-sub-row{margin-top:6px;}
   .add-sub-link{
     background:none;border:none;color:var(--accent-dim);font-size:12.5px;
@@ -404,7 +404,7 @@ function timeLabel(ts){
 function applyTheme(){
   document.documentElement.setAttribute('data-theme', theme);
   const meta = document.querySelector('meta[name="theme-color"]');
-  if(meta) meta.setAttribute('content', theme === 'light' ? '#F2EEE4' : '#0B1220');
+  if(meta) meta.setAttribute('content', theme === 'light' ? '#EFEAF8' : '#0B1220');
   const btn = document.getElementById('themeBtn');
   if(btn) btn.innerHTML = theme === 'light' ? ICONS.sun : ICONS.moon;
 }
