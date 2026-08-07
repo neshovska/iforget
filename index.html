@@ -558,6 +558,7 @@ const STRINGS = {
     errEmailInUse: 'Вече има акаунт с този имейл — опитай вход вместо регистрация.',
     errWeakPassword: 'Паролата трябва да е поне 6 символа.',
     errTooManyRequests: 'Твърде много опити — изчакай малко и опитай пак.',
+    errOperationNotAllowed: 'Входът с имейл/парола не е включен за това приложение (администраторска настройка).',
     errGeneric: 'Нещо се обърка. Опитай отново.',
     errPasswordMismatch: 'Паролите не съвпадат.'
   },
@@ -597,6 +598,7 @@ const STRINGS = {
     errEmailInUse: 'An account with this email already exists — try signing in instead.',
     errWeakPassword: 'Password must be at least 6 characters.',
     errTooManyRequests: 'Too many attempts — wait a bit and try again.',
+    errOperationNotAllowed: 'Email/password sign-in is not enabled for this app (admin setting).',
     errGeneric: 'Something went wrong. Please try again.',
     errPasswordMismatch: "Passwords don't match."
   }
@@ -802,7 +804,8 @@ function translateAuthError(code){
     'auth/invalid-credential': s.errWrongPassword,
     'auth/email-already-in-use': s.errEmailInUse,
     'auth/weak-password': s.errWeakPassword,
-    'auth/too-many-requests': s.errTooManyRequests
+    'auth/too-many-requests': s.errTooManyRequests,
+    'auth/operation-not-allowed': s.errOperationNotAllowed
   };
   return map[code] || s.errGeneric;
 }
