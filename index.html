@@ -216,8 +216,8 @@
   .auth-toggle-mode{font-size:13px;color:var(--text-dim);margin-top:12px;}
   .auth-loading{font-size:13px;color:var(--text-dim);margin-top:18px;}
 
-  /* Кръгло "профилче" в топбара — снимка на Google акаунта (или инициал,
-     ако няма снимка); тапва се за изход. */
+  /* Кръгло "профилче" в топбара — инициал на имейла (цветът му е избираем,
+     виж .color-sw по-долу), тапва се за отваряне на .profile-panel. */
   .user-chip{
     -webkit-appearance:none;appearance:none;
     width:28px;height:28px;border-radius:50%;overflow:hidden;flex-shrink:0;padding:0;
@@ -227,6 +227,51 @@
   }
   .user-chip img{width:100%;height:100%;object-fit:cover;display:block;}
   .user-chip:active{opacity:.7;}
+
+  /* Панел "Профил" — смяна на цвета на буквата в профилчето, смяна на
+     парола/имейл (виж renderProfileMenu()/renderPasswordForm()/
+     renderEmailForm() в скрипта) и изход. Компактен, аналогичен на
+     .settings-panel/.tag-picker — закачен под userChip. */
+  .profile-panel{
+    display:none;position:fixed;z-index:25;background:var(--card);border:1px solid var(--border);
+    border-radius:12px;padding:10px;box-shadow:0 10px 30px rgba(0,0,0,.35);width:230px;
+  }
+  .profile-panel.show{display:block;}
+  .profile-panel .profile-email{
+    font-size:11.5px;color:var(--text-dim);word-break:break-all;margin:0 0 10px;padding:0 2px;
+  }
+  .profile-panel .color-row{display:flex;gap:7px;margin:0 0 10px;padding:0 2px;flex-wrap:wrap;}
+  .profile-panel .color-sw{
+    -webkit-appearance:none;appearance:none;
+    width:20px;height:20px;border-radius:50%;border:2px solid transparent;padding:0;flex-shrink:0;
+  }
+  .profile-panel .color-sw.active{border-color:var(--text);}
+  .profile-panel hr{border:none;border-top:1px solid var(--border);margin:6px 0;}
+  .profile-panel button.action{
+    -webkit-appearance:none;appearance:none;width:100%;text-align:left;background:none;border:none;
+    color:var(--text);font-size:13px;font-weight:600;padding:8px;border-radius:8px;
+    display:flex;align-items:center;gap:8px;font-family:inherit;
+  }
+  .profile-panel button.action:active{background:var(--card-2);}
+  .profile-panel button.action.danger{color:var(--danger);}
+  .profile-panel .sub-form{display:flex;flex-direction:column;gap:8px;padding:2px;}
+  .profile-panel .sub-form input{
+    -webkit-appearance:none;appearance:none;width:100%;background:var(--card-2);border:1px solid var(--border);
+    color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;outline:none;
+    font-family:inherit;box-sizing:border-box;
+  }
+  .profile-panel .form-msg{font-size:11.5px;line-height:1.4;display:none;}
+  .profile-panel .form-msg.error{color:var(--danger);display:block;}
+  .profile-panel .form-msg.success{color:var(--green);display:block;}
+  .profile-panel .sub-form-actions{display:flex;gap:8px;}
+  .profile-panel .sub-form-actions button{
+    -webkit-appearance:none;appearance:none;flex:1;border-radius:8px;padding:8px;
+    font-size:12.5px;font-weight:700;font-family:inherit;border:none;
+  }
+  .profile-panel .sub-form-actions button.secondary{
+    background:var(--card-2);color:var(--text-dim);border:1px solid var(--border);font-weight:600;
+  }
+  .profile-panel .sub-form-actions button.primary{background:var(--accent);color:var(--bg);}
 
   /* Активната зона запълва останалото пространство и подрежда съдържанието
      си долу (justify-content:flex-end) — така при малко бележки те стоят
@@ -448,6 +493,7 @@
 
 <div class="tag-picker" id="tagPicker"></div>
 <div class="settings-panel" id="settingsPanel"></div>
+<div class="profile-panel" id="profilePanel"></div>
 <input type="file" id="importFileInput" accept="application/json,.json" style="display:none">
 
 <!-- Екран за вход — покрива всичко докато не се потвърди активна сесия
@@ -524,6 +570,12 @@ const db = firebase.firestore();
 let currentUser = null;
 let authMode = 'signin'; // 'signin' | 'signup' — за формата с имейл/парола
 
+// Цветът на буквата в профилчето (userChip) е избираем от потребителя —
+// чисто визуална, локална настройка (не се синхронизира през Firestore).
+const PROFILE_COLORS = ['#5B96FF','#FF4FA3','#4FAE9E','#A855F7','#DFAE3A','#E36358'];
+const PROFILE_COLOR_KEY = 'profileColor';
+let profileColor = localStorage.getItem(PROFILE_COLOR_KEY) || PROFILE_COLORS[0];
+
 // Монохромни SVG иконки (stroke=currentColor) — използвани навсякъде вместо
 // цветни емоджита, за да пасват винаги на текущата тема/цвят на бутона.
 const ICONS = {
@@ -579,7 +631,12 @@ const STRINGS = {
     errTooManyRequests: 'Твърде много опити — изчакай малко и опитай пак.',
     errOperationNotAllowed: 'Входът с имейл/парола не е включен за това приложение (администраторска настройка).',
     errGeneric: 'Нещо се обърка. Опитай отново.',
-    errPasswordMismatch: 'Паролите не съвпадат.'
+    errPasswordMismatch: 'Паролите не съвпадат.',
+    changePassword: 'Смени парола', changeEmail: 'Смени имейл', logoutBtn: 'Излез от профила',
+    newPasswordPlaceholder: 'Нова парола', confirmNewPasswordPlaceholder: 'Потвърди новата парола',
+    newEmailPlaceholder: 'Нов имейл',
+    passwordChanged: 'Паролата е сменена успешно.', emailChanged: 'Имейлът е сменен успешно.',
+    needsRecentLogin: 'За тази промяна трябва скорошен вход — излез и влез отново, после опитай пак.'
   },
   en: {
     searchAria: 'Search', searchPlaceholder: 'Search text or date (e.g. 06.08, tuesday)...',
@@ -619,7 +676,12 @@ const STRINGS = {
     errTooManyRequests: 'Too many attempts — wait a bit and try again.',
     errOperationNotAllowed: 'Email/password sign-in is not enabled for this app (admin setting).',
     errGeneric: 'Something went wrong. Please try again.',
-    errPasswordMismatch: "Passwords don't match."
+    errPasswordMismatch: "Passwords don't match.",
+    changePassword: 'Change password', changeEmail: 'Change email', logoutBtn: 'Sign out',
+    newPasswordPlaceholder: 'New password', confirmNewPasswordPlaceholder: 'Confirm new password',
+    newEmailPlaceholder: 'New email',
+    passwordChanged: 'Password changed successfully.', emailChanged: 'Email changed successfully.',
+    needsRecentLogin: 'This change needs a recent login — sign out, sign back in, then try again.'
   }
 };
 function t(){ return STRINGS[lang]; }
@@ -832,16 +894,128 @@ function signOutUser(){
   auth.signOut();
 }
 
+// Панел "Профил" — цвят на буквата + смяна на парола/имейл + изход.
+// Компактен, аналогичен на .settings-panel/.tag-picker: съдържанието се
+// презарежда на място (renderProfileMenu ⇄ renderPasswordForm/
+// renderEmailForm), без да се затваря/отваря панелът наново.
+function openProfilePanel(anchorEl){
+  renderProfileMenu();
+  const panel = document.getElementById('profilePanel');
+  const rect = anchorEl.getBoundingClientRect();
+  panel.style.top = (rect.bottom + 4) + 'px';
+  panel.style.right = (window.innerWidth - rect.right) + 'px';
+  panel.classList.add('show');
+}
+function closeProfilePanel(){
+  document.getElementById('profilePanel').classList.remove('show');
+}
+
+function renderProfileMenu(){
+  const s = t();
+  const panel = document.getElementById('profilePanel');
+  const email = currentUser ? (currentUser.email || '') : '';
+  let html = `<div class="profile-email">${escapeHtml(email)}</div>`;
+  html += `<div class="color-row">` + PROFILE_COLORS.map(c =>
+    `<button type="button" class="color-sw${c===profileColor?' active':''}" data-color="${c}" style="background:${c}" aria-label="${c}"></button>`
+  ).join('') + `</div>`;
+  html += `<hr>`;
+  html += `<button type="button" class="action" data-action="change-password">${ICONS.pencil}${s.changePassword}</button>`;
+  html += `<button type="button" class="action" data-action="change-email">${ICONS.pencil}${s.changeEmail}</button>`;
+  html += `<hr>`;
+  html += `<button type="button" class="action danger" data-action="logout">${ICONS.close}${s.logoutBtn}</button>`;
+  panel.innerHTML = html;
+
+  panel.querySelectorAll('.color-sw').forEach(b=>{
+    b.addEventListener('mousedown', e=>{
+      e.preventDefault();
+      profileColor = b.dataset.color;
+      localStorage.setItem(PROFILE_COLOR_KEY, profileColor);
+      updateUserChip(currentUser);
+      renderProfileMenu();
+    });
+  });
+  panel.querySelector('[data-action="change-password"]').addEventListener('mousedown', e=>{ e.preventDefault(); renderPasswordForm(); });
+  panel.querySelector('[data-action="change-email"]').addEventListener('mousedown', e=>{ e.preventDefault(); renderEmailForm(); });
+  panel.querySelector('[data-action="logout"]').addEventListener('mousedown', e=>{ e.preventDefault(); closeProfilePanel(); signOutUser(); });
+}
+
+function renderPasswordForm(){
+  const s = t();
+  const panel = document.getElementById('profilePanel');
+  panel.innerHTML = `
+    <div class="sub-form">
+      <input type="password" id="newPw1" placeholder="${s.newPasswordPlaceholder}" minlength="6" autocomplete="new-password">
+      <input type="password" id="newPw2" placeholder="${s.confirmNewPasswordPlaceholder}" minlength="6" autocomplete="new-password">
+      <div class="form-msg" id="pwFormMsg"></div>
+      <div class="sub-form-actions">
+        <button type="button" class="secondary" id="pwCancelBtn">${s.cancelAria}</button>
+        <button type="button" class="primary" id="pwSaveBtn">${s.saveAria}</button>
+      </div>
+    </div>`;
+  document.getElementById('pwCancelBtn').addEventListener('mousedown', e=>{ e.preventDefault(); renderProfileMenu(); });
+  document.getElementById('pwSaveBtn').addEventListener('mousedown', e=>{
+    e.preventDefault();
+    const pw1 = document.getElementById('newPw1').value;
+    const pw2 = document.getElementById('newPw2').value;
+    const msg = document.getElementById('pwFormMsg');
+    msg.className = 'form-msg';
+    if(pw1.length < 6){ msg.textContent = t().errWeakPassword; msg.classList.add('error'); return; }
+    if(pw1 !== pw2){ msg.textContent = t().errPasswordMismatch; msg.classList.add('error'); return; }
+    currentUser.updatePassword(pw1).then(()=>{
+      msg.className = 'form-msg success';
+      msg.textContent = t().passwordChanged;
+      setTimeout(closeProfilePanel, 1200);
+    }).catch(err=>{
+      console.error('updatePassword failed', err);
+      msg.className = 'form-msg error';
+      msg.textContent = err.code === 'auth/requires-recent-login' ? t().needsRecentLogin : translateAuthError(err.code);
+    });
+  });
+}
+
+function renderEmailForm(){
+  const s = t();
+  const panel = document.getElementById('profilePanel');
+  panel.innerHTML = `
+    <div class="sub-form">
+      <input type="email" id="newEmailInput" placeholder="${s.newEmailPlaceholder}" value="${escapeHtml(currentUser.email||'')}" autocomplete="email">
+      <div class="form-msg" id="emailFormMsg"></div>
+      <div class="sub-form-actions">
+        <button type="button" class="secondary" id="emailCancelBtn">${s.cancelAria}</button>
+        <button type="button" class="primary" id="emailSaveBtn">${s.saveAria}</button>
+      </div>
+    </div>`;
+  document.getElementById('emailCancelBtn').addEventListener('mousedown', e=>{ e.preventDefault(); renderProfileMenu(); });
+  document.getElementById('emailSaveBtn').addEventListener('mousedown', e=>{
+    e.preventDefault();
+    const newEmail = document.getElementById('newEmailInput').value.trim();
+    const msg = document.getElementById('emailFormMsg');
+    msg.className = 'form-msg';
+    if(!newEmail) return;
+    currentUser.updateEmail(newEmail).then(()=>{
+      msg.className = 'form-msg success';
+      msg.textContent = t().emailChanged;
+      setTimeout(closeProfilePanel, 1200);
+    }).catch(err=>{
+      console.error('updateEmail failed', err);
+      msg.className = 'form-msg error';
+      msg.textContent = err.code === 'auth/requires-recent-login' ? t().needsRecentLogin : translateAuthError(err.code);
+    });
+  });
+}
+
 function updateUserChip(user){
   const chip = document.getElementById('userChip');
-  if(!user){ chip.style.display = 'none'; chip.innerHTML = ''; return; }
+  if(!user){ chip.style.display = 'none'; chip.innerHTML = ''; chip.style.color = ''; return; }
   chip.style.display = 'flex';
   chip.title = user.displayName || user.email || '';
   if(user.photoURL){
     chip.innerHTML = `<img src="${user.photoURL}" alt="" referrerpolicy="no-referrer">`;
+    chip.style.color = '';
   }else{
     const initial = (user.displayName || user.email || '?').trim().charAt(0).toUpperCase();
     chip.textContent = initial;
+    chip.style.color = profileColor;
   }
 }
 
@@ -1437,7 +1611,7 @@ function closeSearchRow(){ searchRow.classList.remove('open'); searchBtn.classLi
 searchBtn.addEventListener('click', ()=>{
   const open = searchRow.classList.toggle('open');
   searchBtn.classList.toggle('active', open);
-  if(open){ closeCatRow(); closeSettingsPanel(); }
+  if(open){ closeCatRow(); closeSettingsPanel(); closeProfilePanel(); }
   updateTopbarHeight();
   if(open){ searchInput.focus(); }
   else{ searchQuery=''; searchInput.value=''; render(); }
@@ -1454,7 +1628,7 @@ document.getElementById('searchClear').addEventListener('click', ()=>{
 catBtn.addEventListener('click', ()=>{
   const open = catRow.classList.toggle('open');
   catBtn.classList.toggle('active', open);
-  if(open){ closeSearchRow(); closeSettingsPanel(); }
+  if(open){ closeSearchRow(); closeSettingsPanel(); closeProfilePanel(); }
   updateTopbarHeight();
 });
 catRow.addEventListener('click', e=>{
@@ -1471,7 +1645,7 @@ settingsBtn.addEventListener('click', ()=>{
   const panel = document.getElementById('settingsPanel');
   const isOpen = panel.classList.contains('show');
   if(isOpen){ closeSettingsPanel(); return; }
-  closeSearchRow(); closeCatRow();
+  closeSearchRow(); closeCatRow(); closeProfilePanel();
   openSettingsPanel(settingsBtn);
 });
 document.getElementById('importFileInput').addEventListener('change', e=>{
@@ -1480,8 +1654,19 @@ document.getElementById('importFileInput').addEventListener('change', e=>{
   e.target.value = '';
 });
 
-// Затваря tag-picker-а/настройките при клик извън тях (и извън бутоните,
-// които ги отварят).
+// Профил — плаващ панел (цвят на буквата, смяна на парола/имейл, изход),
+// закачен под userChip; затваря се взаимно с останалите редове/панели.
+const userChip = document.getElementById('userChip');
+userChip.addEventListener('click', ()=>{
+  const panel = document.getElementById('profilePanel');
+  const isOpen = panel.classList.contains('show');
+  if(isOpen){ closeProfilePanel(); return; }
+  closeSearchRow(); closeCatRow(); closeSettingsPanel();
+  openProfilePanel(userChip);
+});
+
+// Затваря tag-picker-а/настройките/профила при клик извън тях (и извън
+// бутоните, които ги отварят).
 document.addEventListener('mousedown', e=>{
   const picker = document.getElementById('tagPicker');
   if(picker.classList.contains('show') && !picker.contains(e.target) && !e.target.closest('[data-action="tag-open"]')){
@@ -1490,6 +1675,10 @@ document.addEventListener('mousedown', e=>{
   const panel = document.getElementById('settingsPanel');
   if(panel.classList.contains('show') && !panel.contains(e.target) && e.target !== settingsBtn && !settingsBtn.contains(e.target)){
     closeSettingsPanel();
+  }
+  const profPanel = document.getElementById('profilePanel');
+  if(profPanel.classList.contains('show') && !profPanel.contains(e.target) && e.target !== userChip && !userChip.contains(e.target)){
+    closeProfilePanel();
   }
 });
 
@@ -1539,7 +1728,6 @@ if(window.visualViewport){
   window.visualViewport.addEventListener('scroll', handleViewportResize);
 }
 
-document.getElementById('userChip').addEventListener('click', signOutUser);
 document.getElementById('emailAuthForm').addEventListener('submit', handleEmailAuthSubmit);
 document.getElementById('forgotPasswordBtn').addEventListener('mousedown', e=>{ e.preventDefault(); handleForgotPassword(); });
 document.getElementById('toggleAuthModeBtn').addEventListener('mousedown', e=>{
