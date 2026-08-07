@@ -26,6 +26,14 @@
     --green:#5AB77C;
     --danger:#E36358;
     --topbar-h:56px;
+    /* Цветове на категориите/таговете на бележките — умишлено различни от
+       gold/green/danger (заети от статусите), за да не се бъркат визуално. */
+    --tag-personal:#C77DD1;
+    --tag-personal-bg:rgba(199,125,209,.16);
+    --tag-work:#4FAE9E;
+    --tag-work-bg:rgba(79,174,158,.16);
+    --tag-custom:#E08A3C;
+    --tag-custom-bg:rgba(224,138,60,.16);
   }
   /* Светла тема — палитра "Лавандула": бледо лилав фон; синьото е нарочно
      заглушено (по-малко наситено, по-малко контрастно спрямо фона), вместо
@@ -44,6 +52,12 @@
     --accent-dim:#4A61AD;
     --green:#4C8F63;
     --danger:#C2503F;
+    --tag-personal:#A24FAE;
+    --tag-personal-bg:rgba(162,79,174,.14);
+    --tag-work:#2E8F7E;
+    --tag-work-bg:rgba(46,143,126,.14);
+    --tag-custom:#B8631F;
+    --tag-custom-bg:rgba(184,99,31,.14);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
@@ -76,7 +90,8 @@
   }
   .icon-btn:active{opacity:.7;}
   #langBtn{font-size:12px;font-weight:700;letter-spacing:.3px;min-width:28px;}
-  #searchBtn.active{color:var(--accent);border-color:var(--accent-dim);background:rgba(91,150,255,.12);}
+  /* Общо за search/категории бутоните, когато редът им е отворен. */
+  .icon-btn.active{color:var(--accent);border-color:var(--accent-dim);background:rgba(91,150,255,.12);}
   .search-row{display:none;gap:8px;margin-top:10px;}
   .search-row.open{display:flex;}
   .search-row input{
@@ -88,6 +103,46 @@
     background:none;border:none;color:var(--text-dim);padding:4px 8px;
     display:flex;align-items:center;justify-content:center;
   }
+  /* Ред с категории — чипове за филтриране по таг, отваря се от иконата
+     до търсенето, подобно на search-row. */
+  .cat-row{display:none;gap:6px;margin-top:10px;flex-wrap:wrap;}
+  .cat-row.open{display:flex;}
+  .cat-chip{
+    border:1px solid var(--border);border-radius:20px;padding:5px 11px;font-size:11.5px;font-weight:600;
+    background:var(--card-2);color:var(--text-dim);display:flex;align-items:center;gap:5px;
+  }
+  .cat-chip .n{background:var(--bg);border-radius:8px;padding:0 5px;font-size:10.5px;}
+  .cat-chip.active{border-color:var(--accent);color:var(--accent);}
+  .cat-chip.active .n{color:var(--accent);}
+
+  /* Тагче на бележка (Лични/Работни/произволно) — тапва се за смяна.
+     Отделно от .tag (статус-етикета "в прогрес"/"завършено"). */
+  .tag-pill{
+    display:inline-flex;align-items:center;font-size:10px;font-weight:600;
+    padding:2px 8px;border-radius:8px;border:none;font-family:inherit;
+  }
+  .tag-pill.personal{background:var(--tag-personal-bg);color:var(--tag-personal);}
+  .tag-pill.work{background:var(--tag-work-bg);color:var(--tag-work);}
+  .tag-pill.custom{background:var(--tag-custom-bg);color:var(--tag-custom);}
+  .tag-pill.empty{background:none;color:var(--text-dim);border:1px dashed var(--border);}
+
+  /* Плаващ picker за смяна на тага — позициониран динамично под тапнатото
+     тагче (виж openTagPicker()). */
+  .tag-picker{
+    display:none;position:fixed;z-index:25;background:var(--card);border:1px solid var(--border);
+    border-radius:12px;padding:8px;box-shadow:0 10px 30px rgba(0,0,0,.35);min-width:160px;
+  }
+  .tag-picker.show{display:block;}
+  .tag-picker button{
+    width:100%;text-align:left;background:none;border:none;color:var(--text);font-size:13px;font-weight:600;
+    padding:7px 8px;border-radius:8px;display:flex;align-items:center;gap:7px;font-family:inherit;
+  }
+  .tag-picker .sw{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .tag-picker input{
+    width:100%;background:var(--card-2);border:1px solid var(--border);color:var(--text);border-radius:8px;
+    padding:6px 8px;font-size:12.5px;outline:none;margin-top:4px;font-family:inherit;box-sizing:border-box;
+  }
+  .tag-picker hr{border:none;border-top:1px solid var(--border);margin:4px 0;}
 
   /* Активната зона запълва останалото пространство и подрежда съдържанието
      си долу (justify-content:flex-end) — така при малко бележки те стоят
@@ -259,14 +314,18 @@
     <div class="topbar-actions">
       <button id="langBtn" class="icon-btn" aria-label="Език">EN</button>
       <button id="themeBtn" class="icon-btn" aria-label="Тема"></button>
+      <button id="catBtn" class="icon-btn" aria-label="Категории"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L4 3a1 1 0 0 0-1 1l.24 5.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.35-4.35a2 2 0 0 0 0-2.82Z"></path><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor" stroke="none"></circle></svg></button>
       <button id="searchBtn" class="icon-btn" aria-label="Търсене"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
     </div>
   </div>
+  <div class="cat-row" id="catRow"></div>
   <div class="search-row" id="searchRow">
     <input id="searchInput" type="text" placeholder="Търси в бележките...">
     <button id="searchClear"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg></button>
   </div>
 </div>
+
+<div class="tag-picker" id="tagPicker"></div>
 
 <main id="activeArea"></main>
 
@@ -288,8 +347,11 @@ let notes = [];
 let editingKey = null;
 let addingSubFor = null;
 let searchQuery = '';
+let categoryFilter = null; // null = "Всички"; 'personal' | 'work' | произволен таг
+let activeTagNoteId = null; // коя бележка е отворена в момента в tag-picker-а
 let theme = localStorage.getItem(THEME_KEY) || 'dark';
 let lang = localStorage.getItem(LANG_KEY) || 'bg';
+const BUILTIN_TAGS = ['personal', 'work'];
 
 // Монохромни SVG иконки (stroke=currentColor) — използвани навсякъде вместо
 // цветни емоджита, за да пасват винаги на текущата тема/цвят на бутона.
@@ -318,7 +380,10 @@ const STRINGS = {
     confirmDelete: 'Да изтрия ли тази бележка?',
     dayNames: ['Неделя','Понеделник','Вторник','Сряда','Четвъртък','Петък','Събота'],
     monthNames: ['Януари','Февруари','Март','Април','Май','Юни','Юли','Август','Септември','Октомври','Ноември','Декември'],
-    langToggle: 'EN', themeAria: 'Тема', langAria: 'Език'
+    langToggle: 'EN', themeAria: 'Тема', langAria: 'Език',
+    categoriesAria: 'Категории', catAll: 'Всички',
+    tagPersonal: 'Лични', tagWork: 'Работни', addTag: '+ таг', noTag: 'Без таг',
+    newTagPlaceholder: 'Нов таг...', noNotesForTag: 'Няма бележки в тази категория'
   },
   en: {
     searchAria: 'Search', searchPlaceholder: 'Search text or date (e.g. 06.08, tuesday)...',
@@ -332,7 +397,10 @@ const STRINGS = {
     confirmDelete: 'Delete this note?',
     dayNames: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
     monthNames: ['January','February','March','April','May','June','July','August','September','October','November','December'],
-    langToggle: 'BG', themeAria: 'Theme', langAria: 'Language'
+    langToggle: 'BG', themeAria: 'Theme', langAria: 'Language',
+    categoriesAria: 'Categories', catAll: 'All',
+    tagPersonal: 'Personal', tagWork: 'Work', addTag: '+ tag', noTag: 'No tag',
+    newTagPlaceholder: 'New tag...', noNotesForTag: 'No notes in this category'
   }
 };
 function t(){ return STRINGS[lang]; }
@@ -424,6 +492,7 @@ function applyStaticText(){
   document.getElementById('langBtn').setAttribute('aria-label', s.langAria);
   document.getElementById('langBtn').textContent = s.langToggle;
   document.getElementById('noteCancelBtn').setAttribute('aria-label', s.cancelAria);
+  document.getElementById('catBtn').setAttribute('aria-label', s.categoriesAria);
 }
 
 function load(){
@@ -461,7 +530,7 @@ function addNote(text){
   if(!text) return;
   notes.push({
     id: 'n'+Date.now()+Math.random().toString(36).slice(2,6),
-    text, createdAt: Date.now(), status: 'open', subs: []
+    text, createdAt: Date.now(), status: 'open', subs: [], tag: null
   });
   save(); render();
   setTimeout(()=>scrollToBottom(true), 0);
@@ -515,8 +584,91 @@ function cancelEdit(){
   render();
 }
 
+function setNoteTag(noteId, tag){
+  const n = findNote(noteId);
+  if(!n) return;
+  n.tag = tag || null;
+  save(); render();
+}
+
+// Плаващ picker за смяна на тага на бележка — единствен споделен елемент,
+// съдържанието му се презарежда всеки път (за да включва актуалния списък
+// от вече ползвани произволни тагове) и се позиционира спрямо тапнатото
+// тагче с getBoundingClientRect() (position:fixed, viewport-относителни
+// координати).
+function openTagPicker(noteId, anchorEl){
+  activeTagNoteId = noteId;
+  const custom = allTagsInUse().filter(tg => !BUILTIN_TAGS.includes(tg));
+  let html = `
+    <button data-set="personal"><span class="sw" style="background:var(--tag-personal)"></span>${t().tagPersonal}</button>
+    <button data-set="work"><span class="sw" style="background:var(--tag-work)"></span>${t().tagWork}</button>`;
+  custom.forEach(tg=>{
+    html += `<button data-set="${escapeHtml(tg)}"><span class="sw" style="background:var(--tag-custom)"></span>${escapeHtml(tg)}</button>`;
+  });
+  html += `<hr><input type="text" id="newTagInput" placeholder="${t().newTagPlaceholder}" maxlength="24">
+    <hr><button data-set=""><span class="sw" style="background:var(--text-dim)"></span>${t().noTag}</button>`;
+
+  const picker = document.getElementById('tagPicker');
+  picker.innerHTML = html;
+  const rect = anchorEl.getBoundingClientRect();
+  picker.style.top = (rect.bottom + 4) + 'px';
+  picker.style.left = Math.min(rect.left, window.innerWidth - 176) + 'px';
+  picker.classList.add('show');
+
+  picker.querySelectorAll('button[data-set]').forEach(b=>{
+    b.addEventListener('mousedown', e=>{
+      e.preventDefault();
+      setNoteTag(activeTagNoteId, b.dataset.set);
+      closeTagPicker();
+    });
+  });
+  const inp = document.getElementById('newTagInput');
+  inp.addEventListener('keydown', e=>{
+    if(e.key === 'Enter'){
+      const v = inp.value.trim();
+      if(v){ setNoteTag(activeTagNoteId, v); closeTagPicker(); }
+    }
+    if(e.key === 'Escape'){ closeTagPicker(); }
+  });
+  // Съзнателно НЕ фокусираме input-а автоматично — повечето пъти потребителят
+  // просто избира съществуващ таг с едно тапване; клавиатурата да изскача
+  // веднага би пречела на picker-а. Полето за нов таг чака ръчно тапване.
+}
+function closeTagPicker(){
+  document.getElementById('tagPicker').classList.remove('show');
+  activeTagNoteId = null;
+}
+
 function escapeHtml(s){
   return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Категория/таг на бележка: 'personal' и 'work' са вградени (превеждат се
+// според избрания език), всичко друго е свободно въведен текст от
+// потребителя и се показва буквално, без превод.
+function tagLabel(tag){
+  if(tag === 'personal') return t().tagPersonal;
+  if(tag === 'work') return t().tagWork;
+  return tag;
+}
+function tagClass(tag){
+  if(tag === 'personal') return 'personal';
+  if(tag === 'work') return 'work';
+  return 'custom';
+}
+// Всички тагове, които има смисъл да се показват за филтриране — вградените
+// винаги (дори с 0 бележки, за да са видими като предложени категории), плюс
+// всеки произволен таг, който в момента се ползва от поне една бележка.
+function allTagsInUse(){
+  const custom = new Set();
+  notes.forEach(n=>{ if(n.tag && !BUILTIN_TAGS.includes(n.tag)) custom.add(n.tag); });
+  return [...BUILTIN_TAGS, ...[...custom].sort((a,b)=>a.localeCompare(b))];
+}
+function tagPillHtml(item, noteId){
+  const val = item.tag || '';
+  const cls = val ? tagClass(val) : 'empty';
+  const label = val ? escapeHtml(tagLabel(val)) : t().addTag;
+  return `<button class="tag-pill ${cls}" data-action="tag-open" data-note="${noteId}">${label}</button>`;
 }
 
 function itemRow(item, noteId, isSub){
@@ -547,6 +699,7 @@ function itemRow(item, noteId, isSub){
       <div class="body">
         <div class="txt" data-action="edit" data-note="${noteId}" data-sub="${isSub?item.id:''}">${escapeHtml(item.text)}</div>
         <div class="meta">
+          ${!isSub ? tagPillHtml(item, noteId) : ''}
           ${tagText ? `<span class="tag">${tagText}</span>` : ''}
           <span class="time">${timeLabel(item.createdAt)}</span>
         </div>
@@ -607,7 +760,22 @@ function sectionHeader(label, count, cls){
   return `<div class="status-section ${cls}"><span class="status-section-dot"></span>${label}<span class="status-section-count">${count}</span></div>`;
 }
 
+// Пресъздава чиповете в реда с категории (Всички + Лични/Работни/произволни,
+// всеки с брояч). Вика се при всеки render(), за да са бройките и активното
+// състояние винаги верни, без значение откъде е дошла промяната.
+function renderCatRow(){
+  const counts = {};
+  notes.forEach(n=>{ if(n.tag) counts[n.tag] = (counts[n.tag]||0) + 1; });
+  let html = `<button class="cat-chip${categoryFilter===null?' active':''}" data-action="cat-filter" data-cat="">${t().catAll}</button>`;
+  allTagsInUse().forEach(tg=>{
+    const n = counts[tg] || 0;
+    html += `<button class="cat-chip${categoryFilter===tg?' active':''}" data-action="cat-filter" data-cat="${escapeHtml(tg)}">${escapeHtml(tagLabel(tg))}${n?`<span class="n">${n}</span>`:''}</button>`;
+  });
+  document.getElementById('catRow').innerHTML = html;
+}
+
 function render(){
+  renderCatRow();
   const q = searchQuery.trim().toLowerCase();
 
   // Докато търсим: показваме плосък списък с "предложения" веднага, докато
@@ -631,6 +799,24 @@ function render(){
           ${results.map(n=>itemRow(n, n.id, false)).join('')}
         </div>`
       : `<div class="empty">${t().noResultsFor(escapeHtml(searchQuery.trim()))}</div>`;
+
+    document.getElementById('activeArea').innerHTML = html;
+    updateTopbarHeight();
+    attachHandlers();
+    updateJumpVisibility();
+    return;
+  }
+
+  // Филтър по категория: плосък списък (както при търсене), без разделяне
+  // по статус — просто всички бележки с избрания таг, най-новите горе.
+  if(categoryFilter){
+    const filtered = notes.filter(n => n.tag === categoryFilter).sort((a,b)=>b.createdAt-a.createdAt);
+    const html = filtered.length
+      ? `<div class="day-block">
+          <div class="day-label">${escapeHtml(tagLabel(categoryFilter))}<span class="count">${filtered.length}</span></div>
+          ${filtered.map(n=>itemRow(n, n.id, false)).join('')}
+        </div>`
+      : `<div class="empty">${t().noNotesForTag}</div>`;
 
     document.getElementById('activeArea').innerHTML = html;
     updateTopbarHeight();
@@ -665,6 +851,12 @@ function attachHandlers(){
   document.querySelectorAll('[data-action="del"]').forEach(el=>{
     el.addEventListener('click', ()=>{
       if(window.confirm(t().confirmDelete)) removeItem(el.dataset.note, el.dataset.sub||null);
+    });
+  });
+  document.querySelectorAll('[data-action="tag-open"]').forEach(el=>{
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      openTagPicker(el.dataset.note, el);
     });
   });
   document.querySelectorAll('[data-action="edit"]').forEach(el=>{
@@ -772,9 +964,16 @@ noteCancelBtn.addEventListener('mousedown', e=>{ e.preventDefault(); clearNoteIn
 const searchBtn = document.getElementById('searchBtn');
 const searchRow = document.getElementById('searchRow');
 const searchInput = document.getElementById('searchInput');
+const catBtn = document.getElementById('catBtn');
+const catRow = document.getElementById('catRow');
+
+function closeCatRow(){ catRow.classList.remove('open'); catBtn.classList.remove('active'); }
+function closeSearchRow(){ searchRow.classList.remove('open'); searchBtn.classList.remove('active'); }
+
 searchBtn.addEventListener('click', ()=>{
   const open = searchRow.classList.toggle('open');
   searchBtn.classList.toggle('active', open);
+  if(open) closeCatRow();
   updateTopbarHeight();
   if(open){ searchInput.focus(); }
   else{ searchQuery=''; searchInput.value=''; render(); }
@@ -782,6 +981,31 @@ searchBtn.addEventListener('click', ()=>{
 searchInput.addEventListener('input', e=>{ searchQuery = e.target.value; render(); });
 document.getElementById('searchClear').addEventListener('click', ()=>{
   searchQuery=''; searchInput.value=''; searchInput.focus(); render();
+});
+
+// Категории: тапването на иконата отваря/затваря реда с чипове (взаимно
+// изключващ се с търсенето, за да не се струпват два реда наведнъж). Самите
+// чипове се регенерират при всеки render(), затова слушателят е делегиран
+// върху постоянния контейнер #catRow, а не се закача наново всеки път.
+catBtn.addEventListener('click', ()=>{
+  const open = catRow.classList.toggle('open');
+  catBtn.classList.toggle('active', open);
+  if(open) closeSearchRow();
+  updateTopbarHeight();
+});
+catRow.addEventListener('click', e=>{
+  const chip = e.target.closest('[data-action="cat-filter"]');
+  if(!chip) return;
+  categoryFilter = chip.dataset.cat || null;
+  render();
+});
+
+// Затваря tag-picker-а при клик извън него (и извън тагчето, което го отвори).
+document.addEventListener('mousedown', e=>{
+  const picker = document.getElementById('tagPicker');
+  if(picker.classList.contains('show') && !picker.contains(e.target) && !e.target.closest('[data-action="tag-open"]')){
+    closeTagPicker();
+  }
 });
 
 document.getElementById('themeBtn').addEventListener('click', ()=>{
