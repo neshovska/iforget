@@ -127,7 +127,9 @@
   .tag-pill.personal{background:var(--tag-personal-bg);color:var(--tag-personal);}
   .tag-pill.work{background:var(--tag-work-bg);color:var(--tag-work);}
   .tag-pill.custom{background:var(--tag-custom-bg);color:var(--tag-custom);}
-  .tag-pill.empty{background:none;color:var(--text-dim);border:1px dashed var(--border);}
+  /* "+ таг" (все още неотбелязана бележка) — само гол текст, никакво
+     ограждане (нито фон, нито рамка), за разлика от избраните категории. */
+  .tag-pill.empty{background:none;color:var(--text-dim);border:none;padding:1px 2px;}
 
   /* Плаващ picker за смяна на тага — позициониран динамично под тапнатото
      тагче (виж openTagPicker()). */
