@@ -915,16 +915,16 @@ function renderProfileMenu(){
 
   panel.querySelectorAll('.color-sw').forEach(b=>{
     b.addEventListener('mousedown', e=>{
-      e.preventDefault();
+      e.preventDefault(); e.stopPropagation();
       profileColor = b.dataset.color;
       localStorage.setItem(PROFILE_COLOR_KEY, profileColor);
       updateUserChip(currentUser);
       renderProfileMenu();
     });
   });
-  panel.querySelector('[data-action="change-password"]').addEventListener('mousedown', e=>{ e.preventDefault(); renderPasswordForm(); });
-  panel.querySelector('[data-action="change-email"]').addEventListener('mousedown', e=>{ e.preventDefault(); renderEmailForm(); });
-  panel.querySelector('[data-action="logout"]').addEventListener('mousedown', e=>{ e.preventDefault(); closeProfilePanel(); signOutUser(); });
+  panel.querySelector('[data-action="change-password"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderPasswordForm(); });
+  panel.querySelector('[data-action="change-email"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderEmailForm(); });
+  panel.querySelector('[data-action="logout"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); closeProfilePanel(); signOutUser(); });
 }
 
 function renderPasswordForm(){
@@ -940,9 +940,9 @@ function renderPasswordForm(){
         <button type="button" class="primary" id="pwSaveBtn">${s.saveAria}</button>
       </div>
     </div>`;
-  document.getElementById('pwCancelBtn').addEventListener('mousedown', e=>{ e.preventDefault(); renderProfileMenu(); });
+  document.getElementById('pwCancelBtn').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
   document.getElementById('pwSaveBtn').addEventListener('mousedown', e=>{
-    e.preventDefault();
+    e.preventDefault(); e.stopPropagation();
     const pw1 = document.getElementById('newPw1').value;
     const pw2 = document.getElementById('newPw2').value;
     const msg = document.getElementById('pwFormMsg');
@@ -973,9 +973,9 @@ function renderEmailForm(){
         <button type="button" class="primary" id="emailSaveBtn">${s.saveAria}</button>
       </div>
     </div>`;
-  document.getElementById('emailCancelBtn').addEventListener('mousedown', e=>{ e.preventDefault(); renderProfileMenu(); });
+  document.getElementById('emailCancelBtn').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
   document.getElementById('emailSaveBtn').addEventListener('mousedown', e=>{
-    e.preventDefault();
+    e.preventDefault(); e.stopPropagation();
     const newEmail = document.getElementById('newEmailInput').value.trim();
     const msg = document.getElementById('emailFormMsg');
     msg.className = 'form-msg';
