@@ -35,23 +35,23 @@
     --tag-custom:#E08A3C;
     --tag-custom-bg:rgba(224,138,60,.16);
   }
-  /* Светла тема — палитра "Лавандула": бледо лилав фон; синьото е нарочно
-     заглушено (по-малко наситено, по-малко контрастно спрямо фона), вместо
-     ярко като в тъмната тема; превключва се с бутона до търсачката и се
-     пази в localStorage. */
+  /* Светла тема — палитра "Капучино": топъл млечно-бежов фон, пяна и
+     карамел вместо лилаво/синьо, за да пасне на цялостния кафяв нюанс, а не
+     да стърчи студен акцент върху топла основа; превключва се с бутона до
+     търсачката и се пази в localStorage. */
   :root[data-theme="light"]{
-    --bg:#EFEAF8;
-    --card:#FBF8FE;
-    --card-2:#E1D6F0;
-    --border:#CCB9E6;
-    --text:#241A38;
-    --text-dim:#786A93;
-    --gold:#A9812A;
-    --gold-dim:#836420;
-    --accent:#5D78D6;
-    --accent-dim:#4A61AD;
-    --green:#4C8F63;
-    --danger:#C2503F;
+    --bg:#F1E4D2;
+    --card:#FBF6EC;
+    --card-2:#E8D5B7;
+    --border:#D6BE97;
+    --text:#3B2A1C;
+    --text-dim:#8C7357;
+    --gold:#A97535;
+    --gold-dim:#835A26;
+    --accent:#8C5A2B;
+    --accent-dim:#6E4620;
+    --green:#5E8F52;
+    --danger:#C0503C;
     --tag-personal:#A24FAE;
     --tag-personal-bg:rgba(162,79,174,.14);
     --tag-work:#2E8F7E;
@@ -479,7 +479,7 @@ function timeLabel(ts){
 function applyTheme(){
   document.documentElement.setAttribute('data-theme', theme);
   const meta = document.querySelector('meta[name="theme-color"]');
-  if(meta) meta.setAttribute('content', theme === 'light' ? '#EFEAF8' : '#141B2E');
+  if(meta) meta.setAttribute('content', theme === 'light' ? '#F1E4D2' : '#141B2E');
   const btn = document.getElementById('themeBtn');
   if(btn) btn.innerHTML = theme === 'light' ? ICONS.sun : ICONS.moon;
 }
