@@ -6,27 +6,31 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="IForget">
-<meta name="theme-color" content="#0B1220">
+<meta name="theme-color" content="#141B2E">
 <title>IForget</title>
 <style>
+  /* Тъмната тема е с 1-2 тона по-светла от първоначалната — фонът/картите/
+     рамките са вдигнати към по-светъл нюанс на тъмно-синьото, за да не е
+     толкова черно, докато акцентният син е леко изсветлен за баланс. */
   :root{
-    --bg:#0B1220;
-    --card:#141E33;
-    --card-2:#1C2A47;
-    --border:#2B3D5E;
-    --text:#EDF1F7;
-    --text-dim:#8A96AC;
-    --gold:#D9A62B;
-    --gold-dim:#9C7A1E;
-    --accent:#4C8DFF;
-    --accent-dim:#3568B8;
-    --green:#4FAE72;
-    --danger:#E0574C;
+    --bg:#141B2E;
+    --card:#1D2941;
+    --card-2:#26344F;
+    --border:#38496B;
+    --text:#F0F3F9;
+    --text-dim:#98A3B9;
+    --gold:#DFAE3A;
+    --gold-dim:#A6841F;
+    --accent:#5B96FF;
+    --accent-dim:#3D71C4;
+    --green:#5AB77C;
+    --danger:#E36358;
     --topbar-h:56px;
   }
-  /* Светла тема — палитра "Лавандула": бледо лилав фон, синьото остава
-     истинско (не приглушено), за да пасва на тъмната тема; превключва се
-     с бутона до търсачката и се пази в localStorage. */
+  /* Светла тема — палитра "Лавандула": бледо лилав фон; синьото е нарочно
+     заглушено (по-малко наситено, по-малко контрастно спрямо фона), вместо
+     ярко като в тъмната тема; превключва се с бутона до търсачката и се
+     пази в localStorage. */
   :root[data-theme="light"]{
     --bg:#EFEAF8;
     --card:#FBF8FE;
@@ -36,8 +40,8 @@
     --text-dim:#786A93;
     --gold:#A9812A;
     --gold-dim:#836420;
-    --accent:#3B6EFF;
-    --accent-dim:#2C52C7;
+    --accent:#5D78D6;
+    --accent-dim:#4A61AD;
     --green:#4C8F63;
     --danger:#C2503F;
   }
@@ -72,7 +76,7 @@
   }
   .icon-btn:active{opacity:.7;}
   #langBtn{font-size:12px;font-weight:700;letter-spacing:.3px;min-width:28px;}
-  #searchBtn.active{color:var(--accent);border-color:var(--accent-dim);background:rgba(76,141,255,.12);}
+  #searchBtn.active{color:var(--accent);border-color:var(--accent-dim);background:rgba(91,150,255,.12);}
   .search-row{display:none;gap:8px;margin-top:10px;}
   .search-row.open{display:flex;}
   .search-row input{
@@ -404,7 +408,7 @@ function timeLabel(ts){
 function applyTheme(){
   document.documentElement.setAttribute('data-theme', theme);
   const meta = document.querySelector('meta[name="theme-color"]');
-  if(meta) meta.setAttribute('content', theme === 'light' ? '#EFEAF8' : '#0B1220');
+  if(meta) meta.setAttribute('content', theme === 'light' ? '#EFEAF8' : '#141B2E');
   const btn = document.getElementById('themeBtn');
   if(btn) btn.innerHTML = theme === 'light' ? ICONS.sun : ICONS.moon;
 }
