@@ -438,6 +438,7 @@
       <form id="emailAuthForm" class="email-auth-form">
         <input type="email" id="authEmail" class="auth-input" placeholder="Имейл" autocomplete="email" required>
         <input type="password" id="authPassword" class="auth-input" placeholder="Парола" autocomplete="current-password" minlength="6" required>
+        <input type="password" id="authPasswordConfirm" class="auth-input" placeholder="Потвърди парола" autocomplete="new-password" minlength="6" style="display:none;">
         <div class="auth-form-error" id="authFormError" style="display:none;"></div>
         <button type="submit" class="auth-submit-btn" id="authSubmitBtn">Вход</button>
       </form>
@@ -544,7 +545,7 @@ const STRINGS = {
     authSubtitle: 'Твоите бележки, синхронизирани в облака — влез, за да продължиш.',
     googleSignIn: 'Вход с Google', authLoadingText: 'Зареждане...', authError: 'Неуспешен вход. Опитай отново.',
     confirmLogout: 'Да излезеш ли от акаунта?', profileAria: 'Профил',
-    emailPlaceholder: 'Имейл', passwordPlaceholder: 'Парола', orDivider: 'или',
+    emailPlaceholder: 'Имейл', passwordPlaceholder: 'Парола', confirmPasswordPlaceholder: 'Потвърди парола', orDivider: 'или',
     signInBtn: 'Вход', signUpBtn: 'Регистрация',
     noAccountYet: 'Нямаш акаунт?', haveAccountAlready: 'Вече имаш акаунт?',
     signUpLink: 'Регистрирай се', signInLink: 'Влез',
@@ -557,7 +558,8 @@ const STRINGS = {
     errEmailInUse: 'Вече има акаунт с този имейл — опитай вход вместо регистрация.',
     errWeakPassword: 'Паролата трябва да е поне 6 символа.',
     errTooManyRequests: 'Твърде много опити — изчакай малко и опитай пак.',
-    errGeneric: 'Нещо се обърка. Опитай отново.'
+    errGeneric: 'Нещо се обърка. Опитай отново.',
+    errPasswordMismatch: 'Паролите не съвпадат.'
   },
   en: {
     searchAria: 'Search', searchPlaceholder: 'Search text or date (e.g. 06.08, tuesday)...',
@@ -582,7 +584,7 @@ const STRINGS = {
     authSubtitle: 'Your notes, synced to the cloud — sign in to continue.',
     googleSignIn: 'Sign in with Google', authLoadingText: 'Loading...', authError: 'Sign-in failed. Please try again.',
     confirmLogout: 'Sign out of your account?', profileAria: 'Profile',
-    emailPlaceholder: 'Email', passwordPlaceholder: 'Password', orDivider: 'or',
+    emailPlaceholder: 'Email', passwordPlaceholder: 'Password', confirmPasswordPlaceholder: 'Confirm password', orDivider: 'or',
     signInBtn: 'Sign in', signUpBtn: 'Sign up',
     noAccountYet: "Don't have an account?", haveAccountAlready: 'Already have an account?',
     signUpLink: 'Sign up', signInLink: 'Sign in',
@@ -595,7 +597,8 @@ const STRINGS = {
     errEmailInUse: 'An account with this email already exists — try signing in instead.',
     errWeakPassword: 'Password must be at least 6 characters.',
     errTooManyRequests: 'Too many attempts — wait a bit and try again.',
-    errGeneric: 'Something went wrong. Please try again.'
+    errGeneric: 'Something went wrong. Please try again.',
+    errPasswordMismatch: "Passwords don't match."
   }
 };
 function t(){ return STRINGS[lang]; }
@@ -695,6 +698,7 @@ function applyStaticText(){
   document.getElementById('userChip').setAttribute('aria-label', s.profileAria);
   document.getElementById('authEmail').setAttribute('placeholder', s.emailPlaceholder);
   document.getElementById('authPassword').setAttribute('placeholder', s.passwordPlaceholder);
+  document.getElementById('authPasswordConfirm').setAttribute('placeholder', s.confirmPasswordPlaceholder);
   document.getElementById('forgotPasswordBtn').textContent = s.forgotPassword;
   document.getElementById('authDividerLabel').textContent = s.orDivider;
   setAuthMode(authMode); // презарежда надписите "Вход"/"Регистрация" на текущия език
@@ -731,6 +735,14 @@ function setAuthMode(mode){
   document.getElementById('authToggleText').textContent = mode === 'signin' ? s.noAccountYet : s.haveAccountAlready;
   document.getElementById('toggleAuthModeBtn').textContent = mode === 'signin' ? s.signUpLink : s.signInLink;
   document.getElementById('authFormError').style.display = 'none';
+  // Полето "Потвърди парола" се показва само при регистрация — при вход не
+  // е нужно и не бива да пречи (display:none го изважда и от required
+  // валидацията на браузъра автоматично).
+  const isSignup = mode === 'signup';
+  const confirmInput = document.getElementById('authPasswordConfirm');
+  confirmInput.style.display = isSignup ? 'block' : 'none';
+  confirmInput.required = isSignup;
+  confirmInput.value = '';
 }
 
 function signInWithGoogle(){
@@ -753,6 +765,14 @@ function handleEmailAuthSubmit(e){
   const errEl = document.getElementById('authFormError');
   errEl.style.display = 'none';
   if(!email || !password) return;
+  if(authMode === 'signup'){
+    const confirm = document.getElementById('authPasswordConfirm').value;
+    if(password !== confirm){
+      errEl.textContent = t().errPasswordMismatch;
+      errEl.style.display = 'block';
+      return;
+    }
+  }
   showAuthScreen(true);
   const action = authMode === 'signin'
     ? auth.signInWithEmailAndPassword(email, password)
