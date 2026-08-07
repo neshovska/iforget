@@ -650,20 +650,16 @@ function setNoteTag(noteId, tag){
 }
 
 // Плаващ picker за смяна на тага на бележка — единствен споделен елемент,
-// съдържанието му се презарежда всеки път (за да включва актуалния списък
-// от вече ползвани произволни тагове) и се позиционира спрямо тапнатото
-// тагче с getBoundingClientRect() (position:fixed, viewport-относителни
-// координати).
+// позициониран спрямо тапнатото тагче с getBoundingClientRect()
+// (position:fixed, viewport-относителни координати). Произволните тагове
+// НЕ се показват тук като готови бутони за избор — те са моментни, пишат се
+// наново всеки път; само Личен/Работни са трайните бързи опции.
 function openTagPicker(noteId, anchorEl){
   activeTagNoteId = noteId;
-  const custom = allTagsInUse().filter(tg => !BUILTIN_TAGS.includes(tg));
   let html = `
     <button data-set="personal"><span class="sw" style="background:var(--tag-personal)"></span>${t().tagPersonal}</button>
-    <button data-set="work"><span class="sw" style="background:var(--tag-work)"></span>${t().tagWork}</button>`;
-  custom.forEach(tg=>{
-    html += `<button data-set="${escapeHtml(tg)}"><span class="sw" style="background:var(--tag-custom)"></span>${escapeHtml(tg)}</button>`;
-  });
-  html += `<hr><div class="tag-newrow">
+    <button data-set="work"><span class="sw" style="background:var(--tag-work)"></span>${t().tagWork}</button>
+    <hr><div class="tag-newrow">
       <input type="text" id="newTagInput" placeholder="${t().newTagPlaceholder}" maxlength="24">
       <button type="button" class="tag-confirm" id="newTagConfirm" aria-label="${t().saveAria}">${ICONS.check}</button>
     </div>
