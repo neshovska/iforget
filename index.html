@@ -116,10 +116,13 @@
   .cat-chip.active .n{color:var(--accent);}
 
   /* Тагче на бележка (Лични/Работни/произволно) — тапва се за смяна.
-     Отделно от .tag (статус-етикета "в прогрес"/"завършено"). */
+     Отделно от .tag (статус-етикета "в прогрес"/"завършено"). Ресетваме
+     -webkit-appearance и line-height, иначе браузърът добавя невидим
+     допълнителен размер на <button> елементите и тагчето изглежда огромно. */
   .tag-pill{
-    display:inline-flex;align-items:center;font-size:10px;font-weight:600;
-    padding:2px 8px;border-radius:8px;border:none;font-family:inherit;
+    -webkit-appearance:none;appearance:none;
+    display:inline-flex;align-items:center;font-size:9px;font-weight:600;line-height:1.4;
+    padding:1px 6px;border-radius:6px;border:none;font-family:inherit;
   }
   .tag-pill.personal{background:var(--tag-personal-bg);color:var(--tag-personal);}
   .tag-pill.work{background:var(--tag-work-bg);color:var(--tag-work);}
