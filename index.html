@@ -1,4 +1,4 @@
-&lt;!DOCTYPE html&gt;
+<!DOCTYPE html>
 <html lang="bg">
 <head>
 <meta charset="UTF-8">
@@ -143,11 +143,19 @@
     padding:7px 8px;border-radius:8px;display:flex;align-items:center;gap:7px;font-family:inherit;
   }
   .tag-picker .sw{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-  .tag-picker input{
-    width:100%;background:var(--card-2);border:1px solid var(--border);color:var(--text);border-radius:8px;
-    padding:6px 8px;font-size:12.5px;outline:none;margin-top:4px;font-family:inherit;box-sizing:border-box;
-  }
   .tag-picker hr{border:none;border-top:1px solid var(--border);margin:4px 0;}
+  /* Ред с полето за нов таг + бутон за потвърждение (тикче) до него — както
+     всички останали "запази" бутони в приложението (edit-save, sub-save),
+     вместо да разчитаме само на Enter. */
+  .tag-newrow{display:flex;gap:6px;align-items:center;margin-top:4px;}
+  .tag-newrow input{
+    flex:1;width:auto;background:var(--card-2);border:1px solid var(--border);color:var(--text);
+    border-radius:8px;padding:6px 8px;font-size:12.5px;outline:none;font-family:inherit;box-sizing:border-box;
+  }
+  .tag-newrow .tag-confirm{
+    width:26px;height:26px;flex-shrink:0;border-radius:8px;border:none;padding:0;
+    background:var(--accent);color:var(--bg);display:flex;align-items:center;justify-content:center;
+  }
 
   /* Активната зона запълва останалото пространство и подрежда съдържанието
      си долу (justify-content:flex-end) — така при малко бележки те стоят
@@ -610,7 +618,10 @@ function openTagPicker(noteId, anchorEl){
   custom.forEach(tg=>{
     html += `<button data-set="${escapeHtml(tg)}"><span class="sw" style="background:var(--tag-custom)"></span>${escapeHtml(tg)}</button>`;
   });
-  html += `<hr><input type="text" id="newTagInput" placeholder="${t().newTagPlaceholder}" maxlength="24">
+  html += `<hr><div class="tag-newrow">
+      <input type="text" id="newTagInput" placeholder="${t().newTagPlaceholder}" maxlength="24">
+      <button type="button" class="tag-confirm" id="newTagConfirm" aria-label="${t().saveAria}">${ICONS.check}</button>
+    </div>
     <hr><button data-set=""><span class="sw" style="background:var(--text-dim)"></span>${t().noTag}</button>`;
 
   const picker = document.getElementById('tagPicker');
@@ -628,12 +639,17 @@ function openTagPicker(noteId, anchorEl){
     });
   });
   const inp = document.getElementById('newTagInput');
+  const confirmNewTag = () => {
+    const v = inp.value.trim();
+    if(v){ setNoteTag(activeTagNoteId, v); closeTagPicker(); }
+  };
   inp.addEventListener('keydown', e=>{
-    if(e.key === 'Enter'){
-      const v = inp.value.trim();
-      if(v){ setNoteTag(activeTagNoteId, v); closeTagPicker(); }
-    }
+    if(e.key === 'Enter'){ confirmNewTag(); }
     if(e.key === 'Escape'){ closeTagPicker(); }
+  });
+  document.getElementById('newTagConfirm').addEventListener('mousedown', e=>{
+    e.preventDefault();
+    confirmNewTag();
   });
   // Съзнателно НЕ фокусираме input-а автоматично — повечето пъти потребителят
   // просто избира съществуващ таг с едно тапване; клавиатурата да изскача
