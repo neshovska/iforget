@@ -322,7 +322,7 @@
   }
   .note.progress .tag{background:rgba(201,162,39,.18);color:var(--gold);}
   .note.done .tag{background:rgba(93,160,107,.18);color:var(--green);}
-  .note .time{font-size:11px;color:var(--text-dim);}
+  .note .time{font-size:11px;color:var(--text-dim);white-space:nowrap;}
 
   .note-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0;}
   .note-actions button{
@@ -655,6 +655,16 @@ function dayLabel(ts){
 function timeLabel(ts){
   const d = new Date(ts);
   return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+
+// Дата + час до всяка бележка — не само час, за да е ясно от кой ден е
+// бележката дори в плоски изгледи (резултати от търсене, филтър по
+// категория), които смесват бележки от различни дни без ден-заглавия.
+function dateTimeLabel(ts){
+  const d = new Date(ts);
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  return `${dd}.${mm} · ${timeLabel(ts)}`;
 }
 
 function applyTheme(){
@@ -1114,7 +1124,7 @@ function itemRow(item, noteId, isSub){
         <div class="meta">
           ${!isSub ? tagPillHtml(item, noteId) : ''}
           ${tagText ? `<span class="tag">${tagText}</span>` : ''}
-          <span class="time">${timeLabel(item.createdAt)}</span>
+          <span class="time">${dateTimeLabel(item.createdAt)}</span>
         </div>
       </div>
       <div class="note-actions">
