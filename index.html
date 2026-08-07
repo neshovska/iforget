@@ -65,19 +65,19 @@
     -webkit-font-smoothing:antialiased;height:100%;}
   body{display:flex;flex-direction:column;min-height:100vh;transition:background-color .15s ease,color .15s ease;}
 
-  /* Фонов десен от гинко листенца — бледи, разпръснати по целия екран.
-     Сложен директно като background-image на body (вместо отделен fixed
-     SVG елемент) — гарантирано най-долният слой, без изненади със
-     stacking/z-index на различни браузъри. Един и същ мотив (180×180,
-     разпръснати листенца чрез <use>), различен само цветът за двете теми
-     (data: URI не може да чете CSS custom properties, затова два варианта). */
+  /* Фонов десен от гинко листенца — реални изображения (доставени от
+     потребителя), едно на цвят/тема: bg-dark.jpg (тъмно+златни контури) за
+     тъмната тема, bg-light.jpg (кремаво+бежови контури) за светлата.
+     Сложени директно като background-image на body — гарантирано най-
+     долният слой, скролва с цялото съдържание, тайлва се безшевно и
+     хоризонтално, и вертикално за произволно дълъг списък с бележки. */
   body{
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cpath id='g' fill='%2398A3B9' fill-opacity='0.4' d='M0,18 C-11,11 -18,2 -16,-6 C-14,-13 -7,-17 -1,-16 C-0.6,-16 -0.3,-15 0,-13.5 C0.3,-15 0.6,-16 1,-16 C7,-17 14,-13 16,-6 C18,2 11,11 0,18 Z'/%3E%3Cuse href='%23g' transform='translate(18,28) rotate(-20) scale(.34)'/%3E%3Cuse href='%23g' transform='translate(80,14) rotate(35) scale(.22)'/%3E%3Cuse href='%23g' transform='translate(145,50) rotate(-55) scale(.3)'/%3E%3Cuse href='%23g' transform='translate(35,100) rotate(70) scale(.26)'/%3E%3Cuse href='%23g' transform='translate(110,115) rotate(-8) scale(.4)'/%3E%3Cuse href='%23g' transform='translate(165,150) rotate(20) scale(.2)'/%3E%3Cuse href='%23g' transform='translate(65,165) rotate(-85) scale(.3)'/%3E%3Cuse href='%23g' transform='translate(15,150) rotate(110) scale(.18)'/%3E%3Cuse href='%23g' transform='translate(150,90) rotate(150) scale(.24)'/%3E%3C/svg%3E");
+    background-image:url("bg-dark.jpg");
     background-repeat:repeat;
-    background-size:180px 180px;
+    background-size:380px 821px;
   }
   :root[data-theme="light"] body{
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cpath id='g' fill='%238C7357' fill-opacity='0.4' d='M0,18 C-11,11 -18,2 -16,-6 C-14,-13 -7,-17 -1,-16 C-0.6,-16 -0.3,-15 0,-13.5 C0.3,-15 0.6,-16 1,-16 C7,-17 14,-13 16,-6 C18,2 11,11 0,18 Z'/%3E%3Cuse href='%23g' transform='translate(18,28) rotate(-20) scale(.34)'/%3E%3Cuse href='%23g' transform='translate(80,14) rotate(35) scale(.22)'/%3E%3Cuse href='%23g' transform='translate(145,50) rotate(-55) scale(.3)'/%3E%3Cuse href='%23g' transform='translate(35,100) rotate(70) scale(.26)'/%3E%3Cuse href='%23g' transform='translate(110,115) rotate(-8) scale(.4)'/%3E%3Cuse href='%23g' transform='translate(165,150) rotate(20) scale(.2)'/%3E%3Cuse href='%23g' transform='translate(65,165) rotate(-85) scale(.3)'/%3E%3Cuse href='%23g' transform='translate(15,150) rotate(110) scale(.18)'/%3E%3Cuse href='%23g' transform='translate(150,90) rotate(150) scale(.24)'/%3E%3C/svg%3E");
+    background-image:url("bg-light.jpg");
   }
 
   /* Всички икони в приложението са монохромни inline SVG (stroke=currentColor)
