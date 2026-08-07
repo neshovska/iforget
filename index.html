@@ -157,6 +157,27 @@
     background:var(--accent);color:var(--bg);display:flex;align-items:center;justify-content:center;
   }
 
+  /* Панел "Настройки" — резервно копие (Export/Import), защото localStorage
+     НЕ е гарантирано трайно съхранение: Safari на iOS може да го изчисти
+     (особено при икона на началния екран, дълго неотваряне на приложението
+     или ниско свободно място) — виж requestPersistentStorage() и
+     exportNotes()/importNotesFromFile(). Позициониран динамично под бутона,
+     по същия начин като .tag-picker. */
+  .settings-panel{
+    display:none;position:fixed;z-index:25;background:var(--card);border:1px solid var(--border);
+    border-radius:12px;padding:8px;box-shadow:0 10px 30px rgba(0,0,0,.35);width:240px;
+  }
+  .settings-panel.show{display:block;}
+  .settings-panel button.action{
+    width:100%;text-align:left;background:none;border:none;color:var(--text);font-size:13px;font-weight:600;
+    padding:8px;border-radius:8px;display:flex;align-items:center;gap:8px;font-family:inherit;
+  }
+  .settings-panel button.action:active{background:var(--card-2);}
+  .settings-panel hr{border:none;border-top:1px solid var(--border);margin:4px 0;}
+  .settings-panel .hint{
+    font-size:11px;line-height:1.45;color:var(--text-dim);padding:6px 8px 2px;
+  }
+
   /* Активната зона запълва останалото пространство и подрежда съдържанието
      си долу (justify-content:flex-end) — така при малко бележки те стоят
      залепени до полето за писане, а не окачени горе с празно място под тях.
@@ -329,6 +350,7 @@
       <button id="themeBtn" class="icon-btn" aria-label="Тема"></button>
       <button id="catBtn" class="icon-btn" aria-label="Категории"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L4 3a1 1 0 0 0-1 1l.24 5.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.35-4.35a2 2 0 0 0 0-2.82Z"></path><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor" stroke="none"></circle></svg></button>
       <button id="searchBtn" class="icon-btn" aria-label="Търсене"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
+      <button id="settingsBtn" class="icon-btn" aria-label="Настройки"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
     </div>
   </div>
   <div class="cat-row" id="catRow"></div>
@@ -339,6 +361,8 @@
 </div>
 
 <div class="tag-picker" id="tagPicker"></div>
+<div class="settings-panel" id="settingsPanel"></div>
+<input type="file" id="importFileInput" accept="application/json,.json" style="display:none">
 
 <main id="activeArea"></main>
 
@@ -374,7 +398,9 @@ const ICONS = {
   close: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg>',
   check: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>',
   checkSmall: '<svg class="ic" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>',
-  pencil: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>'
+  pencil: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>',
+  download: '<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
+  upload: '<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>'
 };
 
 // Текстове за двата езика — БГ (по подразбиране) и EN. t() връща обекта за
@@ -396,7 +422,11 @@ const STRINGS = {
     langToggle: 'EN', themeAria: 'Тема', langAria: 'Език',
     categoriesAria: 'Категории', catAll: 'Всички',
     tagPersonal: 'Лични', tagWork: 'Работни', addTag: '+ таг', noTag: 'Без таг',
-    newTagPlaceholder: 'Нов таг...', noNotesForTag: 'Няма бележки в тази категория'
+    newTagPlaceholder: 'Нов таг...', noNotesForTag: 'Няма бележки в тази категория',
+    settingsAria: 'Настройки', exportBackup: 'Запази резервно копие', importBackup: 'Възстанови от файл',
+    backupHint: 'Safari на iPhone/iPad понякога изчиства данните на сайта (особено при икона на началния екран или дълго неотваряне). Пази резервно копие от време на време, за да не загубиш бележките си.',
+    confirmImport: 'Възстановяването ще замени текущите бележки с тези от файла. Продължи?',
+    importSuccess: 'Бележките са възстановени успешно.', importError: 'Файлът не можа да се прочете — провери дали е валиден резервен файл.'
   },
   en: {
     searchAria: 'Search', searchPlaceholder: 'Search text or date (e.g. 06.08, tuesday)...',
@@ -413,7 +443,11 @@ const STRINGS = {
     langToggle: 'BG', themeAria: 'Theme', langAria: 'Language',
     categoriesAria: 'Categories', catAll: 'All',
     tagPersonal: 'Personal', tagWork: 'Work', addTag: '+ tag', noTag: 'No tag',
-    newTagPlaceholder: 'New tag...', noNotesForTag: 'No notes in this category'
+    newTagPlaceholder: 'New tag...', noNotesForTag: 'No notes in this category',
+    settingsAria: 'Settings', exportBackup: 'Save backup', importBackup: 'Restore from file',
+    backupHint: 'Safari on iPhone/iPad can sometimes clear site data (especially with a Home Screen icon or long periods without opening it). Keep an occasional backup so you never lose your notes.',
+    confirmImport: 'Restoring will replace your current notes with the ones from the file. Continue?',
+    importSuccess: 'Notes restored successfully.', importError: "Could not read the file — make sure it's a valid backup file."
   }
 };
 function t(){ return STRINGS[lang]; }
@@ -506,6 +540,7 @@ function applyStaticText(){
   document.getElementById('langBtn').textContent = s.langToggle;
   document.getElementById('noteCancelBtn').setAttribute('aria-label', s.cancelAria);
   document.getElementById('catBtn').setAttribute('aria-label', s.categoriesAria);
+  document.getElementById('settingsBtn').setAttribute('aria-label', s.settingsAria);
 }
 
 function load(){
@@ -513,9 +548,19 @@ function load(){
     const raw = localStorage.getItem(STORAGE_KEY);
     notes = raw ? JSON.parse(raw) : [];
   }catch(e){ notes = []; }
-  notes.forEach(n=>{ if(!n.subs) n.subs = []; });
+  notes.forEach(n=>{ if(!n.subs) n.subs = []; if(n.tag===undefined) n.tag = null; });
   render();
   setTimeout(()=>scrollToBottom(false), 0);
+}
+
+// Молим браузъра да третира данните ни като "persistent" — намалява шанса
+// localStorage да бъде изтрит автоматично при недостиг на място (най-вече
+// релевантно на iOS Safari). Не е гаранция сама по себе си, затова има и
+// ръчния Export/Import резервно копие по-долу.
+function requestPersistentStorage(){
+  if(navigator.storage && navigator.storage.persist){
+    navigator.storage.persist().catch(()=>{});
+  }
 }
 
 function scrollToBottom(smooth){
@@ -658,6 +703,66 @@ function openTagPicker(noteId, anchorEl){
 function closeTagPicker(){
   document.getElementById('tagPicker').classList.remove('show');
   activeTagNoteId = null;
+}
+
+// Резервно копие на бележките — единственият напълно надежден начин да не
+// се загубят, тъй като localStorage (виж load()/save()) НЕ е гарантирано
+// трайно съхранение, особено в Safari на iOS.
+function exportNotes(){
+  const data = JSON.stringify(notes, null, 2);
+  const blob = new Blob([data], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `iforget-backup-${todayStr()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function importNotesFromFile(file){
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const parsed = JSON.parse(e.target.result);
+      if(!Array.isArray(parsed)) throw new Error('invalid backup');
+      if(!window.confirm(t().confirmImport)) return;
+      notes = parsed;
+      notes.forEach(n=>{ if(!n.subs) n.subs = []; if(n.tag===undefined) n.tag = null; });
+      save(); render();
+      closeSettingsPanel();
+      window.alert(t().importSuccess);
+    }catch(err){
+      window.alert(t().importError);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function openSettingsPanel(anchorEl){
+  const html = `
+    <button class="action" data-action="export"><span>${ICONS.download}</span>${t().exportBackup}</button>
+    <button class="action" data-action="import"><span>${ICONS.upload}</span>${t().importBackup}</button>
+    <hr><div class="hint">${t().backupHint}</div>`;
+  const panel = document.getElementById('settingsPanel');
+  panel.innerHTML = html;
+  const rect = anchorEl.getBoundingClientRect();
+  panel.style.top = (rect.bottom + 4) + 'px';
+  panel.style.right = (window.innerWidth - rect.right) + 'px';
+  panel.classList.add('show');
+
+  panel.querySelector('[data-action="export"]').addEventListener('mousedown', e=>{
+    e.preventDefault();
+    exportNotes();
+    closeSettingsPanel();
+  });
+  panel.querySelector('[data-action="import"]').addEventListener('mousedown', e=>{
+    e.preventDefault();
+    document.getElementById('importFileInput').click();
+  });
+}
+function closeSettingsPanel(){
+  document.getElementById('settingsPanel').classList.remove('show');
 }
 
 function escapeHtml(s){
@@ -994,7 +1099,7 @@ function closeSearchRow(){ searchRow.classList.remove('open'); searchBtn.classLi
 searchBtn.addEventListener('click', ()=>{
   const open = searchRow.classList.toggle('open');
   searchBtn.classList.toggle('active', open);
-  if(open) closeCatRow();
+  if(open){ closeCatRow(); closeSettingsPanel(); }
   updateTopbarHeight();
   if(open){ searchInput.focus(); }
   else{ searchQuery=''; searchInput.value=''; render(); }
@@ -1011,7 +1116,7 @@ document.getElementById('searchClear').addEventListener('click', ()=>{
 catBtn.addEventListener('click', ()=>{
   const open = catRow.classList.toggle('open');
   catBtn.classList.toggle('active', open);
-  if(open) closeSearchRow();
+  if(open){ closeSearchRow(); closeSettingsPanel(); }
   updateTopbarHeight();
 });
 catRow.addEventListener('click', e=>{
@@ -1021,11 +1126,32 @@ catRow.addEventListener('click', e=>{
   render();
 });
 
-// Затваря tag-picker-а при клик извън него (и извън тагчето, което го отвори).
+// Настройки (резервно копие) — плаващ панел, аналогичен на tag-picker,
+// закачен под settingsBtn; затваря се взаимно с реда за търсене/категории.
+const settingsBtn = document.getElementById('settingsBtn');
+settingsBtn.addEventListener('click', ()=>{
+  const panel = document.getElementById('settingsPanel');
+  const isOpen = panel.classList.contains('show');
+  if(isOpen){ closeSettingsPanel(); return; }
+  closeSearchRow(); closeCatRow();
+  openSettingsPanel(settingsBtn);
+});
+document.getElementById('importFileInput').addEventListener('change', e=>{
+  const file = e.target.files[0];
+  if(file) importNotesFromFile(file);
+  e.target.value = '';
+});
+
+// Затваря tag-picker-а/настройките при клик извън тях (и извън бутоните,
+// които ги отварят).
 document.addEventListener('mousedown', e=>{
   const picker = document.getElementById('tagPicker');
   if(picker.classList.contains('show') && !picker.contains(e.target) && !e.target.closest('[data-action="tag-open"]')){
     closeTagPicker();
+  }
+  const panel = document.getElementById('settingsPanel');
+  if(panel.classList.contains('show') && !panel.contains(e.target) && e.target !== settingsBtn && !settingsBtn.contains(e.target)){
+    closeSettingsPanel();
   }
 });
 
@@ -1077,6 +1203,7 @@ if(window.visualViewport){
 
 applyTheme();
 applyStaticText();
+requestPersistentStorage();
 load();
 </script>
 </body>
