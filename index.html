@@ -65,6 +65,21 @@
     -webkit-font-smoothing:antialiased;height:100%;}
   body{display:flex;flex-direction:column;min-height:100vh;transition:background-color .15s ease,color .15s ease;}
 
+  /* Фонов десен от гинко листенца — бледи, разпръснати по целия екран.
+     Сложен директно като background-image на body (вместо отделен fixed
+     SVG елемент) — гарантирано най-долният слой, без изненади със
+     stacking/z-index на различни браузъри. Един и същ мотив (180×180,
+     разпръснати листенца чрез <use>), различен само цветът за двете теми
+     (data: URI не може да чете CSS custom properties, затова два варианта). */
+  body{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cpath id='g' fill='%2398A3B9' fill-opacity='0.4' d='M0,18 C-11,11 -18,2 -16,-6 C-14,-13 -7,-17 -1,-16 C-0.6,-16 -0.3,-15 0,-13.5 C0.3,-15 0.6,-16 1,-16 C7,-17 14,-13 16,-6 C18,2 11,11 0,18 Z'/%3E%3Cuse href='%23g' transform='translate(18,28) rotate(-20) scale(.34)'/%3E%3Cuse href='%23g' transform='translate(80,14) rotate(35) scale(.22)'/%3E%3Cuse href='%23g' transform='translate(145,50) rotate(-55) scale(.3)'/%3E%3Cuse href='%23g' transform='translate(35,100) rotate(70) scale(.26)'/%3E%3Cuse href='%23g' transform='translate(110,115) rotate(-8) scale(.4)'/%3E%3Cuse href='%23g' transform='translate(165,150) rotate(20) scale(.2)'/%3E%3Cuse href='%23g' transform='translate(65,165) rotate(-85) scale(.3)'/%3E%3Cuse href='%23g' transform='translate(15,150) rotate(110) scale(.18)'/%3E%3Cuse href='%23g' transform='translate(150,90) rotate(150) scale(.24)'/%3E%3C/svg%3E");
+    background-repeat:repeat;
+    background-size:180px 180px;
+  }
+  :root[data-theme="light"] body{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cpath id='g' fill='%238C7357' fill-opacity='0.4' d='M0,18 C-11,11 -18,2 -16,-6 C-14,-13 -7,-17 -1,-16 C-0.6,-16 -0.3,-15 0,-13.5 C0.3,-15 0.6,-16 1,-16 C7,-17 14,-13 16,-6 C18,2 11,11 0,18 Z'/%3E%3Cuse href='%23g' transform='translate(18,28) rotate(-20) scale(.34)'/%3E%3Cuse href='%23g' transform='translate(80,14) rotate(35) scale(.22)'/%3E%3Cuse href='%23g' transform='translate(145,50) rotate(-55) scale(.3)'/%3E%3Cuse href='%23g' transform='translate(35,100) rotate(70) scale(.26)'/%3E%3Cuse href='%23g' transform='translate(110,115) rotate(-8) scale(.4)'/%3E%3Cuse href='%23g' transform='translate(165,150) rotate(20) scale(.2)'/%3E%3Cuse href='%23g' transform='translate(65,165) rotate(-85) scale(.3)'/%3E%3Cuse href='%23g' transform='translate(15,150) rotate(110) scale(.18)'/%3E%3Cuse href='%23g' transform='translate(150,90) rotate(150) scale(.24)'/%3E%3C/svg%3E");
+  }
+
   /* Всички икони в приложението са монохромни inline SVG (stroke=currentColor)
      вместо емоджита — така никога не изкарват цветни глифове и винаги пасват
      на текущата тема. */
@@ -440,37 +455,10 @@
   }
   .jump-btn.show{display:flex;}
 
-  /* Фонов десен от гинко листенца — бледи, разпръснати по целия екран зад
-     съдържанието (position:fixed, най-долният слой). Един SVG <path> се
-     преизползва многократно чрез <use> с различни премествания/завъртания/
-     мащаби (виж <pattern> по-долу), за да изглежда органично разпръснато,
-     без да тежи с много DOM елементи. Цветът е currentColor → взима
-     --text-dim, значи автоматично пасва на двете теми без отделни правила. */
-  .leaf-bg{
-    position:fixed;inset:0;width:100%;height:100%;z-index:-1;
-    pointer-events:none;color:var(--text-dim);opacity:.08;
-  }
+
 </style>
 </head>
 <body>
-
-<svg class="leaf-bg" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <path id="ginkgoLeaf" fill="currentColor" d="M0,18 C-11,11 -18,2 -16,-6 C-14,-13 -7,-17 -1,-16 C-0.6,-16 -0.3,-15 0,-13.5 C0.3,-15 0.6,-16 1,-16 C7,-17 14,-13 16,-6 C18,2 11,11 0,18 Z"></path>
-    <pattern id="ginkgoPattern" width="180" height="180" patternUnits="userSpaceOnUse">
-      <use href="#ginkgoLeaf" transform="translate(18,28) rotate(-20) scale(.34)"></use>
-      <use href="#ginkgoLeaf" transform="translate(80,14) rotate(35) scale(.22)"></use>
-      <use href="#ginkgoLeaf" transform="translate(145,50) rotate(-55) scale(.3)"></use>
-      <use href="#ginkgoLeaf" transform="translate(35,100) rotate(70) scale(.26)"></use>
-      <use href="#ginkgoLeaf" transform="translate(110,115) rotate(-8) scale(.4)"></use>
-      <use href="#ginkgoLeaf" transform="translate(165,150) rotate(20) scale(.2)"></use>
-      <use href="#ginkgoLeaf" transform="translate(65,165) rotate(-85) scale(.3)"></use>
-      <use href="#ginkgoLeaf" transform="translate(15,150) rotate(110) scale(.18)"></use>
-      <use href="#ginkgoLeaf" transform="translate(150,90) rotate(150) scale(.24)"></use>
-    </pattern>
-  </defs>
-  <rect width="100%" height="100%" fill="url(#ginkgoPattern)"></rect>
-</svg>
 
 <div class="topbar">
   <div class="topbar-row">
@@ -607,7 +595,7 @@ const STRINGS = {
     monthNames: ['Януари','Февруари','Март','Април','Май','Юни','Юли','Август','Септември','Октомври','Ноември','Декември'],
     langToggle: 'EN', themeAria: 'Тема', langAria: 'Език',
     categoriesAria: 'Категории', catAll: 'Всички',
-    tagPersonal: 'Лични', tagWork: 'Работни', addTag: 'т', noTag: 'Без таг',
+    tagPersonal: 'Лични', tagWork: 'Работни', addTag: '+ таг', noTag: 'Без таг',
     newTagPlaceholder: 'Нов таг...', noNotesForTag: 'Няма бележки в тази категория',
     settingsAria: 'Настройки', exportBackup: 'Запази резервно копие', importBackup: 'Възстанови от файл',
     backupHint: 'Safari на iPhone/iPad понякога изчиства данните на сайта (особено при икона на началния екран или дълго неотваряне). Пази резервно копие от време на време, за да не загубиш бележките си.',
@@ -652,7 +640,7 @@ const STRINGS = {
     monthNames: ['January','February','March','April','May','June','July','August','September','October','November','December'],
     langToggle: 'BG', themeAria: 'Theme', langAria: 'Language',
     categoriesAria: 'Categories', catAll: 'All',
-    tagPersonal: 'Personal', tagWork: 'Work', addTag: 't', noTag: 'No tag',
+    tagPersonal: 'Personal', tagWork: 'Work', addTag: '+ tag', noTag: 'No tag',
     newTagPlaceholder: 'New tag...', noNotesForTag: 'No notes in this category',
     settingsAria: 'Settings', exportBackup: 'Save backup', importBackup: 'Restore from file',
     backupHint: 'Safari on iPhone/iPad can sometimes clear site data (especially with a Home Screen icon or long periods without opening it). Keep an occasional backup so you never lose your notes.',
@@ -1338,6 +1326,7 @@ function itemRow(item, noteId, isSub){
           <div class="txt" data-action="edit" data-note="${noteId}" data-sub="${isSub?item.id:''}">${escapeHtml(item.text)}</div>
           <div class="meta">
             ${!isSub ? tagPillHtml(item, noteId) : ''}
+            ${!isSub && addingSubFor !== noteId ? `<button class="add-sub-link" data-action="sub-open" data-note="${noteId}">${t().addSubLink}</button>` : ''}
             ${tagText ? `<span class="tag">${tagText}</span>` : ''}
           </div>
         </div>
@@ -1356,17 +1345,17 @@ function subsBlock(note){
   if(note.subs && note.subs.length){
     html += `<div class="subs">${note.subs.map(s=>itemRow(s, note.id, true)).join('')}</div>`;
   }
-  html += `<div class="add-sub-row" style="margin-left:20px;">`;
+  // Бутонът "+ подбележка" вече стои горе в .meta реда (до тага) — тук
+  // остава само активното поле за въвеждане, докато трае добавянето.
   if(addingSubFor === note.id){
-    html += `<div class="add-sub-input-row">
-      <input type="text" class="sub-input" data-note="${note.id}" placeholder="${t().subPlaceholder}" maxlength="300">
-      <button class="save" data-action="sub-save" data-note="${note.id}" aria-label="${t().saveAria}">${ICONS.check}</button>
-      <button class="cancel" data-action="sub-cancel" data-note="${note.id}" aria-label="${t().cancelAria}">${ICONS.close}</button>
+    html += `<div class="add-sub-row" style="margin-left:20px;">
+      <div class="add-sub-input-row">
+        <input type="text" class="sub-input" data-note="${note.id}" placeholder="${t().subPlaceholder}" maxlength="300">
+        <button class="save" data-action="sub-save" data-note="${note.id}" aria-label="${t().saveAria}">${ICONS.check}</button>
+        <button class="cancel" data-action="sub-cancel" data-note="${note.id}" aria-label="${t().cancelAria}">${ICONS.close}</button>
+      </div>
     </div>`;
-  }else{
-    html += `<button class="add-sub-link" data-action="sub-open" data-note="${note.id}">${t().addSubLink}</button>`;
   }
-  html += `</div>`;
   return html;
 }
 
