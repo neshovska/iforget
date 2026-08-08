@@ -298,7 +298,7 @@
      Когато бележките станат повече от наличното място, изтласкват се нагоре
      естествено, както в чат приложение. */
   main{
-    padding:6px 20px 0;padding-bottom:88px;
+    padding:6px 20px 0;padding-bottom:112px;
     flex:1 0 auto;display:flex;flex-direction:column;justify-content:flex-end;
   }
 
@@ -385,6 +385,16 @@
   .note .body{flex:1;min-width:0;}
   .note .txt{font-size:14px;line-height:1.35;word-break:break-word;}
   .note.done .txt{color:var(--text-dim);text-decoration:line-through;}
+  /* Свит текст на дълга бележка — макс. 4 реда, после многоточие. Виж
+     attachHandlers(), който след всеки render() мери scrollHeight и показва
+     .expand-toggle бутона само ако текстът наистина прелива. */
+  .note .txt.clamped{
+    display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;
+  }
+  .expand-toggle{
+    -webkit-appearance:none;appearance:none;background:none;border:none;
+    color:var(--text-dim);padding:2px;display:inline-flex;align-items:center;justify-content:center;
+  }
   .note .meta{display:flex;align-items:center;gap:6px;margin-top:3px;}
   .note .tag{
     display:inline-block;font-size:10px;font-weight:600;
@@ -547,6 +557,7 @@ let addingSubFor = null;
 let searchQuery = '';
 let categoryFilter = null; // null = "Всички"; 'personal' | 'work' | произволен таг
 let activeTagNoteId = null; // коя бележка е отворена в момента в tag-picker-а
+let expandedNotes = new Set(); // ключове (item.id или noteId::subId) на ръчно разгънати дълги бележки
 let theme = localStorage.getItem(THEME_KEY) || 'dark';
 let lang = localStorage.getItem(LANG_KEY) || 'bg';
 const BUILTIN_TAGS = ['personal', 'work'];
@@ -586,7 +597,9 @@ const ICONS = {
   checkSmall: '<svg class="ic" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>',
   pencil: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>',
   download: '<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
-  upload: '<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>'
+  upload: '<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>',
+  chevronDown: '<svg class="ic" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>',
+  chevronUp: '<svg class="ic" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>'
 };
 
 // Текстове за двата езика — БГ (по подразбиране) и EN. t() връща обекта за
@@ -636,7 +649,8 @@ const STRINGS = {
     newPasswordPlaceholder: 'Нова парола', confirmNewPasswordPlaceholder: 'Потвърди новата парола',
     newEmailPlaceholder: 'Нов имейл',
     passwordChanged: 'Паролата е сменена успешно.', emailChanged: 'Имейлът е сменен успешно.',
-    needsRecentLogin: 'За тази промяна трябва скорошен вход — излез и влез отново, после опитай пак.'
+    needsRecentLogin: 'За тази промяна трябва скорошен вход — излез и влез отново, после опитай пак.',
+    expandAria: 'Разгъни', collapseAria: 'Свий'
   },
   en: {
     searchAria: 'Search', searchPlaceholder: 'Search text or date (e.g. 06.08, tuesday)...',
@@ -681,7 +695,8 @@ const STRINGS = {
     newPasswordPlaceholder: 'New password', confirmNewPasswordPlaceholder: 'Confirm new password',
     newEmailPlaceholder: 'New email',
     passwordChanged: 'Password changed successfully.', emailChanged: 'Email changed successfully.',
-    needsRecentLogin: 'This change needs a recent login — sign out, sign back in, then try again.'
+    needsRecentLogin: 'This change needs a recent login — sign out, sign back in, then try again.',
+    expandAria: 'Expand', collapseAria: 'Collapse'
   }
 };
 function t(){ return STRINGS[lang]; }
@@ -1329,17 +1344,23 @@ function itemRow(item, noteId, isSub){
     </div>`;
   }
 
+  // Дълъг текст: свит по подразбиране на 4 реда (.clamped), докато
+  // потребителят не го разгъне ръчно (expandedNotes) — бутонът за
+  // разгъване/свиване се показва само ако текстът наистина прелива, виж
+  // проверката с scrollHeight в attachHandlers().
+  const isExpanded = expandedNotes.has(key);
   return `<div class="note-wrap">
     <div class="note ${item.status}">
       <div class="note-top"><span class="time">${dateTimeLabel(item.createdAt)}</span></div>
       <div class="note-main">
         <div class="dot" data-action="cycle" data-note="${noteId}" data-sub="${isSub?item.id:''}">${icon}</div>
         <div class="body">
-          <div class="txt" data-action="edit" data-note="${noteId}" data-sub="${isSub?item.id:''}">${escapeHtml(item.text)}</div>
+          <div class="txt${!isExpanded ? ' clamped' : ''}" data-key="${key}" data-action="edit" data-note="${noteId}" data-sub="${isSub?item.id:''}">${escapeHtml(item.text)}</div>
           <div class="meta">
             ${!isSub ? tagPillHtml(item, noteId) : ''}
             ${!isSub && addingSubFor !== noteId ? `<button class="add-sub-link" data-action="sub-open" data-note="${noteId}">${t().addSubLink}</button>` : ''}
             ${tagText ? `<span class="tag">${tagText}</span>` : ''}
+            <button class="expand-toggle" data-action="toggle-expand" data-key="${key}" style="display:${isExpanded?'inline-flex':'none'}" aria-label="${isExpanded?t().collapseAria:t().expandAria}">${isExpanded?ICONS.chevronUp:ICONS.chevronDown}</button>
           </div>
         </div>
         <div class="note-actions">
@@ -1483,6 +1504,24 @@ function render(){
 }
 
 function attachHandlers(){
+  // Показва бутона за разгъване само ако свитият текст наистина прелива
+  // (scrollHeight > clientHeight) — иначе за къси бележки бутонът просто не
+  // се появява. Бележки, които потребителят вече е разгънал ръчно, нямат
+  // .clamped клас тук (вече са разгънати), затова не влизат в тази проверка.
+  document.querySelectorAll('.txt.clamped').forEach(el=>{
+    if(el.scrollHeight > el.clientHeight + 1){
+      const btn = document.querySelector(`.expand-toggle[data-key="${el.dataset.key}"]`);
+      if(btn) btn.style.display = 'inline-flex';
+    }
+  });
+  document.querySelectorAll('[data-action="toggle-expand"]').forEach(el=>{
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      const key = el.dataset.key;
+      if(expandedNotes.has(key)) expandedNotes.delete(key); else expandedNotes.add(key);
+      render();
+    });
+  });
   document.querySelectorAll('[data-action="cycle"]').forEach(el=>{
     el.addEventListener('click', ()=>cycleStatus(el.dataset.note, el.dataset.sub||null));
   });
