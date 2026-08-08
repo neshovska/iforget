@@ -41,6 +41,8 @@
     --tag-custom-bg:rgba(168,85,247,.16);
     --tag-satori:#8B7FE8;
     --tag-satori-bg:rgba(139,127,232,.16);
+    --tag-deleted:#9B9FA8;
+    --tag-deleted-bg:rgba(155,159,168,.16);
   }
   /* Светла тема — палитра "Капучино": топъл млечно-бежов фон, пяна и
      карамел вместо лилаво/синьо, за да пасне на цялостния кафяв нюанс, а не
@@ -68,6 +70,8 @@
     --tag-custom-bg:rgba(124,58,237,.15);
     --tag-satori:#5B4FBE;
     --tag-satori-bg:rgba(91,79,190,.15);
+    --tag-deleted:#75695A;
+    --tag-deleted-bg:rgba(117,105,90,.15);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
@@ -181,6 +185,7 @@
   .tag-pill.work{background:var(--tag-work-bg);color:var(--tag-work);}
   .tag-pill.custom{background:var(--tag-custom-bg);color:var(--tag-custom);}
   .tag-pill.satori{background:var(--tag-satori-bg);color:var(--tag-satori);}
+  .tag-pill.deleted{background:var(--tag-deleted-bg);color:var(--tag-deleted);}
   /* "+ таг" (все още неотбелязана бележка) — само гол текст, никакво
      ограждане (нито фон, нито рамка), за разлика от избраните категории. */
   .tag-pill.empty{background:none;color:var(--text-dim);border:none;padding:1px 2px;}
@@ -492,7 +497,10 @@
   .edit-actions button.save{background:var(--accent);color:var(--bg);}
   .edit-actions button:active{transform:scale(.94);}
 
-  .subs{margin:6px 16px 0 15px;padding-left:9px;border-left:2px solid var(--border);}
+  /* Дясната граница на подбележките нарочно съвпада с тази на основните
+     бележки (без десен margin тук) — тесният им вид идва само от ляв отстъп
+     (margin+padding+border), не от асиметрично стесняване от двете страни. */
+  .subs{margin:6px 0 0 15px;padding-left:9px;border-left:2px solid var(--border);}
   .subs .note{padding:6px 8px;background:var(--card-2);}
   .subs .note-wrap{margin-bottom:4px;}
   /* В светлата тема разменяме местата — основните бележки по-тъмни
@@ -653,6 +661,12 @@ let theme = localStorage.getItem(THEME_KEY) || 'dark';
 let lang = localStorage.getItem(LANG_KEY) || 'bg';
 const BUILTIN_TAGS = ['personal', 'work'];
 
+// "Изтрити" — резервиран таг за меко изтритите бележки (виж softDelete()) —
+// пазят се 10 дни, откриваеми от бутона с категориите горе, преди
+// purgeExpiredTrash() да ги премахне окончателно.
+const DELETED_TAG = 'deleted';
+const TRASH_RETENTION_MS = 10 * 24 * 60 * 60 * 1000;
+
 // "Satori" — трети готов таг, но само за конкретния акаунт по-долу (лична
 // заявка), не се показва на никой друг потребител на приложението.
 const SATORI_TAG = 'satori';
@@ -754,7 +768,8 @@ const STRINGS = {
     needsRecentLogin: 'За тази промяна трябва скорошен вход — излез и влез отново, после опитай пак.',
     expandAria: 'Разгъни', collapseAria: 'Свий',
     deletedUndo: 'Бележката е изтрита.', undoBtn: 'Отмени', deleteAria: 'Изтрий',
-    ctxEdit: 'Редактирай', ctxDelete: 'Изтрий', ctxAddSub: 'Добави подбележка'
+    ctxEdit: 'Редактирай', ctxDelete: 'Изтрий', ctxAddSub: 'Добави подбележка',
+    tagDeleted: 'Изтрити'
   },
   en: {
     searchAria: 'Search', searchPlaceholder: 'Search text or date (e.g. 06.08, tuesday)...',
@@ -802,7 +817,8 @@ const STRINGS = {
     needsRecentLogin: 'This change needs a recent login — sign out, sign back in, then try again.',
     expandAria: 'Expand', collapseAria: 'Collapse',
     deletedUndo: 'Note deleted.', undoBtn: 'Undo', deleteAria: 'Delete',
-    ctxEdit: 'Edit', ctxDelete: 'Delete', ctxAddSub: 'Add sub-note'
+    ctxEdit: 'Edit', ctxDelete: 'Delete', ctxAddSub: 'Add sub-note',
+    tagDeleted: 'Deleted'
   }
 };
 function t(){ return STRINGS[lang]; }
@@ -1194,6 +1210,7 @@ function loadFromCloud(uid){
     }else if(notes.length){
       docRef.set({ notes }, { merge:true }).catch(err=>console.error('initial cloud upload failed', err));
     }
+    purgeExpiredTrash();
     render();
     hideAuthScreen();
     setTimeout(()=>scrollToBottom(false), 0);
@@ -1328,13 +1345,62 @@ function scrollToNote(key){
 }
 
 function removeItem(noteId, subId){
+  const restore = softDelete(noteId, subId);
+  if(restore){ save(); render(); }
+}
+
+// Меко изтриване — вместо да трие бележка/подбележка завинаги, ѝ слага таг
+// "Изтрити" (DELETED_TAG) и запомня кога, за да се откри после от бутона с
+// категориите горе; purgeExpiredTrash() я премахва окончателно едва след
+// TRASH_RETENTION_MS (10 дни). Подбележка не може да носи собствен таг
+// (само основните бележки имат tag-picker), затова при изтриване се
+// "изважда" от родителя си като самостоятелна бележка в кошчето — данните
+// не се губят, само вложеността ѝ под оригиналната бележка. Връща restore()
+// функция, ползвана и от Undo тоста (deleteBySwipe), и другаде евентуално.
+function softDelete(noteId, subId){
+  const now = Date.now();
   if(subId){
     const n = findNote(noteId);
-    if(n) n.subs = n.subs.filter(s=>s.id!==subId);
+    if(!n) return null;
+    const idx = n.subs.findIndex(s=>s.id===subId);
+    if(idx === -1) return null;
+    const sub = n.subs[idx];
+    n.subs.splice(idx, 1);
+    const trashed = {
+      id: sub.id, text: sub.text, status: sub.status, createdAt: sub.createdAt,
+      subs: [], tag: DELETED_TAG, deletedAt: now
+    };
+    notes.push(trashed);
+    return function restore(){
+      const ix = notes.findIndex(x=>x.id===trashed.id);
+      if(ix !== -1) notes.splice(ix, 1);
+      const parent = findNote(noteId);
+      if(parent) parent.subs.splice(Math.min(idx, parent.subs.length), 0, sub);
+      save(); render();
+    };
   }else{
-    notes = notes.filter(n=>n.id!==noteId);
+    const idx = notes.findIndex(n=>n.id===noteId);
+    if(idx === -1) return null;
+    const note = notes[idx];
+    const prevTag = note.tag;
+    note.tag = DELETED_TAG;
+    note.deletedAt = now;
+    return function restore(){
+      note.tag = prevTag;
+      delete note.deletedAt;
+      save(); render();
+    };
   }
-  save(); render();
+}
+
+// Изчиства бележките в кошчето, стоящи там повече от TRASH_RETENTION_MS —
+// викана веднъж на зареждане (виж loadLocalCache()/loadFromCloud() накрая
+// на скрипта), не при всеки render(), за да не пипаме масива излишно често.
+function purgeExpiredTrash(){
+  const cutoff = Date.now() - TRASH_RETENTION_MS;
+  const before = notes.length;
+  notes = notes.filter(n => !(n.tag === DELETED_TAG && n.deletedAt && n.deletedAt < cutoff));
+  if(notes.length !== before) save();
 }
 
 // Haptic feedback при swipe — navigator.vibrate() НЕ съществува в Safari на
@@ -1355,35 +1421,14 @@ function markDoneBySwipe(noteId, subId){
   scrollToNote(subId ? noteId+'::'+subId : noteId);
 }
 
-// Swipe-наляво: изтрива веднага без диалог за потвърждение (за разлика от
-// бутона "Изтрий"), но пази точна позиция за възстановяване и показва Undo
-// тост за няколко секунди — по-бърз, но все пак безопасен начин.
+// Swipe-наляво / "Изтрий" от long-press менюто: меко изтрива веднага (виж
+// softDelete()) и показва Undo тост за няколко секунди — по-бърз, но все
+// пак безопасен начин; дори без Undo бележката пак стои в кошчето 10 дни.
 let undoRestoreFn = null;
 let undoTimeoutId = null;
 function deleteBySwipe(noteId, subId){
-  let restoreFn;
-  if(subId){
-    const n = findNote(noteId);
-    if(!n) return;
-    const idx = n.subs.findIndex(s=>s.id===subId);
-    if(idx === -1) return;
-    const backup = n.subs[idx];
-    n.subs.splice(idx, 1);
-    restoreFn = ()=>{
-      const nn = findNote(noteId);
-      if(nn) nn.subs.splice(Math.min(idx, nn.subs.length), 0, backup);
-      save(); render();
-    };
-  }else{
-    const idx = notes.findIndex(n=>n.id===noteId);
-    if(idx === -1) return;
-    const backup = notes[idx];
-    notes.splice(idx, 1);
-    restoreFn = ()=>{
-      notes.splice(Math.min(idx, notes.length), 0, backup);
-      save(); render();
-    };
-  }
+  const restoreFn = softDelete(noteId, subId);
+  if(!restoreFn) return;
   save(); render();
   showUndoToast(restoreFn);
 }
@@ -1504,6 +1549,9 @@ function setNoteTag(noteId, tag){
   const n = findNote(noteId);
   if(!n) return;
   n.tag = tag || null;
+  // Ръчна смяна на тага от кошчето (Изтрити → Личен/Работни/...) на практика
+  // "възстановява" бележката — вече не бива да е кандидат за purgeExpiredTrash().
+  if(n.tag !== DELETED_TAG) delete n.deletedAt;
   save(); render();
 }
 
@@ -1679,23 +1727,28 @@ function tagLabel(tag){
   if(tag === 'personal') return t().tagPersonal;
   if(tag === 'work') return t().tagWork;
   if(tag === SATORI_TAG) return 'Satori';
+  if(tag === DELETED_TAG) return t().tagDeleted;
   return tag;
 }
 function tagClass(tag){
   if(tag === 'personal') return 'personal';
   if(tag === 'work') return 'work';
   if(tag === SATORI_TAG) return 'satori';
+  if(tag === DELETED_TAG) return 'deleted';
   return 'custom';
 }
 // Всички тагове, които има смисъл да се показват за филтриране — вградените
 // винаги (дори с 0 бележки, за да са видими като предложени категории), плюс
 // "Satori" само за конкретния акаунт, плюс всеки произволен таг, който в
-// момента се ползва от поне една бележка.
+// момента се ползва от поне една бележка, плюс "Изтрити" накрая — но само
+// докато има поне 1 меко изтрита бележка в кошчето (виж softDelete()).
 function allTagsInUse(){
   const custom = new Set();
-  notes.forEach(n=>{ if(n.tag && !BUILTIN_TAGS.includes(n.tag) && n.tag !== SATORI_TAG) custom.add(n.tag); });
+  notes.forEach(n=>{ if(n.tag && !BUILTIN_TAGS.includes(n.tag) && n.tag !== SATORI_TAG && n.tag !== DELETED_TAG) custom.add(n.tag); });
   const builtins = isSatoriUser() ? [...BUILTIN_TAGS, SATORI_TAG] : BUILTIN_TAGS;
-  return [...builtins, ...[...custom].sort((a,b)=>a.localeCompare(b))];
+  const tags = [...builtins, ...[...custom].sort((a,b)=>a.localeCompare(b))];
+  if(notes.some(n=>n.tag === DELETED_TAG)) tags.push(DELETED_TAG);
+  return tags;
 }
 function tagPillHtml(item, noteId){
   const val = item.tag || '';
@@ -1842,7 +1895,9 @@ function render(){
       textMatches(n.text, q, qLatin) ||
       dateMatches(n.createdAt, q, qLatin) ||
       (n.subs||[]).some(s => textMatches(s.text, q, qLatin) || dateMatches(s.createdAt, q, qLatin));
-    const results = notes.filter(noteHit).sort((a,b)=>b.createdAt-a.createdAt);
+    // Изтритите (кошчето) съзнателно не участват в общото търсене — намират
+    // се само през филтъра "Изтрити" горе, за да не се "изпречват" случайно.
+    const results = notes.filter(n => n.tag !== DELETED_TAG && noteHit(n)).sort((a,b)=>b.createdAt-a.createdAt);
 
     const html = results.length
       ? `<div class="day-block">
@@ -1876,7 +1931,9 @@ function render(){
     return;
   }
 
-  const byStatus = status => notes.filter(n => (n.status||'open') === status).sort((a,b)=>a.createdAt-b.createdAt);
+  // Бележките в кошчето (tag===DELETED_TAG) не се показват в нормалните
+  // секции Приключени/В прогрес/Активни — само през филтъра "Изтрити".
+  const byStatus = status => notes.filter(n => (n.status||'open') === status && n.tag !== DELETED_TAG).sort((a,b)=>a.createdAt-b.createdAt);
   const done = byStatus('done');
   const progress = byStatus('progress');
   const open = byStatus('open');
@@ -2242,6 +2299,7 @@ requestPersistentStorage();
 // бъде презаписан от Firestore при потвърден вход (виж loadFromCloud()).
 showAuthScreen(true);
 loadLocalCache();
+purgeExpiredTrash();
 </script>
 </body>
 </html>
