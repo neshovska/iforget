@@ -236,6 +236,33 @@
   }
   .ctx-menu button.danger{color:var(--danger);}
 
+  /* Обучение при първи вход (виж runOnboardingTour() накрая на скрипта) —
+     иконките в топбара "изпъкват" една по една с леко златно сияние, после
+     балонче с обяснение следва демо-бележката стъпка по стъпка. */
+  @keyframes onboardIconIn{
+    0%{opacity:0;transform:scale(.6);}
+    55%{opacity:1;transform:scale(1.14);box-shadow:0 0 12px 3px rgba(var(--gold-rgb),.45);}
+    100%{opacity:1;transform:scale(1);box-shadow:0 0 0 0 rgba(var(--gold-rgb),0);}
+  }
+  .onboard-tip{
+    display:none;position:fixed;z-index:60;max-width:250px;
+    background:var(--card);border:1px solid var(--accent-dim);border-radius:14px;
+    padding:12px 14px;box-shadow:0 14px 40px rgba(0,0,0,.4);
+  }
+  .onboard-tip.show{display:block;animation:onboardTipIn .25s ease;}
+  @keyframes onboardTipIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  .onboard-tip-text{font-size:13px;line-height:1.5;color:var(--text);margin-bottom:10px;}
+  .onboard-tip-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .onboard-tip-dots{display:flex;gap:4px;}
+  .onboard-tip-dots span{width:5px;height:5px;border-radius:50%;background:var(--border);flex-shrink:0;}
+  .onboard-tip-dots span.active{background:var(--accent);}
+  .onboard-tip-btns{display:flex;align-items:center;gap:10px;}
+  .onboard-tip-skip{background:none;border:none;color:var(--text-dim);font-size:11.5px;font-family:inherit;padding:4px;}
+  .onboard-tip-next{
+    background:var(--accent);color:var(--bg);border:none;border-radius:8px;
+    padding:6px 13px;font-size:12px;font-weight:700;font-family:inherit;
+  }
+
   /* Екран за вход — покрива цялото приложение (position:fixed inset:0, най-
      високият z-index в страницата), докато Firebase Auth не потвърди активна
      сесия. Бележките вече живеят в Firestore, разделени по потребител
@@ -604,6 +631,7 @@
 
 <div class="tag-picker" id="tagPicker"></div>
 <div class="ctx-menu" id="ctxMenu"></div>
+<div class="onboard-tip" id="onboardTip"></div>
 <div class="profile-panel" id="profilePanel"></div>
 <input type="file" id="importFileInput" accept="application/json,.json" style="display:none">
 
@@ -820,7 +848,15 @@ const STRINGS = {
     statsTitle: 'Статистика', statsLoading: 'Зареждане...',
     statsError: 'Неуспешно зареждане на статистиката.',
     statsTotal: 'Общо регистрирани', statsDay: 'Днес',
-    statsWeek: 'Тази седмица', statsMonth: 'Този месец', statsYear: 'Тази година'
+    statsWeek: 'Тази седмица', statsMonth: 'Този месец', statsYear: 'Тази година',
+    onboardDemoText: 'Това е бележка — тапни текста, за да я редактираш.',
+    onboardDemoSub: 'Това е подбележка — за под-задачи и детайли.',
+    onboardStep1: 'Тапни кръгчето, за да смениш статуса: активна → в прогрес → завършено.',
+    onboardStep2: 'Тагни бележката, за да я подредиш по категория — Лични, Работни или свой таг.',
+    onboardStep3: 'Всяка бележка може да има подбележки — за под-задачи и детайли.',
+    onboardStep4: 'Плъзни надясно за бързо завършване, наляво за изтриване — винаги можеш да отмениш.',
+    onboardStep5: 'Готово! Пиши първата си истинска бележка тук долу.',
+    onboardNext: 'Напред', onboardGotIt: 'Разбрах', onboardSkip: 'Пропусни обучението'
   },
   en: {
     searchAria: 'Search', searchPlaceholder: 'Search text or date (e.g. 06.08, tuesday)...',
@@ -879,7 +915,15 @@ const STRINGS = {
     statsTitle: 'Statistics', statsLoading: 'Loading...',
     statsError: 'Failed to load statistics.',
     statsTotal: 'Total registered', statsDay: 'Today',
-    statsWeek: 'This week', statsMonth: 'This month', statsYear: 'This year'
+    statsWeek: 'This week', statsMonth: 'This month', statsYear: 'This year',
+    onboardDemoText: 'This is a note — tap the text to edit it.',
+    onboardDemoSub: 'This is a sub-note — for sub-tasks and details.',
+    onboardStep1: 'Tap the circle to cycle status: active → in progress → done.',
+    onboardStep2: 'Tag a note to sort it by category — Personal, Work, or your own tag.',
+    onboardStep3: 'Any note can have sub-notes — for sub-tasks and details.',
+    onboardStep4: 'Swipe right to complete instantly, left to delete — you can always undo.',
+    onboardStep5: "That's it! Write your first real note down here.",
+    onboardNext: 'Next', onboardGotIt: 'Got it', onboardSkip: 'Skip tutorial'
   }
 };
 function t(){ return STRINGS[lang]; }
@@ -1328,6 +1372,10 @@ function updateUserChip(user){
 function loadFromCloud(uid){
   const docRef = db.collection('users').doc(uid);
   docRef.get().then(snap=>{
+    // Съвсем нов акаунт: няма още документ в Firestore И няма локални
+    // бележки (свеж браузър/устройство) — единственият сигурен признак, че
+    // това е първи вход изобщо, виж runOnboardingTour().
+    const isNewUser = !snap.exists && notes.length === 0;
     if(snap.exists && Array.isArray(snap.data().notes)){
       notes = snap.data().notes;
       notes.forEach(n=>{ if(!n.subs) n.subs = []; if(n.tag===undefined) n.tag = null; });
@@ -1340,6 +1388,7 @@ function loadFromCloud(uid){
     setTimeout(()=>scrollToBottom(false), 0);
     maybeFocusQuickAdd();
     touchLastSeen(docRef);
+    if(isNewUser) runOnboardingTour(docRef);
   }).catch(err=>{
     console.error('cloud load failed', err);
     render();
@@ -1354,6 +1403,147 @@ function loadFromCloud(uid){
 // на нищо друго в приложението.
 function touchLastSeen(docRef){
   docRef.set({ lastSeen: Date.now() }, { merge:true }).catch(err=>console.error('touchLastSeen failed', err));
+}
+
+// ===== Обучение при първи вход (виж loadFromCloud() — тръгва само когато
+// snap.exists е false и няма локални бележки, т.е. съвсем нов акаунт).
+// Иконките горе изпъкват една по една, после автоматично се създава демо
+// бележка + подбележка, минаваме през кратки балончета за статус/тагове/
+// подбележки/swipe, демонстрираме плъзгането анимирано и накрая изтриваме
+// демо бележката и бележим onboarded:true, за да не се показва пак. */
+
+function wait(ms){ return new Promise(r=>setTimeout(r, ms)); }
+
+function animateTopbarIcons(){
+  const icons = document.querySelectorAll('.topbar-actions .icon-btn, .topbar-actions .user-chip');
+  icons.forEach((el, i)=>{
+    el.style.animation = `onboardIconIn .5s ease ${i*130}ms both`;
+  });
+}
+
+function positionOnboardTip(targetEl){
+  const tip = document.getElementById('onboardTip');
+  const tRect = targetEl.getBoundingClientRect();
+  const tipW = tip.offsetWidth, tipH = tip.offsetHeight;
+  let top = tRect.bottom + 10;
+  if(top + tipH > window.innerHeight - 12) top = tRect.top - tipH - 10;
+  top = Math.max(8, top);
+  let left = tRect.left + tRect.width/2 - tipW/2;
+  left = Math.max(8, Math.min(left, window.innerWidth - tipW - 8));
+  tip.style.top = top + 'px';
+  tip.style.left = left + 'px';
+}
+
+// Показва едно балонче, сочещо targetEl (или центрирано, ако няма) —
+// resolve-ва с 'next' или 'skip' щом потребителят тапне съответния бутон.
+function showOnboardTip(targetEl, textKey, stepIndex, totalSteps){
+  return new Promise(resolve=>{
+    const s = t();
+    const tip = document.getElementById('onboardTip');
+    let dots = '';
+    for(let i=0;i<totalSteps;i++) dots += `<span class="${i===stepIndex?'active':''}"></span>`;
+    const isLast = stepIndex === totalSteps - 1;
+    tip.innerHTML = `
+      <div class="onboard-tip-text">${s[textKey]}</div>
+      <div class="onboard-tip-actions">
+        <span class="onboard-tip-dots">${dots}</span>
+        <div class="onboard-tip-btns">
+          <button type="button" class="onboard-tip-skip" id="onboardSkipBtn">${s.onboardSkip}</button>
+          <button type="button" class="onboard-tip-next" id="onboardNextBtn">${isLast ? s.onboardGotIt : s.onboardNext}</button>
+        </div>
+      </div>`;
+    tip.style.transform = '';
+    tip.classList.add('show');
+    if(targetEl) positionOnboardTip(targetEl);
+    else{
+      tip.style.left = '50%'; tip.style.top = '50%'; tip.style.transform = 'translate(-50%,-50%)';
+    }
+    let done = false;
+    function finish(skip){
+      if(done) return;
+      done = true;
+      tip.classList.remove('show');
+      resolve(skip ? 'skip' : 'next');
+    }
+    document.getElementById('onboardNextBtn').addEventListener('click', ()=>finish(false));
+    document.getElementById('onboardSkipBtn').addEventListener('click', ()=>finish(true));
+  });
+}
+
+// Скриптирана визуална демонстрация на swipe жеста (без реален допир) —
+// плъзга картата надясно (зелен фон "завърши"), връща я, после наляво
+// (червен фон "изтрий"), връща я. Ползва СЪЩИТЕ .swipe-bg слоеве, които
+// реалният swipe гест ползва (виж attachSwipeHandlers()).
+function demoSwipePreview(noteEl){
+  return new Promise(resolve=>{
+    const shell = noteEl && noteEl.closest('.swipe-shell');
+    if(!shell){ resolve(); return; }
+    const bgComplete = shell.querySelector('.swipe-bg.complete');
+    const bgDelete = shell.querySelector('.swipe-bg.delete');
+    noteEl.style.transition = 'transform .45s ease';
+    noteEl.style.transform = 'translateX(74px)';
+    if(bgComplete) bgComplete.style.opacity = 1;
+    setTimeout(()=>{
+      noteEl.style.transform = '';
+      if(bgComplete) bgComplete.style.opacity = 0;
+      setTimeout(()=>{
+        noteEl.style.transform = 'translateX(-74px)';
+        if(bgDelete) bgDelete.style.opacity = 1;
+        setTimeout(()=>{
+          noteEl.style.transform = '';
+          if(bgDelete) bgDelete.style.opacity = 0;
+          setTimeout(resolve, 400);
+        }, 450);
+      }, 350);
+    }, 450);
+  });
+}
+
+// Маха демо бележката (директно, не през кошчето — не бива да замърсява
+// "Изтрити" при съвсем прясна сметка) и бележи onboarded:true, за да не се
+// показва обучението пак при следващ вход.
+function finishOnboarding(docRef, demoId){
+  document.getElementById('onboardTip').classList.remove('show');
+  if(demoId) notes = notes.filter(n=>n.id!==demoId);
+  save(); render();
+  if(docRef) docRef.set({ onboarded:true }, { merge:true }).catch(err=>console.error('onboarded flag save failed', err));
+}
+
+async function runOnboardingTour(docRef){
+  const s = t();
+  await wait(500);
+  animateTopbarIcons();
+  await wait(1300);
+
+  addNote(s.onboardDemoText);
+  const demoId = notes[notes.length-1].id;
+  await wait(300);
+
+  let dotEl = document.querySelector(`.dot[data-note="${demoId}"][data-sub=""]`);
+  let result = await showOnboardTip(dotEl, 'onboardStep1', 0, 5);
+  if(result === 'skip') return finishOnboarding(docRef, demoId);
+
+  setNoteTag(demoId, 'personal');
+  await wait(200);
+  let tagEl = document.querySelector(`.tag-pill[data-note="${demoId}"]`);
+  result = await showOnboardTip(tagEl, 'onboardStep2', 1, 5);
+  if(result === 'skip') return finishOnboarding(docRef, demoId);
+
+  addSub(demoId, s.onboardDemoSub);
+  await wait(200);
+  let subEl = document.querySelector('.subs .txt');
+  result = await showOnboardTip(subEl, 'onboardStep3', 2, 5);
+  if(result === 'skip') return finishOnboarding(docRef, demoId);
+
+  let noteEl = document.querySelector(`.note[data-swipe-key="${demoId}"]`);
+  result = await showOnboardTip(noteEl, 'onboardStep4', 3, 5);
+  if(result === 'skip') return finishOnboarding(docRef, demoId);
+  await demoSwipePreview(noteEl);
+
+  const inputEl = document.getElementById('noteInput');
+  await showOnboardTip(inputEl, 'onboardStep5', 4, 5);
+
+  finishOnboarding(docRef, demoId);
 }
 
 // Home Screen quick-add — manifest.json дефинира shortcut "Нова бележка",
