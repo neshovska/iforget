@@ -119,3 +119,21 @@ tag-picker в интерфейса).
 
 - **Превод на приложението на руски, немски и испански** — в допълнение
   към сегашните `STRINGS.bg`/`STRINGS.en`. Не е започнато.
+- **Брандиран линк за забравена парола** (`iforget.eu/reset-password.html`
+  вместо Firebase-овия `iforgetbg.firebaseapp.com`) — Firebase Console
+  "Action URL" полето постоянно дава "An error occurred updating action
+  URL" (потвърдено: `iforget.eu` е в Authorized domains, акаунтът е Owner,
+  проблемът остава). Дори да се оправи през конзолата, реално няма да
+  проработи — Firebase-генерираните линкове винаги сочат към
+  `*.firebaseapp.com`, освен ако сайтът е на Firebase Hosting (iforget.eu е
+  на GitHub Pages, не Firebase Hosting). Истинското решение (виж как е
+  направено в `neshovska/glowtrack` — Cloud Function `sendBrandedPasswordReset`
+  в `functions/index.js`: генерира линк през Admin SDK, взима oobCode-а,
+  строи собствен `https://glowtrack.eu/?mode=resetPassword&oobCode=...`,
+  праща имейла през собствен SMTP вместо Firebase-овата система) изисква:
+  платен Firebase план Blaze (Cloud Functions не работят на безплатния
+  Spark), SMTP акаунт, писане+deploy на функция през Firebase CLI.
+  `reset-password.html` вече съществува в repo-то и приема точно тези
+  параметри — липсва само сървърната част. Съзнателно отложено — козметично
+  подобрение, не блокира нищо (забравената парола вече работи с
+  Firebase-овия линк).
