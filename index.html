@@ -183,6 +183,20 @@
     background:var(--accent);color:var(--bg);display:flex;align-items:center;justify-content:center;
   }
 
+  /* Контекстно меню при задържане (long-press) върху бележка — Редактирай /
+     Добави подбележка / Изтрий, вместо отделни постоянно видими иконки.
+     Позициониран динамично, аналогично на .tag-picker (виж openCtxMenu()). */
+  .ctx-menu{
+    display:none;position:fixed;z-index:26;background:var(--card);border:1px solid var(--border);
+    border-radius:12px;padding:6px;box-shadow:0 10px 30px rgba(0,0,0,.35);min-width:180px;
+  }
+  .ctx-menu.show{display:block;}
+  .ctx-menu button{
+    width:100%;text-align:left;background:none;border:none;color:var(--text);font-size:13px;font-weight:600;
+    padding:9px 10px;border-radius:8px;display:flex;align-items:center;gap:9px;font-family:inherit;
+  }
+  .ctx-menu button.danger{color:var(--danger);}
+
   /* Панел "Настройки" — резервно копие (Export/Import), защото localStorage
      НЕ е гарантирано трайно съхранение: Safari на iOS може да го изчисти
      (особено при икона на началния екран, дълго неотваряне на приложението
@@ -539,6 +553,7 @@
 </div>
 
 <div class="tag-picker" id="tagPicker"></div>
+<div class="ctx-menu" id="ctxMenu"></div>
 <div class="settings-panel" id="settingsPanel"></div>
 <div class="profile-panel" id="profilePanel"></div>
 <input type="file" id="importFileInput" accept="application/json,.json" style="display:none">
@@ -600,6 +615,7 @@ let searchQuery = '';
 let categoryFilter = null; // null = "Всички"; 'personal' | 'work' | произволен таг
 let activeTagNoteId = null; // коя бележка е отворена в момента в tag-picker-а
 let expandedNotes = new Set(); // ключове (item.id или noteId::subId) на ръчно разгънати дълги бележки
+let ctxMenuNote = null; // {noteId, subId} на бележката с отворено long-press меню
 let theme = localStorage.getItem(THEME_KEY) || 'dark';
 let lang = localStorage.getItem(LANG_KEY) || 'bg';
 const BUILTIN_TAGS = ['personal', 'work'];
@@ -650,7 +666,8 @@ const ICONS = {
   upload: '<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>',
   chevronDown: '<svg class="ic" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>',
   chevronUp: '<svg class="ic" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>',
-  trash: '<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>'
+  trash: '<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
+  plus: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>'
 };
 
 // Текстове за двата езика — БГ (по подразбиране) и EN. t() връща обекта за
@@ -702,7 +719,8 @@ const STRINGS = {
     passwordChanged: 'Паролата е сменена успешно.', emailChanged: 'Имейлът е сменен успешно.',
     needsRecentLogin: 'За тази промяна трябва скорошен вход — излез и влез отново, после опитай пак.',
     expandAria: 'Разгъни', collapseAria: 'Свий',
-    deletedUndo: 'Бележката е изтрита.', undoBtn: 'Отмени', deleteAria: 'Изтрий'
+    deletedUndo: 'Бележката е изтрита.', undoBtn: 'Отмени', deleteAria: 'Изтрий',
+    ctxEdit: 'Редактирай', ctxDelete: 'Изтрий', ctxAddSub: 'Добави подбележка'
   },
   en: {
     searchAria: 'Search', searchPlaceholder: 'Search text or date (e.g. 06.08, tuesday)...',
@@ -749,7 +767,8 @@ const STRINGS = {
     passwordChanged: 'Password changed successfully.', emailChanged: 'Email changed successfully.',
     needsRecentLogin: 'This change needs a recent login — sign out, sign back in, then try again.',
     expandAria: 'Expand', collapseAria: 'Collapse',
-    deletedUndo: 'Note deleted.', undoBtn: 'Undo', deleteAria: 'Delete'
+    deletedUndo: 'Note deleted.', undoBtn: 'Undo', deleteAria: 'Delete',
+    ctxEdit: 'Edit', ctxDelete: 'Delete', ctxAddSub: 'Add sub-note'
   }
 };
 function t(){ return STRINGS[lang]; }
@@ -1296,13 +1315,29 @@ function attachSwipeHandlers(){
     const bgComplete = shell.querySelector('.swipe-bg.complete');
     const bgDelete = shell.querySelector('.swipe-bg.delete');
     let startX = 0, startY = 0, dx = 0, axis = null, dragging = false;
+    // Задържане (long-press) без движение отваря контекстно меню — таймерът
+    // се пуска при допир и се спира веднага щом посоката се определи като
+    // истински swipe/скрол (виж axis по-долу), за да не се сблъскват двата жеста.
+    let pressTimer = null, longPressFired = false;
+    const LONG_PRESS_MS = 480;
 
     noteEl.addEventListener('touchstart', e=>{
       if(e.touches.length !== 1) return;
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
-      dx = 0; axis = null; dragging = true;
+      dx = 0; axis = null; dragging = true; longPressFired = false;
       noteEl.classList.add('swiping');
+      clearTimeout(pressTimer);
+      pressTimer = setTimeout(()=>{
+        if(axis === null && dragging){
+          longPressFired = true;
+          dragging = false;
+          noteEl.classList.remove('swiping');
+          noteEl.style.transform = '';
+          triggerHaptic();
+          openCtxMenu(noteEl.dataset.note, noteEl.dataset.sub || null, noteEl);
+        }
+      }, LONG_PRESS_MS);
     }, {passive:true});
 
     noteEl.addEventListener('touchmove', e=>{
@@ -1313,6 +1348,7 @@ function attachSwipeHandlers(){
       if(axis === null){
         if(Math.abs(moveX) > 8 || Math.abs(moveY) > 8){
           axis = Math.abs(moveX) > Math.abs(moveY) ? 'x' : 'y';
+          clearTimeout(pressTimer);
         }
       }
       if(axis !== 'x') return; // вертикално движение — оставяме нормалния скрол
@@ -1325,6 +1361,8 @@ function attachSwipeHandlers(){
     }, {passive:false});
 
     function endSwipe(){
+      clearTimeout(pressTimer);
+      if(longPressFired){ longPressFired = false; axis = null; dx = 0; return; }
       if(!dragging) return;
       dragging = false;
       noteEl.classList.remove('swiping');
@@ -1424,6 +1462,52 @@ function openTagPicker(noteId, anchorEl){
 function closeTagPicker(){
   document.getElementById('tagPicker').classList.remove('show');
   activeTagNoteId = null;
+}
+
+// Контекстно меню при задържане (long-press) върху бележка — вижда се веднага
+// централно спрямо бележката (за разлика от tag-picker, който виси под
+// тапнатия елемент), защото задържането може да стане навсякъде по картата.
+function openCtxMenu(noteId, subId, anchorEl){
+  ctxMenuNote = {noteId, subId};
+  let html = `<button data-ctx="edit">${ICONS.pencil}${t().ctxEdit}</button>`;
+  if(!subId){
+    html += `<button data-ctx="addsub">${ICONS.plus}${t().ctxAddSub}</button>`;
+  }
+  html += `<button class="danger" data-ctx="delete">${ICONS.trash}${t().ctxDelete}</button>`;
+  const menu = document.getElementById('ctxMenu');
+  menu.innerHTML = html;
+  menu.classList.add('show');
+  const rect = anchorEl.getBoundingClientRect();
+  const menuH = menu.offsetHeight;
+  const top = Math.max(8, Math.min(rect.top + rect.height/2 - menuH/2, window.innerHeight - menuH - 8));
+  menu.style.top = top + 'px';
+  menu.style.left = Math.min(rect.left + 12, window.innerWidth - 196) + 'px';
+
+  menu.querySelectorAll('button[data-ctx]').forEach(b=>{
+    b.addEventListener('mousedown', e=>{
+      e.preventDefault();
+      const action = b.dataset.ctx;
+      const noteId2 = ctxMenuNote.noteId, subId2 = ctxMenuNote.subId;
+      closeCtxMenu();
+      if(action === 'edit'){
+        editingKey = subId2 ? noteId2+'::'+subId2 : noteId2;
+        addingSubFor = null;
+        render();
+      }else if(action === 'addsub'){
+        addingSubFor = noteId2;
+        editingKey = null;
+        render();
+        const inp = document.querySelector('.sub-input[data-note="'+noteId2+'"]');
+        if(inp) inp.focus();
+      }else if(action === 'delete'){
+        deleteBySwipe(noteId2, subId2);
+      }
+    });
+  });
+}
+function closeCtxMenu(){
+  document.getElementById('ctxMenu').classList.remove('show');
+  ctxMenuNote = null;
 }
 
 // Резервно копие на бележките — вече Firestore е основното трайно
@@ -1920,6 +2004,10 @@ document.addEventListener('mousedown', e=>{
   const picker = document.getElementById('tagPicker');
   if(picker.classList.contains('show') && !picker.contains(e.target) && !e.target.closest('[data-action="tag-open"]')){
     closeTagPicker();
+  }
+  const ctxMenu = document.getElementById('ctxMenu');
+  if(ctxMenu.classList.contains('show') && !ctxMenu.contains(e.target)){
+    closeCtxMenu();
   }
   const panel = document.getElementById('settingsPanel');
   if(panel.classList.contains('show') && !panel.contains(e.target) && e.target !== settingsBtn && !settingsBtn.contains(e.target)){
