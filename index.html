@@ -50,8 +50,8 @@
     --border:#D6BE97;
     --text:#3B2A1C;
     --text-dim:#8C7357;
-    --gold:#A97535;
-    --gold-dim:#835A26;
+    --gold:#C77D0A;
+    --gold-dim:#9C6208;
     --accent:#8C5A2B;
     --accent-dim:#6E4620;
     --green:#5E8F52;
@@ -1143,6 +1143,19 @@ function cycleStatus(noteId, subId){
   if(!target) return;
   target.status = target.status === 'open' ? 'progress' : target.status === 'progress' ? 'done' : 'open';
   save(); render();
+  // Смяната на статус премества бележката в друга секция (Приключени/В
+  // прогрес/Активни) — без това щеше просто да "изчезне" от погледа.
+  // Проследяваме я до новата ѝ позиция с плавен скрол.
+  scrollToNote(subId ? noteId+'::'+subId : noteId);
+}
+
+// Намира бележка/подбележка по нейния ключ (виж itemRow()) в текущия DOM
+// (след render()) и я скролва плавно в центъра на видимата зона.
+function scrollToNote(key){
+  const el = document.querySelector(`.txt[data-key="${key}"]`);
+  if(!el) return;
+  const wrap = el.closest('.note-wrap');
+  if(wrap) wrap.scrollIntoView({behavior:'smooth', block:'center'});
 }
 
 function removeItem(noteId, subId){
