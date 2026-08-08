@@ -244,24 +244,33 @@
     55%{opacity:1;transform:scale(1.14);box-shadow:0 0 12px 3px rgba(var(--gold-rgb),.45);}
     100%{opacity:1;transform:scale(1);box-shadow:0 0 0 0 rgba(var(--gold-rgb),0);}
   }
+  /* Балончето е изрязано във формата на гинко листо (ветрилообразно, плитка
+     резка горе, стеснено като дръжка долу — виж clip-path пътя) — фиксиран
+     размер, защото path координатите са в пиксели, обвързани с кутията.
+     Долната точка на "дръжката" е изходната точка на стрелката към
+     обяснявания елемент, виж drawOnboardArrow(). */
   .onboard-tip{
-    display:none;position:fixed;z-index:60;max-width:250px;
-    background:var(--card);border:1px solid var(--accent-dim);border-radius:14px;
-    padding:12px 14px;box-shadow:0 14px 40px rgba(0,0,0,.4);
+    display:none;position:fixed;z-index:60;width:236px;height:210px;
+    background:var(--card);
+    clip-path:path('M118,206 C64,168 22,120 26,72 C29,42 57,18 97,21 C107,22 113,32 118,47 C123,32 129,22 139,21 C179,18 207,42 210,72 C214,120 172,168 118,206 Z');
+    filter:drop-shadow(0 10px 26px rgba(0,0,0,.4));
   }
-  .onboard-tip.show{display:block;animation:onboardTipIn .25s ease;}
-  @keyframes onboardTipIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
-  .onboard-tip-text{font-size:13px;line-height:1.5;color:var(--text);margin-bottom:10px;}
-  .onboard-tip-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;}
-  .onboard-tip-dots{display:flex;gap:4px;}
+  .onboard-tip.show{display:block;animation:onboardTipIn .3s ease;}
+  @keyframes onboardTipIn{from{opacity:0;transform:translateY(6px) scale(.94);}to{opacity:1;transform:translateY(0) scale(1);}}
+  .onboard-tip-inner{
+    height:100%;box-sizing:border-box;padding:52px 40px 40px;
+    display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+    text-align:center;
+  }
+  .onboard-tip-text{font-size:12px;line-height:1.45;color:var(--text);margin-bottom:8px;}
+  .onboard-tip-dots{display:flex;gap:4px;margin-bottom:8px;}
   .onboard-tip-dots span{width:5px;height:5px;border-radius:50%;background:var(--border);flex-shrink:0;}
   .onboard-tip-dots span.active{background:var(--accent);}
-  .onboard-tip-btns{display:flex;align-items:center;gap:10px;}
-  .onboard-tip-skip{background:none;border:none;color:var(--text-dim);font-size:11.5px;font-family:inherit;padding:4px;}
   .onboard-tip-next{
     background:var(--accent);color:var(--bg);border:none;border-radius:8px;
-    padding:6px 13px;font-size:12px;font-weight:700;font-family:inherit;
+    padding:5px 12px;font-size:11.5px;font-weight:700;font-family:inherit;margin-bottom:4px;
   }
+  .onboard-tip-skip{background:none;border:none;color:var(--text-dim);font-size:10.5px;font-family:inherit;padding:2px;}
 
   /* Екран за вход — покрива цялото приложение (position:fixed inset:0, най-
      високият z-index в страницата), докато Firebase Auth не потвърди активна
@@ -633,6 +642,14 @@
 <div class="tag-picker" id="tagPicker"></div>
 <div class="ctx-menu" id="ctxMenu"></div>
 <div class="onboard-tip" id="onboardTip"></div>
+<svg id="onboardArrowSvg" style="position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:59;display:none;">
+  <defs>
+    <marker id="onboardArrowHead" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="var(--accent)"></path>
+    </marker>
+  </defs>
+  <path id="onboardArrowPath" d="" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" marker-end="url(#onboardArrowHead)"></path>
+</svg>
 <div class="profile-panel" id="profilePanel"></div>
 <input type="file" id="importFileInput" accept="application/json,.json" style="display:none">
 
@@ -1474,12 +1491,13 @@ function animateTopbarIcons(){
   });
 }
 
+// Балончето стои ВИНАГИ над сочения елемент (не под него), за да не
+// покрива примерната бележка отдолу — с достатъчен луфт за стрелката.
 function positionOnboardTip(targetEl){
   const tip = document.getElementById('onboardTip');
   const tRect = targetEl.getBoundingClientRect();
   const tipW = tip.offsetWidth, tipH = tip.offsetHeight;
-  let top = tRect.bottom + 10;
-  if(top + tipH > window.innerHeight - 12) top = tRect.top - tipH - 10;
+  let top = tRect.top - tipH - 26;
   top = Math.max(8, top);
   let left = tRect.left + tRect.width/2 - tipW/2;
   left = Math.max(8, Math.min(left, window.innerWidth - tipW - 8));
@@ -1487,8 +1505,34 @@ function positionOnboardTip(targetEl){
   tip.style.left = left + 'px';
 }
 
-// Показва едно балонче, сочещо targetEl (или центрирано, ако няма) —
-// resolve-ва с 'next' или 'skip' щом потребителят тапне съответния бутон.
+// Долната точка на "дръжката" на листото (виж clip-path пътя в CSS) — оттук
+// тръгва стрелката към сочения елемент.
+function onboardTipAnchorPoint(){
+  const tip = document.getElementById('onboardTip');
+  const r = tip.getBoundingClientRect();
+  return { x: r.left + r.width * (118/236), y: r.top + r.height * (204/210) };
+}
+
+// Извива лека SVG стрелка от дръжката на листото до центъра на сочения
+// елемент — предефинира се при всяка стъпка.
+function drawOnboardArrow(targetEl){
+  const svg = document.getElementById('onboardArrowSvg');
+  const path = document.getElementById('onboardArrowPath');
+  if(!targetEl){ svg.style.display = 'none'; return; }
+  const a = onboardTipAnchorPoint();
+  const tRect = targetEl.getBoundingClientRect();
+  const b = { x: tRect.left + tRect.width/2, y: tRect.top + tRect.height/2 };
+  const midX = (a.x + b.x)/2 + (b.x > a.x ? -18 : 18);
+  const midY = (a.y + b.y)/2;
+  path.setAttribute('d', `M${a.x},${a.y} Q${midX},${midY} ${b.x},${b.y}`);
+  svg.style.display = 'block';
+}
+function hideOnboardArrow(){
+  document.getElementById('onboardArrowSvg').style.display = 'none';
+}
+
+// Показва едно балонче (гинко листо), сочещо targetEl (или центрирано, ако
+// няма) — resolve-ва с 'next' или 'skip' щом потребителят тапне бутона.
 function showOnboardTip(targetEl, textKey, stepIndex, totalSteps){
   return new Promise(resolve=>{
     const s = t();
@@ -1497,25 +1541,27 @@ function showOnboardTip(targetEl, textKey, stepIndex, totalSteps){
     for(let i=0;i<totalSteps;i++) dots += `<span class="${i===stepIndex?'active':''}"></span>`;
     const isLast = stepIndex === totalSteps - 1;
     tip.innerHTML = `
-      <div class="onboard-tip-text">${s[textKey]}</div>
-      <div class="onboard-tip-actions">
+      <div class="onboard-tip-inner">
+        <div class="onboard-tip-text">${s[textKey]}</div>
         <span class="onboard-tip-dots">${dots}</span>
-        <div class="onboard-tip-btns">
-          <button type="button" class="onboard-tip-skip" id="onboardSkipBtn">${s.onboardSkip}</button>
-          <button type="button" class="onboard-tip-next" id="onboardNextBtn">${isLast ? s.onboardGotIt : s.onboardNext}</button>
-        </div>
+        <button type="button" class="onboard-tip-next" id="onboardNextBtn">${isLast ? s.onboardGotIt : s.onboardNext}</button>
+        <button type="button" class="onboard-tip-skip" id="onboardSkipBtn">${s.onboardSkip}</button>
       </div>`;
     tip.style.transform = '';
     tip.classList.add('show');
-    if(targetEl) positionOnboardTip(targetEl);
-    else{
+    if(targetEl){
+      positionOnboardTip(targetEl);
+      drawOnboardArrow(targetEl);
+    }else{
       tip.style.left = '50%'; tip.style.top = '50%'; tip.style.transform = 'translate(-50%,-50%)';
+      hideOnboardArrow();
     }
     let done = false;
     function finish(skip){
       if(done) return;
       done = true;
       tip.classList.remove('show');
+      hideOnboardArrow();
       resolve(skip ? 'skip' : 'next');
     }
     document.getElementById('onboardNextBtn').addEventListener('click', ()=>finish(false));
@@ -1557,6 +1603,7 @@ function demoSwipePreview(noteEl){
 // показва обучението пак при следващ вход.
 function finishOnboarding(docRef, demoId){
   document.getElementById('onboardTip').classList.remove('show');
+  hideOnboardArrow();
   if(demoId) notes = notes.filter(n=>n.id!==demoId);
   save(); render();
   if(docRef) docRef.set({ onboarded:true }, { merge:true }).catch(err=>console.error('onboarded flag save failed', err));
