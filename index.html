@@ -298,7 +298,7 @@
      Когато бележките станат повече от наличното място, изтласкват се нагоре
      естествено, както в чат приложение. */
   main{
-    padding:6px 14px 0;padding-bottom:88px;
+    padding:6px 20px 0;padding-bottom:88px;
     flex:1 0 auto;display:flex;flex-direction:column;justify-content:flex-end;
   }
 
@@ -426,7 +426,9 @@
      Пипаме само тук, не самите --card/--card-2 стойности (те се ползват и
      другаде — бутони, полета и т.н. — и не бива да се променят). */
   :root[data-theme="light"] .note{background:var(--card-2);}
-  :root[data-theme="light"] .subs .note{background:var(--card);}
+  /* Малко по-тъмни от чисто --card (не колкото основните бележки, за да си
+     личи разликата), между двата тона. */
+  :root[data-theme="light"] .subs .note{background:#F3E6CB;}
   .add-sub-row{margin-top:6px;}
   .add-sub-link{
     background:none;border:none;color:var(--accent-dim);font-size:12.5px;
