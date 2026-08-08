@@ -473,13 +473,6 @@
   .note.done .tag{background:rgba(93,160,107,.18);color:var(--green);}
   .note .time{font-size:10.5px;color:var(--text-dim);white-space:nowrap;}
 
-  .note-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0;}
-  .note-actions button{
-    width:21px;height:21px;border:none;background:none;
-    color:var(--text-dim);display:flex;align-items:center;justify-content:center;
-  }
-  .note-actions button.del{color:var(--danger);}
-
   .edit-input{
     width:100%;background:var(--card-2);border:1px solid var(--accent-dim);
     color:var(--text);border-radius:10px;padding:8px 10px;font-size:15px;
@@ -1805,10 +1798,6 @@ function itemRow(item, noteId, isSub){
             <button class="expand-toggle" data-action="toggle-expand" data-key="${key}" style="display:${isExpanded?'inline-flex':'none'}" aria-label="${isExpanded?t().collapseAria:t().expandAria}">${isExpanded?t().collapseAria:t().expandAria}${isExpanded?ICONS.chevronUp:ICONS.chevronDown}</button>
           </div>
         </div>
-        <div class="note-actions">
-          <button data-action="edit" data-note="${noteId}" data-sub="${isSub?item.id:''}">${ICONS.pencil}</button>
-          <button class="del" data-action="del" data-note="${noteId}" data-sub="${isSub?item.id:''}">${ICONS.close}</button>
-        </div>
       </div>
       </div>
     </div>
@@ -1973,12 +1962,6 @@ function attachHandlers(){
   });
   document.querySelectorAll('[data-action="cycle"]').forEach(el=>{
     el.addEventListener('click', ()=>cycleStatus(el.dataset.note, el.dataset.sub||null));
-  });
-  // Изтриването вече иска потвърждение — предпазва от случаен допир.
-  document.querySelectorAll('[data-action="del"]').forEach(el=>{
-    el.addEventListener('click', ()=>{
-      if(window.confirm(t().confirmDelete)) removeItem(el.dataset.note, el.dataset.sub||null);
-    });
   });
   document.querySelectorAll('[data-action="tag-open"]').forEach(el=>{
     el.addEventListener('click', e=>{
