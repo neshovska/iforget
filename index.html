@@ -375,10 +375,24 @@
      в карето) + .note-main (точка/текст/бутони — старият ред). Разделени
      умишлено, за да не се бори датата за пространство с бутоните за
      редакция/изтриване, които също стоят вдясно. */
+  /* Swipe: .swipe-shell е "прозорец" (overflow:hidden) зад .note, с два
+     цветни слоя отдолу (complete/delete), които се показват докато .note се
+     плъзга хоризонтално върху тях (виж attachSwipeHandlers() в скрипта).
+     .note пази transition само когато НЕ се влачи в момента (.swiping го
+     маха, за да следва пръста без закъснение). */
+  .swipe-shell{position:relative;border-radius:11px;overflow:hidden;}
+  .swipe-bg{
+    position:absolute;inset:0;display:flex;align-items:center;gap:8px;
+    padding:0 18px;font-size:13px;font-weight:700;color:#fff;opacity:0;border-radius:11px;
+  }
+  .swipe-bg.complete{background:var(--green);justify-content:flex-start;}
+  .swipe-bg.delete{background:var(--danger);justify-content:flex-end;}
   .note{
     background:var(--card);border:1px solid var(--border);border-radius:11px;
-    padding:8px 10px;display:flex;flex-direction:column;gap:2px;
+    padding:8px 10px;display:flex;flex-direction:column;gap:2px;position:relative;
+    touch-action:pan-y;transition:transform .22s ease;
   }
+  .note.swiping{transition:none;}
   .note-top{display:flex;justify-content:flex-end;}
   .note-main{display:flex;align-items:flex-start;gap:8px;}
   .note .dot{
@@ -483,6 +497,21 @@
   }
   .jump-btn.show{display:flex;}
 
+  /* Undo тост при swipe-изтриване — плаваща лента над bottombar, изчезва
+     сама след няколко секунди (виж showUndoToast()/hideUndoToast()). */
+  .undo-toast{
+    display:none;position:fixed;left:16px;right:16px;z-index:12;
+    bottom:calc(env(safe-area-inset-bottom,0px) + 78px);
+    background:#161616;color:#F5F5F5;border-radius:14px;
+    padding:11px 8px 11px 16px;box-shadow:0 6px 20px rgba(0,0,0,.4);
+    align-items:center;justify-content:space-between;gap:10px;font-size:13.5px;
+  }
+  .undo-toast.show{display:flex;}
+  .undo-toast button{
+    -webkit-appearance:none;appearance:none;background:none;border:none;
+    color:var(--accent);font-weight:700;font-size:13.5px;padding:6px 10px;font-family:inherit;
+  }
+
 
 </style>
 </head>
@@ -541,6 +570,11 @@
 <main id="activeArea"></main>
 
 <button class="jump-btn" id="jumpBtn"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg><span id="jumpLabel">Най-нови</span></button>
+
+<div class="undo-toast" id="undoToast">
+  <span id="undoToastText"></span>
+  <button type="button" id="undoToastBtn">Отмени</button>
+</div>
 
 <div class="bottombar" id="bottomBar">
   <div class="input-row">
@@ -613,7 +647,8 @@ const ICONS = {
   download: '<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
   upload: '<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>',
   chevronDown: '<svg class="ic" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>',
-  chevronUp: '<svg class="ic" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>'
+  chevronUp: '<svg class="ic" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>',
+  trash: '<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>'
 };
 
 // Текстове за двата езика — БГ (по подразбиране) и EN. t() връща обекта за
@@ -664,7 +699,8 @@ const STRINGS = {
     newEmailPlaceholder: 'Нов имейл',
     passwordChanged: 'Паролата е сменена успешно.', emailChanged: 'Имейлът е сменен успешно.',
     needsRecentLogin: 'За тази промяна трябва скорошен вход — излез и влез отново, после опитай пак.',
-    expandAria: 'Разгъни', collapseAria: 'Свий'
+    expandAria: 'Разгъни', collapseAria: 'Свий',
+    deletedUndo: 'Бележката е изтрита.', undoBtn: 'Отмени', deleteAria: 'Изтрий'
   },
   en: {
     searchAria: 'Search', searchPlaceholder: 'Search text or date (e.g. 06.08, tuesday)...',
@@ -710,7 +746,8 @@ const STRINGS = {
     newEmailPlaceholder: 'New email',
     passwordChanged: 'Password changed successfully.', emailChanged: 'Email changed successfully.',
     needsRecentLogin: 'This change needs a recent login — sign out, sign back in, then try again.',
-    expandAria: 'Expand', collapseAria: 'Collapse'
+    expandAria: 'Expand', collapseAria: 'Collapse',
+    deletedUndo: 'Note deleted.', undoBtn: 'Undo', deleteAria: 'Delete'
   }
 };
 function t(){ return STRINGS[lang]; }
@@ -821,6 +858,7 @@ function applyStaticText(){
   document.getElementById('authPassword').setAttribute('placeholder', s.passwordPlaceholder);
   document.getElementById('authPasswordConfirm').setAttribute('placeholder', s.confirmPasswordPlaceholder);
   document.getElementById('forgotPasswordBtn').textContent = s.forgotPassword;
+  document.getElementById('undoToastBtn').textContent = s.undoBtn;
   setAuthMode(authMode); // презарежда надписите "Вход"/"Регистрация" на текущия език
 }
 
@@ -1181,6 +1219,136 @@ function removeItem(noteId, subId){
   save(); render();
 }
 
+// Haptic feedback при swipe — navigator.vibrate() НЕ съществува в Safari на
+// iOS (съзнателна политика на Apple, само нативни приложения), но е
+// безобидно да го викаме навсякъде — на Android/Chrome реално ще вибрира.
+function triggerHaptic(){
+  if(navigator.vibrate) navigator.vibrate(12);
+}
+
+// Swipe-надясно: директно маркира завършено (не преминава през целия
+// open→progress→done цикъл на бутона вляво) + проследяваме новата позиция.
+function markDoneBySwipe(noteId, subId){
+  const target = subId ? findSub(noteId, subId) : findNote(noteId);
+  if(!target) return;
+  target.status = 'done';
+  save(); render();
+  scrollToNote(subId ? noteId+'::'+subId : noteId);
+}
+
+// Swipe-наляво: изтрива веднага без диалог за потвърждение (за разлика от
+// бутона "Изтрий"), но пази точна позиция за възстановяване и показва Undo
+// тост за няколко секунди — по-бърз, но все пак безопасен начин.
+let undoRestoreFn = null;
+let undoTimeoutId = null;
+function deleteBySwipe(noteId, subId){
+  let restoreFn;
+  if(subId){
+    const n = findNote(noteId);
+    if(!n) return;
+    const idx = n.subs.findIndex(s=>s.id===subId);
+    if(idx === -1) return;
+    const backup = n.subs[idx];
+    n.subs.splice(idx, 1);
+    restoreFn = ()=>{
+      const nn = findNote(noteId);
+      if(nn) nn.subs.splice(Math.min(idx, nn.subs.length), 0, backup);
+      save(); render();
+    };
+  }else{
+    const idx = notes.findIndex(n=>n.id===noteId);
+    if(idx === -1) return;
+    const backup = notes[idx];
+    notes.splice(idx, 1);
+    restoreFn = ()=>{
+      notes.splice(Math.min(idx, notes.length), 0, backup);
+      save(); render();
+    };
+  }
+  save(); render();
+  showUndoToast(restoreFn);
+}
+
+function showUndoToast(restoreFn){
+  undoRestoreFn = restoreFn;
+  const toast = document.getElementById('undoToast');
+  document.getElementById('undoToastText').textContent = t().deletedUndo;
+  toast.classList.add('show');
+  clearTimeout(undoTimeoutId);
+  undoTimeoutId = setTimeout(hideUndoToast, 4000);
+}
+function hideUndoToast(){
+  document.getElementById('undoToast').classList.remove('show');
+  undoRestoreFn = null;
+}
+
+// Плъзгане на бележка: следи хоризонтално движение с пръст (без да пречи на
+// нормалния вертикален скрол — виж проверката на axis), оцветява фона зад
+// картата пропорционално, и при пускане отвъд прага изпълнява действието с
+// анимация встрани; иначе се връща на място. Извиква се при всеки render()
+// от attachHandlers().
+function attachSwipeHandlers(){
+  document.querySelectorAll('.note[data-swipe-key]').forEach(noteEl=>{
+    const shell = noteEl.closest('.swipe-shell');
+    if(!shell) return;
+    const bgComplete = shell.querySelector('.swipe-bg.complete');
+    const bgDelete = shell.querySelector('.swipe-bg.delete');
+    let startX = 0, startY = 0, dx = 0, axis = null, dragging = false;
+
+    noteEl.addEventListener('touchstart', e=>{
+      if(e.touches.length !== 1) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      dx = 0; axis = null; dragging = true;
+      noteEl.classList.add('swiping');
+    }, {passive:true});
+
+    noteEl.addEventListener('touchmove', e=>{
+      if(!dragging) return;
+      const touch = e.touches[0];
+      const moveX = touch.clientX - startX;
+      const moveY = touch.clientY - startY;
+      if(axis === null){
+        if(Math.abs(moveX) > 8 || Math.abs(moveY) > 8){
+          axis = Math.abs(moveX) > Math.abs(moveY) ? 'x' : 'y';
+        }
+      }
+      if(axis !== 'x') return; // вертикално движение — оставяме нормалния скрол
+      e.preventDefault();
+      dx = moveX;
+      const clamped = Math.max(-110, Math.min(110, dx));
+      noteEl.style.transform = `translateX(${clamped}px)`;
+      bgComplete.style.opacity = clamped > 8 ? Math.min(1, clamped/70) : 0;
+      bgDelete.style.opacity = clamped < -8 ? Math.min(1, -clamped/70) : 0;
+    }, {passive:false});
+
+    function endSwipe(){
+      if(!dragging) return;
+      dragging = false;
+      noteEl.classList.remove('swiping');
+      const THRESH = 68;
+      const noteId = noteEl.dataset.note;
+      const subId = noteEl.dataset.sub || null;
+      if(axis === 'x' && dx > THRESH){
+        triggerHaptic();
+        noteEl.style.transform = 'translateX(130%)';
+        setTimeout(()=>markDoneBySwipe(noteId, subId), 160);
+      }else if(axis === 'x' && dx < -THRESH){
+        triggerHaptic();
+        noteEl.style.transform = 'translateX(-130%)';
+        setTimeout(()=>deleteBySwipe(noteId, subId), 160);
+      }else{
+        noteEl.style.transform = '';
+        bgComplete.style.opacity = 0;
+        bgDelete.style.opacity = 0;
+      }
+      axis = null; dx = 0;
+    }
+    noteEl.addEventListener('touchend', endSwipe);
+    noteEl.addEventListener('touchcancel', endSwipe);
+  });
+}
+
 function commitEdit(noteId, subId, value){
   const target = subId ? findSub(noteId, subId) : findNote(noteId);
   const v = value.trim();
@@ -1384,7 +1552,10 @@ function itemRow(item, noteId, isSub){
   // проверката с scrollHeight в attachHandlers().
   const isExpanded = expandedNotes.has(key);
   return `<div class="note-wrap">
-    <div class="note ${item.status}">
+    <div class="swipe-shell">
+      <div class="swipe-bg complete" aria-hidden="true">${ICONS.check} ${t().tagDone}</div>
+      <div class="swipe-bg delete" aria-hidden="true">${t().deleteAria} ${ICONS.trash}</div>
+      <div class="note ${item.status}" data-swipe-key="${key}" data-note="${noteId}" data-sub="${isSub?item.id:''}">
       <div class="note-top"><span class="time">${dateTimeLabel(item.createdAt)}</span></div>
       <div class="note-main">
         <div class="dot" data-action="cycle" data-note="${noteId}" data-sub="${isSub?item.id:''}">${icon}</div>
@@ -1401,6 +1572,7 @@ function itemRow(item, noteId, isSub){
           <button data-action="edit" data-note="${noteId}" data-sub="${isSub?item.id:''}">${ICONS.pencil}</button>
           <button class="del" data-action="del" data-note="${noteId}" data-sub="${isSub?item.id:''}">${ICONS.close}</button>
         </div>
+      </div>
       </div>
     </div>
     ${!isSub ? subsBlock(item) : ''}
@@ -1538,6 +1710,7 @@ function render(){
 }
 
 function attachHandlers(){
+  attachSwipeHandlers();
   // Показва бутона за разгъване само ако свитият текст наистина прелива
   // (scrollHeight > clientHeight) — иначе за къси бележки бутонът просто не
   // се появява. Бележки, които потребителят вече е разгънал ръчно, нямат
@@ -1781,6 +1954,11 @@ function updateJumpVisibility(){
 window.addEventListener('scroll', updateJumpVisibility);
 window.addEventListener('resize', updateJumpVisibility);
 jumpBtn.addEventListener('click', ()=>scrollToBottom(true));
+
+document.getElementById('undoToastBtn').addEventListener('click', ()=>{
+  if(undoRestoreFn) undoRestoreFn();
+  hideUndoToast();
+});
 
 window.addEventListener('resize', updateTopbarHeight);
 
