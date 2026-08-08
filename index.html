@@ -1353,8 +1353,11 @@ function removeItem(noteId, subId){
 // TRASH_RETENTION_MS (10 дни). Подбележка не може да носи собствен таг
 // (само основните бележки имат tag-picker), затова при изтриване се
 // "изважда" от родителя си като самостоятелна бележка в кошчето — данните
-// не се губят, само вложеността ѝ под оригиналната бележка. Връща restore()
-// функция, ползвана и от Undo тоста (deleteBySwipe), и другаде евентуално.
+// не се губят, само вложеността ѝ под оригиналната бележка.
+// Ако бележката/подбележката ВЕЧЕ е в кошчето (родителят ѝ носи
+// DELETED_TAG), ново изтриване е окончателно — трие се напълно от масива,
+// без повторно "мекото" изтриване. Връща restore() функция, ползвана и от
+// Undo тоста (deleteBySwipe), и другаде евентуално.
 function softDelete(noteId, subId){
   const now = Date.now();
   if(subId){
@@ -1363,6 +1366,14 @@ function softDelete(noteId, subId){
     const idx = n.subs.findIndex(s=>s.id===subId);
     if(idx === -1) return null;
     const sub = n.subs[idx];
+    if(n.tag === DELETED_TAG){
+      n.subs.splice(idx, 1);
+      return function restore(){
+        const parent = findNote(noteId);
+        if(parent) parent.subs.splice(Math.min(idx, parent.subs.length), 0, sub);
+        save(); render();
+      };
+    }
     n.subs.splice(idx, 1);
     const trashed = {
       id: sub.id, text: sub.text, status: sub.status, createdAt: sub.createdAt,
@@ -1380,6 +1391,13 @@ function softDelete(noteId, subId){
     const idx = notes.findIndex(n=>n.id===noteId);
     if(idx === -1) return null;
     const note = notes[idx];
+    if(note.tag === DELETED_TAG){
+      notes.splice(idx, 1);
+      return function restore(){
+        notes.splice(Math.min(idx, notes.length), 0, note);
+        save(); render();
+      };
+    }
     const prevTag = note.tag;
     note.tag = DELETED_TAG;
     note.deletedAt = now;
