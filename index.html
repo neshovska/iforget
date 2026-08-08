@@ -14,6 +14,11 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>IForget</title>
 <style>
+  /* Шрифтова двойка, взета от GlowTrack за визуална консистентност между
+     двете приложения: "Cormorant Garamond" (serif) за заглавие/акценти,
+     "DM Sans" за целия останал текст. */
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=DM+Sans:wght@300;400;500;600&display=swap');
+
   /* Тъмната тема е с 1-2 тона по-светла от първоначалната — фонът/картите/
      рамките са вдигнати към по-светъл нюанс на тъмно-синьото, за да не е
      толкова черно, докато акцентният син е леко изсветлен за баланс. */
@@ -76,7 +81,7 @@
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
-    font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
+    font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
     -webkit-font-smoothing:antialiased;height:100%;}
   body{display:flex;flex-direction:column;min-height:100vh;transition:background-color .15s ease,color .15s ease;}
 
@@ -128,7 +133,7 @@
   .topbar-row{display:flex;align-items:center;justify-content:space-between;}
   .topbar-title-group{display:flex;align-items:center;gap:7px;}
   .topbar h1{
-    font-size:16px;font-weight:700;letter-spacing:.3px;color:var(--accent);
+    font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;letter-spacing:.3px;color:var(--accent);
     margin:0;
   }
   /* Брояч "серия" (streak) — поредни дни с поне 1 завършена бележка, виж
@@ -245,9 +250,9 @@
      сесия — затова тук има собствено копче за смяна на езика. */
   .auth-lang-btn{position:absolute;top:calc(env(safe-area-inset-top,0px) + 16px);right:16px;}
   .auth-card{max-width:320px;width:100%;}
-  .auth-card h1{font-size:28px;font-weight:800;color:var(--accent);margin:0 0 8px;letter-spacing:.3px;}
+  .auth-card h1{font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:600;color:var(--accent);margin:0 0 8px;letter-spacing:.3px;}
   /* Мотото на приложението — под заглавието, над функционалния текст. */
-  .auth-motto{font-size:14.5px;font-style:italic;color:var(--gold);line-height:1.4;margin:0 0 10px;}
+  .auth-motto{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;font-style:italic;color:var(--gold);line-height:1.4;margin:0 0 10px;}
   .auth-card p{font-size:14px;color:var(--text-dim);line-height:1.55;margin:0 0 20px;}
   /* Кратък списък с най-важните функции над формата за вход — първото,
      което вижда нов човек, преди изобщо да е влязъл. */
