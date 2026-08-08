@@ -442,7 +442,7 @@
     touch-action:pan-y;transition:transform .22s ease;
   }
   .note.swiping{transition:none;}
-  .note-top{display:flex;justify-content:flex-end;}
+  .note-top{display:flex;justify-content:flex-end;align-items:center;gap:6px;}
   .note-main{display:flex;align-items:flex-start;gap:8px;}
   .note .dot{
     width:17px;height:17px;border-radius:50%;flex-shrink:0;margin-top:2px;
@@ -1786,7 +1786,7 @@ function itemRow(item, noteId, isSub){
       <div class="swipe-bg complete" aria-hidden="true">${ICONS.check} ${t().tagDone}</div>
       <div class="swipe-bg delete" aria-hidden="true">${t().deleteAria} ${ICONS.trash}</div>
       <div class="note ${item.status}" data-swipe-key="${key}" data-note="${noteId}" data-sub="${isSub?item.id:''}">
-      <div class="note-top"><span class="time">${dateTimeLabel(item.createdAt)}</span></div>
+      <div class="note-top">${tagText ? `<span class="tag">${tagText}</span>` : ''}<span class="time">${dateTimeLabel(item.createdAt)}</span></div>
       <div class="note-main">
         <div class="dot" data-action="cycle" data-note="${noteId}" data-sub="${isSub?item.id:''}">${icon}</div>
         <div class="body">
@@ -1794,7 +1794,6 @@ function itemRow(item, noteId, isSub){
           <div class="meta">
             ${!isSub ? tagPillHtml(item, noteId) : ''}
             ${!isSub && addingSubFor !== noteId ? `<button class="add-sub-link" data-action="sub-open" data-note="${noteId}">${t().addSubLink}</button>` : ''}
-            ${tagText ? `<span class="tag">${tagText}</span>` : ''}
             <button class="expand-toggle" data-action="toggle-expand" data-key="${key}" style="display:${isExpanded?'inline-flex':'none'}" aria-label="${isExpanded?t().collapseAria:t().expandAria}">${isExpanded?t().collapseAria:t().expandAria}${isExpanded?ICONS.chevronUp:ICONS.chevronDown}</button>
           </div>
         </div>
