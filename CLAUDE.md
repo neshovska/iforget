@@ -79,7 +79,8 @@ tag-picker в интерфейса).
 - **Тема** — тъмна (по подразбиране) / светла "Капучино" палитра
   (`:root[data-theme="light"]`), превключвател в topbar-а, пази се в
   localStorage.
-- **Език** — bg/en превключвател (`STRINGS.bg`/`STRINGS.en`, `t()` helper).
+- **Език** — 5 езика (bg/en/ru/de/es, `STRINGS.<code>`, `t()` helper),
+  падащо меню (`openLangPicker()`) вместо просто превключване.
 - **Фон** — ginkgo листа (реални снимки на потребителя, `bg-dark.jpg`/
   `bg-light.jpg`), директно като `body` background-image, тайлват се.
 - **PWA** — собствена икона (ginkgo лист), `manifest.json`,
@@ -116,9 +117,6 @@ tag-picker в интерфейса).
 обикновено стават ясни от контекста; при истинска неяснота — питай.
 
 ## Планирани задачи (за после, не сега)
-
-- **Превод на приложението на руски, немски и испански** — в допълнение
-  към сегашните `STRINGS.bg`/`STRINGS.en`. Не е започнато.
 - **Брандиран линк за забравена парола** (`iforget.eu/reset-password.html`
   вместо Firebase-овия `iforgetbg.firebaseapp.com`) — Firebase Console
   "Action URL" полето постоянно дава "An error occurred updating action
