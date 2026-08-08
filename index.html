@@ -25,6 +25,7 @@
     --text-dim:#98A3B9;
     --gold:#DFAE3A;
     --gold-dim:#A6841F;
+    --gold-rgb:223,174,58;
     --accent:#5B96FF;
     --accent-dim:#3D71C4;
     --green:#5AB77C;
@@ -54,6 +55,7 @@
     --text-dim:#8C7357;
     --gold:#C77D0A;
     --gold-dim:#9C6208;
+    --gold-rgb:199,125,10;
     --accent:#8C5A2B;
     --accent-dim:#6E4620;
     --green:#5E8F52;
@@ -399,7 +401,7 @@
     width:17px;height:17px;border-radius:50%;flex-shrink:0;margin-top:2px;
     border:1.5px solid var(--text-dim);display:flex;align-items:center;justify-content:center;
   }
-  .note.progress .dot{border-color:var(--gold);background:rgba(201,162,39,.15);}
+  .note.progress .dot{border-color:var(--gold);background:rgba(var(--gold-rgb),.38);}
   .note.done .dot{border-color:var(--green);background:var(--green);color:#0E1A10;}
   .note .body{flex:1;min-width:0;}
   .note .txt{font-size:14px;line-height:1.35;word-break:break-word;}
