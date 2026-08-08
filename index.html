@@ -389,7 +389,7 @@
      attachHandlers(), който след всеки render() мери scrollHeight и показва
      .expand-toggle бутона само ако текстът наистина прелива. */
   .note .txt.clamped{
-    display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
   }
   .expand-toggle{
     -webkit-appearance:none;appearance:none;background:none;border:none;
@@ -610,7 +610,7 @@ const STRINGS = {
   bg: {
     searchAria: 'Търсене', searchPlaceholder: 'Търси по текст или дата (напр. 06.08, вторник)...',
     notePlaceholder: 'Нова бележка...', subPlaceholder: 'Подбележка...',
-    addSubLink: '+ подбележка', cancelAria: 'Откажи', saveAria: 'Запази',
+    addSubLink: '+ добави', cancelAria: 'Откажи', saveAria: 'Запази',
     jumpLatest: 'Най-нови',
     today: 'Днес', yesterday: 'Вчера', noNotes: 'Няма бележки',
     results: 'Резултати', noResultsFor: q => `Няма намерени бележки за "${q}"`,
@@ -656,7 +656,7 @@ const STRINGS = {
   en: {
     searchAria: 'Search', searchPlaceholder: 'Search text or date (e.g. 06.08, tuesday)...',
     notePlaceholder: 'New note...', subPlaceholder: 'Sub-note...',
-    addSubLink: '+ sub-note', cancelAria: 'Cancel', saveAria: 'Save',
+    addSubLink: '+ add', cancelAria: 'Cancel', saveAria: 'Save',
     jumpLatest: 'Latest',
     today: 'Today', yesterday: 'Yesterday', noNotes: 'No notes',
     results: 'Results', noResultsFor: q => `No notes found for "${q}"`,
