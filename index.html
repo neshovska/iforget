@@ -1437,7 +1437,7 @@ function showUndoToast(restoreFn){
   document.getElementById('undoToastText').textContent = t().deletedUndo;
   toast.classList.add('show');
   clearTimeout(undoTimeoutId);
-  undoTimeoutId = setTimeout(hideUndoToast, 4000);
+  undoTimeoutId = setTimeout(hideUndoToast, 2500);
 }
 function hideUndoToast(){
   document.getElementById('undoToast').classList.remove('show');
