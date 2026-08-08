@@ -241,6 +241,9 @@
     text-align:center;
   }
   .auth-screen.show{display:flex;}
+  /* Топбар-ът (с бутона за език) е скрит зад екрана за вход, докато няма
+     сесия — затова тук има собствено копче за смяна на езика. */
+  .auth-lang-btn{position:absolute;top:calc(env(safe-area-inset-top,0px) + 16px);right:16px;}
   .auth-card{max-width:320px;width:100%;}
   .auth-card h1{font-size:28px;font-weight:800;color:var(--accent);margin:0 0 8px;letter-spacing:.3px;}
   /* Мотото на приложението — под заглавието, над функционалния текст. */
@@ -604,10 +607,10 @@
      (виж setAuthMode(), handleEmailAuthSubmit()) — умишлено без Google, за
      да не се показва firebaseapp.com при OAuth екрана. -->
 <div class="auth-screen show" id="authScreen">
+  <button type="button" id="authLangBtn" class="icon-btn auth-lang-btn" aria-label="Език">EN</button>
   <div class="auth-card">
     <h1>IForget</h1>
     <p class="auth-motto" id="authMotto">Помни това, което има значение.</p>
-    <p id="authSubtitle">Твоите бележки, синхронизирани в облака — влез, за да продължиш.</p>
     <ul class="auth-features" id="authFeatures">
       <li><span class="ico"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg></span><span id="authFeat1">Синхронизация в облака — на всяко устройство</span></li>
       <li><span class="ico"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 8 3 12 7 16"></polyline><polyline points="17 8 21 12 17 16"></polyline><line x1="3" y1="12" x2="21" y2="12"></line></svg></span><span id="authFeat2">Swipe жестове — завърши или изтрий с едно движение</span></li>
@@ -1014,8 +1017,9 @@ function applyStaticText(){
   document.getElementById('langBtn').textContent = s.langToggle;
   document.getElementById('noteCancelBtn').setAttribute('aria-label', s.cancelAria);
   document.getElementById('catBtn').setAttribute('aria-label', s.categoriesAria);
+  document.getElementById('authLangBtn').setAttribute('aria-label', s.langAria);
+  document.getElementById('authLangBtn').textContent = s.langToggle;
   document.getElementById('authMotto').textContent = s.authMotto;
-  document.getElementById('authSubtitle').textContent = s.authSubtitle;
   document.getElementById('authFeat1').textContent = s.authFeat1;
   document.getElementById('authFeat2').textContent = s.authFeat2;
   document.getElementById('authFeat3').textContent = s.authFeat3;
@@ -2271,12 +2275,14 @@ document.getElementById('themeBtn').addEventListener('click', ()=>{
   localStorage.setItem(THEME_KEY, theme);
   applyTheme();
 });
-document.getElementById('langBtn').addEventListener('click', ()=>{
+function toggleLang(){
   lang = lang === 'bg' ? 'en' : 'bg';
   localStorage.setItem(LANG_KEY, lang);
   applyStaticText();
   render();
-});
+}
+document.getElementById('langBtn').addEventListener('click', toggleLang);
+document.getElementById('authLangBtn').addEventListener('click', toggleLang);
 
 // Плаващо копче "най-нови" — появява се само ако потребителят е скролнал
 // значително далеч от дъното (напр. докато преглежда резултати от търсене),
