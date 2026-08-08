@@ -421,6 +421,12 @@
   .subs{margin:6px 0 0 15px;padding-left:9px;border-left:2px solid var(--border);}
   .subs .note{padding:6px 8px;background:var(--card-2);}
   .subs .note-wrap{margin-bottom:4px;}
+  /* В светлата тема разменяме местата — основните бележки по-тъмни
+     (--card-2), подбележките по-светли (--card), обратно на тъмната тема.
+     Пипаме само тук, не самите --card/--card-2 стойности (те се ползват и
+     другаде — бутони, полета и т.н. — и не бива да се променят). */
+  :root[data-theme="light"] .note{background:var(--card-2);}
+  :root[data-theme="light"] .subs .note{background:var(--card);}
   .add-sub-row{margin-top:6px;}
   .add-sub-link{
     background:none;border:none;color:var(--accent-dim);font-size:12.5px;
