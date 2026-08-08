@@ -393,7 +393,8 @@
   }
   .expand-toggle{
     -webkit-appearance:none;appearance:none;background:none;border:none;
-    color:var(--text-dim);padding:2px;display:inline-flex;align-items:center;justify-content:center;
+    color:var(--accent-dim);padding:2px;display:inline-flex;align-items:center;justify-content:center;
+    gap:3px;font-size:10.5px;font-weight:600;font-family:inherit;line-height:1;
   }
   .note .meta{display:flex;align-items:center;gap:6px;margin-top:3px;}
   .note .tag{
@@ -438,7 +439,7 @@
   :root[data-theme="light"] .note{background:var(--card-2);}
   /* Малко по-тъмни от чисто --card (не колкото основните бележки, за да си
      личи разликата), между двата тона. */
-  :root[data-theme="light"] .subs .note{background:#F3E6CB;}
+  :root[data-theme="light"] .subs .note{background:#F7EEDC;}
   .add-sub-row{margin-top:6px;}
   .add-sub-link{
     background:none;border:none;color:var(--accent-dim);font-size:12.5px;
@@ -1360,7 +1361,7 @@ function itemRow(item, noteId, isSub){
             ${!isSub ? tagPillHtml(item, noteId) : ''}
             ${!isSub && addingSubFor !== noteId ? `<button class="add-sub-link" data-action="sub-open" data-note="${noteId}">${t().addSubLink}</button>` : ''}
             ${tagText ? `<span class="tag">${tagText}</span>` : ''}
-            <button class="expand-toggle" data-action="toggle-expand" data-key="${key}" style="display:${isExpanded?'inline-flex':'none'}" aria-label="${isExpanded?t().collapseAria:t().expandAria}">${isExpanded?ICONS.chevronUp:ICONS.chevronDown}</button>
+            <button class="expand-toggle" data-action="toggle-expand" data-key="${key}" style="display:${isExpanded?'inline-flex':'none'}" aria-label="${isExpanded?t().collapseAria:t().expandAria}">${isExpanded?t().collapseAria:t().expandAria}${isExpanded?ICONS.chevronUp:ICONS.chevronDown}</button>
           </div>
         </div>
         <div class="note-actions">
