@@ -92,7 +92,7 @@
      долният слой, скролва с цялото съдържание, тайлва се безшевно и
      хоризонтално, и вертикално за произволно дълъг списък с бележки. */
   body{
-    background-image:url("bg-dark.jpg");
+    background-image:url("bg-dark.jpg?v=2");
     background-repeat:repeat;
     background-size:380px 821px;
   }
@@ -244,35 +244,26 @@
     55%{opacity:1;transform:scale(1.14);box-shadow:0 0 12px 3px rgba(var(--gold-rgb),.45);}
     100%{opacity:1;transform:scale(1);box-shadow:0 0 0 0 rgba(var(--gold-rgb),0);}
   }
-  /* Балончето е изрязано във формата на гинко ветрило (широко, заоблено
-     отгоре, стеснено като дръжка долу, без дълбока резка — за да не заприлича
-     на сърце) — фиксиран размер, защото path координатите са в пиксели,
-     обвързани с кутията. Тънки "жилки" (SVG линии) от дръжката нагоре
-     подсилват усещането за листо. Долната точка на дръжката е изходната
-     точка на стрелката към обяснявания елемент, виж drawOnboardArrow(). */
+  /* Само текст + стрелка, без картичка/фон — виж drawOnboardArrow() за
+     стрелката, свързваща текста с обяснявания елемент. */
   .onboard-tip{
-    display:none;position:fixed;z-index:60;width:350px;height:245px;
-    background:var(--card);
-    clip-path:path('M175,235 C95,196 21,146 16,95 C13,68 37,21 95,12 C127,7 155,8 175,8 C195,8 223,7 255,12 C313,21 337,68 334,95 C329,146 255,196 175,235 Z');
-    filter:drop-shadow(0 10px 26px rgba(0,0,0,.4));
-  }
-  .onboard-tip.show{display:block;animation:onboardTipIn .3s ease;}
-  @keyframes onboardTipIn{from{opacity:0;transform:translateY(6px) scale(.94);}to{opacity:1;transform:translateY(0) scale(1);}}
-  .onboard-tip-veins{position:absolute;inset:0;pointer-events:none;}
-  .onboard-tip-inner{
-    position:relative;height:100%;box-sizing:border-box;padding:70px 46px 45px;
-    display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+    display:none;position:fixed;z-index:60;width:230px;
     text-align:center;
   }
-  .onboard-tip-text{font-size:13px;line-height:1.5;color:var(--text);margin-bottom:10px;}
-  .onboard-tip-dots{display:flex;gap:4px;margin-bottom:10px;}
+  .onboard-tip.show{display:block;animation:onboardTipIn .3s ease;}
+  @keyframes onboardTipIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  .onboard-tip-text{
+    font-size:13px;line-height:1.5;color:var(--text);margin-bottom:10px;
+    text-shadow:0 2px 10px var(--bg),0 0 16px var(--bg);
+  }
+  .onboard-tip-dots{display:flex;gap:4px;margin-bottom:10px;justify-content:center;}
   .onboard-tip-dots span{width:5px;height:5px;border-radius:50%;background:var(--border);flex-shrink:0;}
   .onboard-tip-dots span.active{background:var(--accent);}
   .onboard-tip-next{
     background:var(--accent);color:var(--bg);border:none;border-radius:8px;
     padding:6px 14px;font-size:12.5px;font-weight:700;font-family:inherit;margin-bottom:6px;
   }
-  .onboard-tip-skip{background:none;border:none;color:var(--text-dim);font-size:11px;font-family:inherit;padding:2px;}
+  .onboard-tip-skip{background:none;border:none;color:var(--text-dim);font-size:11px;font-family:inherit;padding:2px;text-shadow:0 2px 10px var(--bg);}
 
   /* Екран за вход — покрива цялото приложение (position:fixed inset:0, най-
      високият z-index в страницата), докато Firebase Auth не потвърди активна
@@ -1507,12 +1498,11 @@ function positionOnboardTip(targetEl){
   tip.style.left = left + 'px';
 }
 
-// Долната точка на "дръжката" на листото (виж clip-path пътя в CSS) — оттук
-// тръгва стрелката към сочения елемент.
+// Долният край на текстовия блок — оттук тръгва стрелката към сочения елемент.
 function onboardTipAnchorPoint(){
   const tip = document.getElementById('onboardTip');
   const r = tip.getBoundingClientRect();
-  return { x: r.left + r.width * (175/350), y: r.top + r.height * (233/245) };
+  return { x: r.left + r.width/2, y: r.bottom };
 }
 
 // Извива лека SVG стрелка от дръжката на листото до центъра на сочения
@@ -1533,8 +1523,8 @@ function hideOnboardArrow(){
   document.getElementById('onboardArrowSvg').style.display = 'none';
 }
 
-// Показва едно балонче (гинко листо), сочещо targetEl (или центрирано, ако
-// няма) — resolve-ва с 'next' или 'skip' щом потребителят тапне бутона.
+// Показва текст + стрелка, сочещи targetEl (или центрирано, ако няма) —
+// resolve-ва с 'next' или 'skip' щом потребителят тапне бутона.
 function showOnboardTip(targetEl, textKey, stepIndex, totalSteps){
   return new Promise(resolve=>{
     const s = t();
@@ -1543,21 +1533,10 @@ function showOnboardTip(targetEl, textKey, stepIndex, totalSteps){
     for(let i=0;i<totalSteps;i++) dots += `<span class="${i===stepIndex?'active':''}"></span>`;
     const isLast = stepIndex === totalSteps - 1;
     tip.innerHTML = `
-      <svg class="onboard-tip-veins" viewBox="0 0 350 245">
-        <g stroke="var(--accent-dim)" stroke-width="1" stroke-linecap="round" opacity=".5" fill="none">
-          <path d="M175,235 L175,15"></path>
-          <path d="M175,235 L115,25"></path>
-          <path d="M175,235 L235,25"></path>
-          <path d="M175,235 L68,62"></path>
-          <path d="M175,235 L282,62"></path>
-        </g>
-      </svg>
-      <div class="onboard-tip-inner">
-        <div class="onboard-tip-text">${s[textKey]}</div>
-        <span class="onboard-tip-dots">${dots}</span>
-        <button type="button" class="onboard-tip-next" id="onboardNextBtn">${isLast ? s.onboardGotIt : s.onboardNext}</button>
-        <button type="button" class="onboard-tip-skip" id="onboardSkipBtn">${s.onboardSkip}</button>
-      </div>`;
+      <div class="onboard-tip-text">${s[textKey]}</div>
+      <span class="onboard-tip-dots">${dots}</span>
+      <button type="button" class="onboard-tip-next" id="onboardNextBtn">${isLast ? s.onboardGotIt : s.onboardNext}</button>
+      <button type="button" class="onboard-tip-skip" id="onboardSkipBtn">${s.onboardSkip}</button>`;
     tip.style.transform = '';
     tip.classList.add('show');
     if(targetEl){
