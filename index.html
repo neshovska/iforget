@@ -38,6 +38,8 @@
     --tag-work-bg:rgba(79,174,158,.16);
     --tag-custom:#A855F7;
     --tag-custom-bg:rgba(168,85,247,.16);
+    --tag-satori:#8B7FE8;
+    --tag-satori-bg:rgba(139,127,232,.16);
   }
   /* Светла тема — палитра "Капучино": топъл млечно-бежов фон, пяна и
      карамел вместо лилаво/синьо, за да пасне на цялостния кафяв нюанс, а не
@@ -62,6 +64,8 @@
     --tag-work-bg:rgba(14,143,121,.15);
     --tag-custom:#7C3AED;
     --tag-custom-bg:rgba(124,58,237,.15);
+    --tag-satori:#5B4FBE;
+    --tag-satori-bg:rgba(91,79,190,.15);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
@@ -146,6 +150,7 @@
   .tag-pill.personal{background:var(--tag-personal-bg);color:var(--tag-personal);}
   .tag-pill.work{background:var(--tag-work-bg);color:var(--tag-work);}
   .tag-pill.custom{background:var(--tag-custom-bg);color:var(--tag-custom);}
+  .tag-pill.satori{background:var(--tag-satori-bg);color:var(--tag-satori);}
   /* "+ таг" (все още неотбелязана бележка) — само гол текст, никакво
      ограждане (нито фон, нито рамка), за разлика от избраните категории. */
   .tag-pill.empty{background:none;color:var(--text-dim);border:none;padding:1px 2px;}
@@ -562,6 +567,14 @@ let expandedNotes = new Set(); // ключове (item.id или noteId::subId) 
 let theme = localStorage.getItem(THEME_KEY) || 'dark';
 let lang = localStorage.getItem(LANG_KEY) || 'bg';
 const BUILTIN_TAGS = ['personal', 'work'];
+
+// "Satori" — трети готов таг, но само за конкретния акаунт по-долу (лична
+// заявка), не се показва на никой друг потребител на приложението.
+const SATORI_TAG = 'satori';
+const SATORI_EMAIL = 'neshovska@yahoo.com';
+function isSatoriUser(){
+  return !!(currentUser && currentUser.email && currentUser.email.toLowerCase() === SATORI_EMAIL);
+}
 
 // Firebase — вход с Google + Firestore, за да могат бележките да се
 // синхронизират в облака per потребител (вместо да остават само в
@@ -1197,8 +1210,11 @@ function openTagPicker(noteId, anchorEl){
   activeTagNoteId = noteId;
   let html = `
     <button data-set="personal"><span class="sw" style="background:var(--tag-personal)"></span>${t().tagPersonal}</button>
-    <button data-set="work"><span class="sw" style="background:var(--tag-work)"></span>${t().tagWork}</button>
-    <hr><div class="tag-newrow">
+    <button data-set="work"><span class="sw" style="background:var(--tag-work)"></span>${t().tagWork}</button>`;
+  if(isSatoriUser()){
+    html += `<button data-set="${SATORI_TAG}"><span class="sw" style="background:var(--tag-satori)"></span>Satori</button>`;
+  }
+  html += `<hr><div class="tag-newrow">
       <input type="text" id="newTagInput" placeholder="${t().newTagPlaceholder}" maxlength="24">
       <button type="button" class="tag-confirm" id="newTagConfirm" aria-label="${t().saveAria}">${ICONS.check}</button>
     </div>
@@ -1310,20 +1326,24 @@ function escapeHtml(s){
 function tagLabel(tag){
   if(tag === 'personal') return t().tagPersonal;
   if(tag === 'work') return t().tagWork;
+  if(tag === SATORI_TAG) return 'Satori';
   return tag;
 }
 function tagClass(tag){
   if(tag === 'personal') return 'personal';
   if(tag === 'work') return 'work';
+  if(tag === SATORI_TAG) return 'satori';
   return 'custom';
 }
 // Всички тагове, които има смисъл да се показват за филтриране — вградените
 // винаги (дори с 0 бележки, за да са видими като предложени категории), плюс
-// всеки произволен таг, който в момента се ползва от поне една бележка.
+// "Satori" само за конкретния акаунт, плюс всеки произволен таг, който в
+// момента се ползва от поне една бележка.
 function allTagsInUse(){
   const custom = new Set();
-  notes.forEach(n=>{ if(n.tag && !BUILTIN_TAGS.includes(n.tag)) custom.add(n.tag); });
-  return [...BUILTIN_TAGS, ...[...custom].sort((a,b)=>a.localeCompare(b))];
+  notes.forEach(n=>{ if(n.tag && !BUILTIN_TAGS.includes(n.tag) && n.tag !== SATORI_TAG) custom.add(n.tag); });
+  const builtins = isSatoriUser() ? [...BUILTIN_TAGS, SATORI_TAG] : BUILTIN_TAGS;
+  return [...builtins, ...[...custom].sort((a,b)=>a.localeCompare(b))];
 }
 function tagPillHtml(item, noteId){
   const val = item.tag || '';
