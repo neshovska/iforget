@@ -250,7 +250,7 @@
     display:flex;flex-direction:column;gap:10px;text-align:left;
   }
   .auth-features li{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--text-dim);line-height:1.4;}
-  .auth-features .ico{font-size:15px;flex-shrink:0;width:20px;text-align:center;}
+  .auth-features .ico{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:20px;color:var(--accent-dim);}
   /* Форма за вход/регистрация с имейл + парола — алтернатива на Google,
      за да не се минава задължително през Google-екрана (виж setAuthMode()/
      handleEmailAuthSubmit() в скрипта). */
@@ -378,8 +378,10 @@
   }
   .input-row{display:flex;gap:8px;align-items:center;}
   .dictation-hint{
-    font-size:11px;color:var(--text-dim);margin-top:6px;text-align:center;
+    font-size:11px;color:var(--text-dim);margin-top:6px;
+    display:flex;align-items:center;justify-content:center;gap:4px;
   }
+  .dictation-hint svg{flex-shrink:0;}
   #noteInput{
     flex:1;background:var(--card);border:1px solid var(--border);
     color:var(--text);border-radius:14px;padding:12px 14px;font-size:16px;
@@ -600,10 +602,10 @@
     <h1>IForget</h1>
     <p id="authSubtitle">Твоите бележки, синхронизирани в облака — влез, за да продължиш.</p>
     <ul class="auth-features" id="authFeatures">
-      <li><span class="ico">☁️</span><span id="authFeat1">Синхронизация в облака — на всяко устройство</span></li>
-      <li><span class="ico">👆</span><span id="authFeat2">Swipe жестове — завърши или изтрий с едно движение</span></li>
-      <li><span class="ico">🔥</span><span id="authFeat3">Streak — малко мотивация всеки ден</span></li>
-      <li><span class="ico">🏷️</span><span id="authFeat4">Тагове, подбележки и бързо търсене</span></li>
+      <li><span class="ico"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg></span><span id="authFeat1">Синхронизация в облака — на всяко устройство</span></li>
+      <li><span class="ico"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 8 3 12 7 16"></polyline><polyline points="17 8 21 12 17 16"></polyline><line x1="3" y1="12" x2="21" y2="12"></line></svg></span><span id="authFeat2">Swipe жестове — завърши или изтрий с едно движение</span></li>
+      <li><span class="ico"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" stroke="none"><path d="M12 2c1 3-3 4-3 8a3 3 0 0 0 6 0c1.2 1 2 2.6 2 4.2A5.2 5.2 0 0 1 6.8 19c-2.8-2.2-3-6.4-.6-9.4C7.6 7.8 9 6 12 2z"></path></svg></span><span id="authFeat3">Streak — малко мотивация всеки ден</span></li>
+      <li><span class="ico"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L4 3a1 1 0 0 0-1 1l.24 5.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.35-4.35a2 2 0 0 0 0-2.82Z"></path><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor" stroke="none"></circle></svg></span><span id="authFeat4">Тагове, подбележки и бързо търсене</span></li>
     </ul>
     <div id="authFormWrap">
       <form id="emailAuthForm" class="email-auth-form">
@@ -638,7 +640,7 @@
     <button id="noteCancelBtn" aria-label="Откажи"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg></button>
     <button id="addBtn"><svg class="ic" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
   </div>
-  <div class="dictation-hint">🎙 Може и да диктуваш — микрофонът на клавиатурата</div>
+  <div class="dictation-hint"><svg class="ic" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg> Може и да диктуваш — микрофонът на клавиатурата</div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
