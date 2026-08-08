@@ -1197,11 +1197,30 @@ function loadFromCloud(uid){
     render();
     hideAuthScreen();
     setTimeout(()=>scrollToBottom(false), 0);
+    maybeFocusQuickAdd();
   }).catch(err=>{
     console.error('cloud load failed', err);
     render();
     hideAuthScreen();
+    maybeFocusQuickAdd();
   });
+}
+
+// Home Screen quick-add — manifest.json дефинира shortcut "Нова бележка",
+// който при дълго задържане на иконата на началния екран отваря директно
+// ?quickadd=1 (виж shortcuts в manifest.json). Тук, след като приложението
+// е напълно готово (данните заредени, екранът за вход скрит), фокусираме
+// полето за нова бележка веднага — без потребителят да гледа списъка.
+function maybeFocusQuickAdd(){
+  const params = new URLSearchParams(location.search);
+  if(params.get('quickadd') !== '1') return;
+  setTimeout(()=>{
+    const inp = document.getElementById('noteInput');
+    if(inp) inp.focus();
+    scrollToBottom(false);
+  }, 0);
+  // Чистим URL-а, за да не се задейства пак при по-нататъшна навигация в сесията.
+  history.replaceState(null, '', location.pathname);
 }
 
 // Единственото място, което следи дали има вход — показва/скрива екрана за
