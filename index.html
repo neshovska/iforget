@@ -640,6 +640,7 @@
 <div class="pull-refresh" id="pullRefresh"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2z"></path></svg></div>
 
 <div class="tag-picker" id="tagPicker"></div>
+<div class="tag-picker" id="langPicker"></div>
 <div class="ctx-menu" id="ctxMenu"></div>
 <div class="onboard-tip" id="onboardTip"></div>
 <svg id="onboardArrowSvg" style="position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:59;display:none;">
@@ -711,6 +712,10 @@
 const STORAGE_KEY = 'notes';
 const THEME_KEY = 'theme';
 const LANG_KEY = 'lang';
+// Реда, в който се показват езиците в падащото меню (виж openLangPicker()),
+// и пълните им имена на собствения им език.
+const LANG_ORDER = ['bg','en','ru','de','es'];
+const LANG_NAMES = {bg:'Български', en:'English', ru:'Русский', de:'Deutsch', es:'Español'};
 let notes = [];
 let editingKey = null;
 let addingSubFor = null;
@@ -951,6 +956,216 @@ const STRINGS = {
     onboardStep4: 'Swipe right to complete instantly, left to delete — you can always undo.',
     onboardStep5: "That's it! Write your first real note down here.",
     onboardNext: 'Next', onboardGotIt: 'Got it', onboardSkip: 'Skip tutorial'
+  },
+  ru: {
+    searchAria: 'Поиск', searchPlaceholder: 'Поиск по тексту или дате (напр. 06.08, вторник)...',
+    notePlaceholder: 'Новая заметка...', subPlaceholder: 'Подзаметка...',
+    addSubLink: '+ добавить', cancelAria: 'Отмена', saveAria: 'Сохранить',
+    jumpLatest: 'Новые',
+    today: 'Сегодня', yesterday: 'Вчера', noNotes: 'Нет заметок',
+    results: 'Результаты', noResultsFor: q => `Заметки для "${q}" не найдены`,
+    tagProgress: 'в процессе', tagDone: 'выполнено',
+    sectionDone: 'Выполненные', sectionProgress: 'В процессе', sectionActive: 'Активные',
+    confirmDelete: 'Удалить эту заметку?',
+    dayNames: ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'],
+    monthNames: ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'],
+    themeAria: 'Тема', langAria: 'Язык',
+    categoriesAria: 'Категории', catAll: 'Все',
+    tagPersonal: 'Личное', tagWork: 'Работа', addTag: '+ тег', noTag: 'Без тега',
+    newTagPlaceholder: 'Новый тег...', noNotesForTag: 'Нет заметок в этой категории',
+    settingsAria: 'Настройки', exportBackup: 'Сохранить резервную копию', importBackup: 'Восстановить из файла',
+    backupHint: 'Safari на iPhone/iPad иногда очищает данные сайта (особенно при значке на главном экране или долгом отсутствии). Периодически сохраняй резервную копию, чтобы не потерять заметки.',
+    confirmImport: 'Восстановление заменит текущие заметки данными из файла. Продолжить?',
+    importSuccess: 'Заметки успешно восстановлены.', importError: 'Не удалось прочитать файл — проверь, что это корректный файл резервной копии.',
+    authMotto: 'Помни то, что важно.',
+    authSubtitle: 'Твои заметки, синхронизированные в облаке — войди, чтобы продолжить.',
+    authFeat1: 'Синхронизация в облаке — на любом устройстве',
+    authFeat2: 'Жесты свайпа — завершай или удаляй одним движением',
+    authFeat3: 'Streak — немного мотивации каждый день',
+    authFeat4: 'Теги, подзаметки и быстрый поиск',
+    authLoadingText: 'Загрузка...', authError: 'Не удалось войти. Попробуй снова.',
+    confirmLogout: 'Выйти из аккаунта?', profileAria: 'Профиль',
+    profileColorDefault: 'По умолчанию',
+    emailPlaceholder: 'Email', passwordPlaceholder: 'Пароль', confirmPasswordPlaceholder: 'Подтверди пароль',
+    signInBtn: 'Войти', signUpBtn: 'Регистрация',
+    noAccountYet: 'Нет аккаунта?', haveAccountAlready: 'Уже есть аккаунт?',
+    signUpLink: 'Зарегистрироваться', signInLink: 'Войти',
+    forgotPassword: 'Забыли пароль?',
+    enterEmailFirst: 'Введи свой email выше, чтобы получить ссылку для нового пароля.',
+    resetEmailSent: 'Мы отправили письмо со ссылкой для нового пароля — проверь почту.',
+    errInvalidEmail: 'Некорректный email адрес.',
+    errUserNotFound: 'Нет аккаунта с таким email.',
+    errWrongPassword: 'Неверный email или пароль.',
+    errEmailInUse: 'Аккаунт с таким email уже существует — попробуй войти вместо регистрации.',
+    errWeakPassword: 'Пароль должен быть не менее 6 символов.',
+    errTooManyRequests: 'Слишком много попыток — подожди немного и попробуй снова.',
+    errOperationNotAllowed: 'Вход по email/паролю не включён для этого приложения (настройка администратора).',
+    errGeneric: 'Что-то пошло не так. Попробуй снова.',
+    errPasswordMismatch: 'Пароли не совпадают.',
+    changePassword: 'Сменить пароль', changeEmail: 'Сменить email', logoutBtn: 'Выйти из профиля',
+    deleteAccount: 'Удалить профиль',
+    deleteAccountWarning: 'Это навсегда удалит твой аккаунт и все твои заметки. Действие необратимо.',
+    deleteAccountConfirmBtn: 'Удалить навсегда',
+    newPasswordPlaceholder: 'Новый пароль', confirmNewPasswordPlaceholder: 'Подтверди новый пароль',
+    newEmailPlaceholder: 'Новый email',
+    passwordChanged: 'Пароль успешно изменён.', emailChanged: 'Email успешно изменён.',
+    needsRecentLogin: 'Для этого изменения нужен недавний вход — выйди и войди снова, затем попробуй ещё раз.',
+    expandAria: 'Развернуть', collapseAria: 'Свернуть',
+    deletedUndo: 'Заметка удалена.', undoBtn: 'Отменить', deleteAria: 'Удалить',
+    ctxEdit: 'Редактировать', ctxDelete: 'Удалить', ctxAddSub: 'Добавить подзаметку',
+    tagDeleted: 'Удалённые',
+    statsTitle: 'Статистика', statsLoading: 'Загрузка...',
+    statsError: 'Не удалось загрузить статистику.',
+    statsTotal: 'Всего зарегистрировано', statsDay: 'Сегодня',
+    statsWeek: 'На этой неделе', statsMonth: 'В этом месяце', statsYear: 'В этом году',
+    onboardDemoText: 'Это заметка — нажми на текст, чтобы её отредактировать.',
+    onboardDemoSub: 'Это подзаметка — для подзадач и деталей.',
+    onboardStep1: 'Нажми на кружок, чтобы сменить статус: активная → в процессе → выполнено.',
+    onboardStep2: 'Присвой заметке тег, чтобы отсортировать по категории — Личное, Работа или свой тег.',
+    onboardStep3: 'У любой заметки могут быть подзаметки — для подзадач и деталей.',
+    onboardStep4: 'Свайп вправо — быстрое завершение, влево — удаление, всегда можно отменить.',
+    onboardStep5: 'Готово! Напиши свою первую настоящую заметку здесь.',
+    onboardNext: 'Далее', onboardGotIt: 'Понятно', onboardSkip: 'Пропустить обучение'
+  },
+  de: {
+    searchAria: 'Suche', searchPlaceholder: 'Suche nach Text oder Datum (z. B. 06.08, Dienstag)...',
+    notePlaceholder: 'Neue Notiz...', subPlaceholder: 'Unternotiz...',
+    addSubLink: '+ hinzufügen', cancelAria: 'Abbrechen', saveAria: 'Speichern',
+    jumpLatest: 'Neueste',
+    today: 'Heute', yesterday: 'Gestern', noNotes: 'Keine Notizen',
+    results: 'Ergebnisse', noResultsFor: q => `Keine Notizen gefunden für "${q}"`,
+    tagProgress: 'in Bearbeitung', tagDone: 'erledigt',
+    sectionDone: 'Erledigt', sectionProgress: 'In Bearbeitung', sectionActive: 'Aktiv',
+    confirmDelete: 'Diese Notiz löschen?',
+    dayNames: ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'],
+    monthNames: ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'],
+    themeAria: 'Design', langAria: 'Sprache',
+    categoriesAria: 'Kategorien', catAll: 'Alle',
+    tagPersonal: 'Privat', tagWork: 'Arbeit', addTag: '+ Tag', noTag: 'Kein Tag',
+    newTagPlaceholder: 'Neuer Tag...', noNotesForTag: 'Keine Notizen in dieser Kategorie',
+    settingsAria: 'Einstellungen', exportBackup: 'Backup speichern', importBackup: 'Aus Datei wiederherstellen',
+    backupHint: 'Safari auf iPhone/iPad löscht manchmal Website-Daten (besonders bei einem Symbol auf dem Home-Bildschirm oder langer Nichtnutzung). Erstelle ab und zu ein Backup, damit du deine Notizen nicht verlierst.',
+    confirmImport: 'Die Wiederherstellung ersetzt deine aktuellen Notizen durch die aus der Datei. Fortfahren?',
+    importSuccess: 'Notizen erfolgreich wiederhergestellt.', importError: 'Datei konnte nicht gelesen werden — prüfe, ob es eine gültige Backup-Datei ist.',
+    authMotto: 'Merke dir, was zählt.',
+    authSubtitle: 'Deine Notizen, in der Cloud synchronisiert — melde dich an, um fortzufahren.',
+    authFeat1: 'Cloud-Synchronisierung — auf jedem Gerät',
+    authFeat2: 'Wischgesten — in einer Bewegung erledigen oder löschen',
+    authFeat3: 'Streak — etwas tägliche Motivation',
+    authFeat4: 'Tags, Unternotizen und schnelle Suche',
+    authLoadingText: 'Wird geladen...', authError: 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
+    confirmLogout: 'Vom Konto abmelden?', profileAria: 'Profil',
+    profileColorDefault: 'Standard',
+    emailPlaceholder: 'E-Mail', passwordPlaceholder: 'Passwort', confirmPasswordPlaceholder: 'Passwort bestätigen',
+    signInBtn: 'Anmelden', signUpBtn: 'Registrieren',
+    noAccountYet: 'Noch kein Konto?', haveAccountAlready: 'Schon ein Konto?',
+    signUpLink: 'Registrieren', signInLink: 'Anmelden',
+    forgotPassword: 'Passwort vergessen?',
+    enterEmailFirst: 'Gib oben deine E-Mail ein, damit wir dir einen Link für ein neues Passwort senden können.',
+    resetEmailSent: 'Wir haben eine E-Mail mit einem Link für ein neues Passwort gesendet — prüfe dein Postfach.',
+    errInvalidEmail: 'Ungültige E-Mail-Adresse.',
+    errUserNotFound: 'Kein Konto mit dieser E-Mail.',
+    errWrongPassword: 'Falsche E-Mail oder falsches Passwort.',
+    errEmailInUse: 'Es existiert bereits ein Konto mit dieser E-Mail — versuche dich stattdessen anzumelden.',
+    errWeakPassword: 'Das Passwort muss mindestens 6 Zeichen lang sein.',
+    errTooManyRequests: 'Zu viele Versuche — warte kurz und versuche es erneut.',
+    errOperationNotAllowed: 'Die Anmeldung mit E-Mail/Passwort ist für diese App nicht aktiviert (Admin-Einstellung).',
+    errGeneric: 'Etwas ist schiefgelaufen. Bitte erneut versuchen.',
+    errPasswordMismatch: 'Die Passwörter stimmen nicht überein.',
+    changePassword: 'Passwort ändern', changeEmail: 'E-Mail ändern', logoutBtn: 'Abmelden',
+    deleteAccount: 'Konto löschen',
+    deleteAccountWarning: 'Dies löscht dein Konto und alle deine Notizen dauerhaft. Diese Aktion kann nicht rückgängig gemacht werden.',
+    deleteAccountConfirmBtn: 'Endgültig löschen',
+    newPasswordPlaceholder: 'Neues Passwort', confirmNewPasswordPlaceholder: 'Neues Passwort bestätigen',
+    newEmailPlaceholder: 'Neue E-Mail',
+    passwordChanged: 'Passwort erfolgreich geändert.', emailChanged: 'E-Mail erfolgreich geändert.',
+    needsRecentLogin: 'Für diese Änderung ist eine kürzliche Anmeldung erforderlich — melde dich ab und wieder an und versuche es erneut.',
+    expandAria: 'Ausklappen', collapseAria: 'Einklappen',
+    deletedUndo: 'Notiz gelöscht.', undoBtn: 'Rückgängig', deleteAria: 'Löschen',
+    ctxEdit: 'Bearbeiten', ctxDelete: 'Löschen', ctxAddSub: 'Unternotiz hinzufügen',
+    tagDeleted: 'Gelöscht',
+    statsTitle: 'Statistik', statsLoading: 'Wird geladen...',
+    statsError: 'Statistik konnte nicht geladen werden.',
+    statsTotal: 'Insgesamt registriert', statsDay: 'Heute',
+    statsWeek: 'Diese Woche', statsMonth: 'Diesen Monat', statsYear: 'Dieses Jahr',
+    onboardDemoText: 'Das ist eine Notiz — tippe auf den Text, um sie zu bearbeiten.',
+    onboardDemoSub: 'Das ist eine Unternotiz — für Teilaufgaben und Details.',
+    onboardStep1: 'Tippe auf den Kreis, um den Status zu wechseln: aktiv → in Bearbeitung → erledigt.',
+    onboardStep2: 'Tagge eine Notiz, um sie nach Kategorie zu sortieren — Privat, Arbeit oder ein eigener Tag.',
+    onboardStep3: 'Jede Notiz kann Unternotizen haben — für Teilaufgaben und Details.',
+    onboardStep4: 'Wische nach rechts, um sofort zu erledigen, nach links zum Löschen — du kannst es immer rückgängig machen.',
+    onboardStep5: 'Fertig! Schreib hier unten deine erste echte Notiz.',
+    onboardNext: 'Weiter', onboardGotIt: 'Verstanden', onboardSkip: 'Einführung überspringen'
+  },
+  es: {
+    searchAria: 'Buscar', searchPlaceholder: 'Buscar por texto o fecha (p. ej. 06.08, martes)...',
+    notePlaceholder: 'Nueva nota...', subPlaceholder: 'Subnota...',
+    addSubLink: '+ añadir', cancelAria: 'Cancelar', saveAria: 'Guardar',
+    jumpLatest: 'Recientes',
+    today: 'Hoy', yesterday: 'Ayer', noNotes: 'Sin notas',
+    results: 'Resultados', noResultsFor: q => `No se encontraron notas para "${q}"`,
+    tagProgress: 'en curso', tagDone: 'hecho',
+    sectionDone: 'Completadas', sectionProgress: 'En curso', sectionActive: 'Activas',
+    confirmDelete: '¿Eliminar esta nota?',
+    dayNames: ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'],
+    monthNames: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
+    themeAria: 'Tema', langAria: 'Idioma',
+    categoriesAria: 'Categorías', catAll: 'Todas',
+    tagPersonal: 'Personal', tagWork: 'Trabajo', addTag: '+ etiqueta', noTag: 'Sin etiqueta',
+    newTagPlaceholder: 'Nueva etiqueta...', noNotesForTag: 'No hay notas en esta categoría',
+    settingsAria: 'Ajustes', exportBackup: 'Guardar copia de seguridad', importBackup: 'Restaurar desde archivo',
+    backupHint: 'Safari en iPhone/iPad a veces borra los datos del sitio (especialmente con un icono en la pantalla de inicio o tras mucho tiempo sin abrirlo). Guarda una copia de seguridad de vez en cuando para no perder tus notas.',
+    confirmImport: 'Restaurar reemplazará tus notas actuales con las del archivo. ¿Continuar?',
+    importSuccess: 'Notas restauradas correctamente.', importError: 'No se pudo leer el archivo — comprueba que sea un archivo de copia de seguridad válido.',
+    authMotto: 'Recuerda lo que importa.',
+    authSubtitle: 'Tus notas, sincronizadas en la nube — inicia sesión para continuar.',
+    authFeat1: 'Sincronización en la nube — en cualquier dispositivo',
+    authFeat2: 'Gestos de deslizar — completa o elimina con un solo movimiento',
+    authFeat3: 'Racha — un poco de motivación diaria',
+    authFeat4: 'Etiquetas, subnotas y búsqueda rápida',
+    authLoadingText: 'Cargando...', authError: 'No se pudo iniciar sesión. Inténtalo de nuevo.',
+    confirmLogout: '¿Cerrar sesión de la cuenta?', profileAria: 'Perfil',
+    profileColorDefault: 'Predeterminado',
+    emailPlaceholder: 'Correo electrónico', passwordPlaceholder: 'Contraseña', confirmPasswordPlaceholder: 'Confirma la contraseña',
+    signInBtn: 'Iniciar sesión', signUpBtn: 'Registrarse',
+    noAccountYet: '¿No tienes cuenta?', haveAccountAlready: '¿Ya tienes cuenta?',
+    signUpLink: 'Regístrate', signInLink: 'Inicia sesión',
+    forgotPassword: '¿Olvidaste tu contraseña?',
+    enterEmailFirst: 'Escribe tu correo arriba para enviarte un enlace para una nueva contraseña.',
+    resetEmailSent: 'Te enviamos un correo con un enlace para una nueva contraseña — revisa tu bandeja de entrada.',
+    errInvalidEmail: 'Dirección de correo no válida.',
+    errUserNotFound: 'No existe ninguna cuenta con este correo.',
+    errWrongPassword: 'Correo o contraseña incorrectos.',
+    errEmailInUse: 'Ya existe una cuenta con este correo — prueba a iniciar sesión en su lugar.',
+    errWeakPassword: 'La contraseña debe tener al menos 6 caracteres.',
+    errTooManyRequests: 'Demasiados intentos — espera un poco y vuelve a intentarlo.',
+    errOperationNotAllowed: 'El inicio de sesión con correo/contraseña no está habilitado para esta app (ajuste del administrador).',
+    errGeneric: 'Algo salió mal. Inténtalo de nuevo.',
+    errPasswordMismatch: 'Las contraseñas no coinciden.',
+    changePassword: 'Cambiar contraseña', changeEmail: 'Cambiar correo', logoutBtn: 'Cerrar sesión',
+    deleteAccount: 'Eliminar cuenta',
+    deleteAccountWarning: 'Esto eliminará tu cuenta y todas tus notas de forma permanente. Esta acción no se puede deshacer.',
+    deleteAccountConfirmBtn: 'Eliminar para siempre',
+    newPasswordPlaceholder: 'Nueva contraseña', confirmNewPasswordPlaceholder: 'Confirma la nueva contraseña',
+    newEmailPlaceholder: 'Nuevo correo',
+    passwordChanged: 'Contraseña cambiada correctamente.', emailChanged: 'Correo cambiado correctamente.',
+    needsRecentLogin: 'Este cambio requiere un inicio de sesión reciente — cierra sesión, vuelve a entrar y prueba de nuevo.',
+    expandAria: 'Expandir', collapseAria: 'Contraer',
+    deletedUndo: 'Nota eliminada.', undoBtn: 'Deshacer', deleteAria: 'Eliminar',
+    ctxEdit: 'Editar', ctxDelete: 'Eliminar', ctxAddSub: 'Añadir subnota',
+    tagDeleted: 'Eliminadas',
+    statsTitle: 'Estadísticas', statsLoading: 'Cargando...',
+    statsError: 'No se pudieron cargar las estadísticas.',
+    statsTotal: 'Total registrados', statsDay: 'Hoy',
+    statsWeek: 'Esta semana', statsMonth: 'Este mes', statsYear: 'Este año',
+    onboardDemoText: 'Esto es una nota — toca el texto para editarla.',
+    onboardDemoSub: 'Esto es una subnota — para subtareas y detalles.',
+    onboardStep1: 'Toca el círculo para cambiar el estado: activa → en curso → hecho.',
+    onboardStep2: 'Etiqueta una nota para ordenarla por categoría — Personal, Trabajo o tu propia etiqueta.',
+    onboardStep3: 'Cualquier nota puede tener subnotas — para subtareas y detalles.',
+    onboardStep4: 'Desliza a la derecha para completar al instante, a la izquierda para eliminar — siempre puedes deshacerlo.',
+    onboardStep5: '¡Listo! Escribe tu primera nota real aquí abajo.',
+    onboardNext: 'Siguiente', onboardGotIt: 'Entendido', onboardSkip: 'Saltar introducción'
   }
 };
 function t(){ return STRINGS[lang]; }
@@ -1090,11 +1305,11 @@ function applyStaticText(){
   document.getElementById('jumpLabel').textContent = s.jumpLatest;
   document.getElementById('themeBtn').setAttribute('aria-label', s.themeAria);
   document.getElementById('langBtn').setAttribute('aria-label', s.langAria);
-  document.getElementById('langBtn').textContent = s.langToggle;
+  document.getElementById('langBtn').textContent = lang.toUpperCase();
   document.getElementById('noteCancelBtn').setAttribute('aria-label', s.cancelAria);
   document.getElementById('catBtn').setAttribute('aria-label', s.categoriesAria);
   document.getElementById('authLangBtn').setAttribute('aria-label', s.langAria);
-  document.getElementById('authLangBtn').textContent = s.langToggle;
+  document.getElementById('authLangBtn').textContent = lang.toUpperCase();
   document.getElementById('authMotto').textContent = s.authMotto;
   document.getElementById('authFeat1').textContent = s.authFeat1;
   document.getElementById('authFeat2').textContent = s.authFeat2;
@@ -2045,6 +2260,37 @@ function closeTagPicker(){
   activeTagNoteId = null;
 }
 
+// Падащо меню за избор на език — 5 възможности (bg/en/ru/de/es), позиционирано
+// под бутона, който го е отворил (топбар или екрана за вход, виж
+// langBtn/authLangBtn по-долу). Аналогично на openTagPicker().
+function openLangPicker(anchorEl){
+  const picker = document.getElementById('langPicker');
+  picker.innerHTML = LANG_ORDER.map(code =>
+    `<button data-lang="${code}">${LANG_NAMES[code]}${code===lang?ICONS.check:''}</button>`
+  ).join('');
+  const rect = anchorEl.getBoundingClientRect();
+  picker.style.top = (rect.bottom + 4) + 'px';
+  picker.style.left = Math.min(rect.left, window.innerWidth - 176) + 'px';
+  picker.classList.add('show');
+  picker.querySelectorAll('button[data-lang]').forEach(b=>{
+    b.addEventListener('mousedown', e=>{
+      e.preventDefault();
+      setLang(b.dataset.lang);
+      closeLangPicker();
+    });
+  });
+}
+function closeLangPicker(){
+  document.getElementById('langPicker').classList.remove('show');
+}
+function setLang(code){
+  if(!LANG_NAMES[code] || code === lang) return;
+  lang = code;
+  localStorage.setItem(LANG_KEY, lang);
+  applyStaticText();
+  render();
+}
+
 // Контекстно меню при задържане (long-press) върху бележка — вижда се веднага
 // централно спрямо бележката (за разлика от tag-picker, който виси под
 // тапнатия елемент), защото задържането може да стане навсякъде по картата.
@@ -2557,6 +2803,10 @@ document.addEventListener('mousedown', e=>{
   if(profPanel.classList.contains('show') && !profPanel.contains(e.target) && e.target !== userChip && !userChip.contains(e.target)){
     closeProfilePanel();
   }
+  const langPicker = document.getElementById('langPicker');
+  if(langPicker.classList.contains('show') && !langPicker.contains(e.target) && e.target !== langBtn && !langBtn.contains(e.target) && e.target !== authLangBtn && !authLangBtn.contains(e.target)){
+    closeLangPicker();
+  }
 });
 
 document.getElementById('themeBtn').addEventListener('click', ()=>{
@@ -2564,14 +2814,23 @@ document.getElementById('themeBtn').addEventListener('click', ()=>{
   localStorage.setItem(THEME_KEY, theme);
   applyTheme();
 });
-function toggleLang(){
-  lang = lang === 'bg' ? 'en' : 'bg';
-  localStorage.setItem(LANG_KEY, lang);
-  applyStaticText();
-  render();
-}
-document.getElementById('langBtn').addEventListener('click', toggleLang);
-document.getElementById('authLangBtn').addEventListener('click', toggleLang);
+// Бутонът за език вече отваря падащо меню с всичките 5 езика (виж
+// openLangPicker()), вместо просто да превключва между два.
+const langBtn = document.getElementById('langBtn');
+const authLangBtn = document.getElementById('authLangBtn');
+langBtn.addEventListener('click', e=>{
+  e.stopPropagation();
+  const picker = document.getElementById('langPicker');
+  if(picker.classList.contains('show')){ closeLangPicker(); return; }
+  closeTagPicker(); closeCtxMenu();
+  openLangPicker(langBtn);
+});
+authLangBtn.addEventListener('click', e=>{
+  e.stopPropagation();
+  const picker = document.getElementById('langPicker');
+  if(picker.classList.contains('show')){ closeLangPicker(); return; }
+  openLangPicker(authLangBtn);
+});
 
 // Плаващо копче "най-нови" — появява се само ако потребителят е скролнал
 // значително далеч от дъното (напр. докато преглежда резултати от търсене),
