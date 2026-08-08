@@ -384,6 +384,9 @@
     padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 14px);
   }
   .input-row{display:flex;gap:8px;align-items:center;}
+  .dictation-hint{
+    font-size:11px;color:var(--text-dim);margin-top:6px;text-align:center;
+  }
   #noteInput{
     flex:1;background:var(--card);border:1px solid var(--border);
     color:var(--text);border-radius:14px;padding:12px 14px;font-size:16px;
@@ -638,6 +641,7 @@
     <button id="noteCancelBtn" aria-label="Откажи"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg></button>
     <button id="addBtn"><svg class="ic" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
   </div>
+  <div class="dictation-hint">🎙 Може и да диктуваш — микрофонът на клавиатурата</div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
