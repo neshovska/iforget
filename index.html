@@ -306,6 +306,9 @@
     width:20px;height:20px;border-radius:50%;border:2px solid transparent;padding:0;flex-shrink:0;
   }
   .profile-panel .color-sw.active{border-color:var(--text);}
+  /* "По подразбиране" — двуцветно квадратче (син/кафяв), показва че тук
+     акцентният цвят следва темата, вместо да е фиксиран override. */
+  .profile-panel .color-sw.default-sw{background:linear-gradient(135deg, #5B96FF 50%, #8C5A2B 50%) !important;}
   .profile-panel hr{border:none;border-top:1px solid var(--border);margin:6px 0;}
   .profile-panel button.action{
     -webkit-appearance:none;appearance:none;width:100%;text-align:left;background:none;border:none;
@@ -695,11 +698,35 @@ const db = firebase.firestore();
 let currentUser = null;
 let authMode = 'signin'; // 'signin' | 'signup' — за формата с имейл/парола
 
-// Цветът на буквата в профилчето (userChip) е избираем от потребителя —
-// чисто визуална, локална настройка (не се синхронизира през Firestore).
-const PROFILE_COLORS = ['#5B96FF','#FF4FA3','#4FAE9E','#A855F7','#DFAE3A','#E36358'];
+// Цветът на буквата в профилчето (userChip) е избираем от потребителя — и
+// вече определя и основния акцентен цвят (--accent/--accent-dim) на цялото
+// приложение, виж applyAccentColor(). '' (празен низ) = "По подразбиране" —
+// theme-native цветовете (син в тъмна тема, кафяв в светла), без override.
+// Чисто локална настройка, не се синхронизира през Firestore.
+const PROFILE_COLORS = ['', '#5B96FF','#FF4FA3','#4FAE9E','#A855F7','#DFAE3A','#E36358'];
+// Всеки избираем цвят си има по-тъмен "dim" вариант (за рамки/hover), в
+// същия дух като вече съществуващите --accent-dim/--gold-dim в палитрата.
+const ACCENT_DIM_MAP = {
+  '#5B96FF':'#3D71C4', '#FF4FA3':'#C93A7D', '#4FAE9E':'#357F73',
+  '#A855F7':'#7C3AED', '#DFAE3A':'#A6841F', '#E36358':'#B84237'
+};
 const PROFILE_COLOR_KEY = 'profileColor';
-let profileColor = localStorage.getItem(PROFILE_COLOR_KEY) || PROFILE_COLORS[0];
+let profileColor = localStorage.getItem(PROFILE_COLOR_KEY) || '';
+
+// Прилага избрания акцентен цвят върху цялото приложение (--accent/
+// --accent-dim), еднакво и в двете теми. При '' (По подразбиране) просто
+// маха override-а, за да важат отново оригиналните theme-native стойности
+// от :root/:root[data-theme="light"].
+function applyAccentColor(){
+  const root = document.documentElement;
+  if(profileColor){
+    root.style.setProperty('--accent', profileColor);
+    root.style.setProperty('--accent-dim', ACCENT_DIM_MAP[profileColor] || profileColor);
+  }else{
+    root.style.removeProperty('--accent');
+    root.style.removeProperty('--accent-dim');
+  }
+}
 
 // Монохромни SVG иконки (stroke=currentColor) — използвани навсякъде вместо
 // цветни емоджита, за да пасват винаги на текущата тема/цвят на бутона.
@@ -751,6 +778,7 @@ const STRINGS = {
     authFeat4: 'Тагове, подбележки и бързо търсене',
     authLoadingText: 'Зареждане...', authError: 'Неуспешен вход. Опитай отново.',
     confirmLogout: 'Да излезеш ли от акаунта?', profileAria: 'Профил',
+    profileColorDefault: 'По подразбиране',
     emailPlaceholder: 'Имейл', passwordPlaceholder: 'Парола', confirmPasswordPlaceholder: 'Потвърди парола',
     signInBtn: 'Вход', signUpBtn: 'Регистрация',
     noAccountYet: 'Нямаш акаунт?', haveAccountAlready: 'Вече имаш акаунт?',
@@ -808,6 +836,7 @@ const STRINGS = {
     authFeat4: 'Tags, sub-notes and quick search',
     authLoadingText: 'Loading...', authError: 'Sign-in failed. Please try again.',
     confirmLogout: 'Sign out of your account?', profileAria: 'Profile',
+    profileColorDefault: 'Default',
     emailPlaceholder: 'Email', passwordPlaceholder: 'Password', confirmPasswordPlaceholder: 'Confirm password',
     signInBtn: 'Sign in', signUpBtn: 'Sign up',
     noAccountYet: "Don't have an account?", haveAccountAlready: 'Already have an account?',
@@ -1115,7 +1144,7 @@ function renderProfileMenu(){
   const email = currentUser ? (currentUser.email || '') : '';
   let html = `<div class="profile-email">${escapeHtml(email)}</div>`;
   html += `<div class="color-row">` + PROFILE_COLORS.map(c =>
-    `<button type="button" class="color-sw${c===profileColor?' active':''}" data-color="${c}" style="background:${c}" aria-label="${c}"></button>`
+    `<button type="button" class="color-sw${c===profileColor?' active':''}${c===''?' default-sw':''}" data-color="${c}" style="${c?`background:${c}`:''}" aria-label="${c || s.profileColorDefault}"></button>`
   ).join('') + `</div>`;
   html += `<hr>`;
   html += `<button type="button" class="action" data-action="change-password">${ICONS.pencil}${s.changePassword}</button>`;
@@ -1139,6 +1168,7 @@ function renderProfileMenu(){
       profileColor = b.dataset.color;
       localStorage.setItem(PROFILE_COLOR_KEY, profileColor);
       updateUserChip(currentUser);
+      applyAccentColor();
       renderProfileMenu();
     });
   });
@@ -1271,7 +1301,7 @@ function updateUserChip(user){
   }else{
     const initial = (user.displayName || user.email || '?').trim().charAt(0).toUpperCase();
     chip.textContent = initial;
-    chip.style.color = profileColor;
+    chip.style.color = profileColor || 'var(--accent)';
   }
 }
 
@@ -2345,6 +2375,7 @@ document.getElementById('toggleAuthModeBtn').addEventListener('mousedown', e=>{
 });
 
 applyTheme();
+applyAccentColor();
 applyStaticText();
 requestPersistentStorage();
 // Показваме екрана за вход веднага в "зареждане" вид, докато Firebase
