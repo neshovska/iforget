@@ -1541,10 +1541,24 @@ function showOnboardTip(targetEl, textKey, stepIndex, totalSteps){
       done = true;
       tip.classList.remove('show');
       hideOnboardArrow();
+      // capture:true на document.addEventListener по-долу — трябва да махнем
+      // със СЪЩИЯ трети аргумент, иначе removeEventListener тихо не хваща нищо.
+      document.removeEventListener('click', screenTapAdvance, true);
       resolve(skip ? 'skip' : 'next');
     }
     document.getElementById('onboardNextBtn').addEventListener('click', ()=>finish(false));
     document.getElementById('onboardSkipBtn').addEventListener('click', ()=>finish(true));
+    // Тапване къде и да е на екрана (освен върху "Пропусни") също отваря
+    // напред — бутонът "Напред" е малък, не бива да се изисква точно
+    // попадение. Capture-фаза + stopPropagation, за да не задейства и
+    // истинско действие върху демо бележката отдолу (напр. смяна на статус).
+    function screenTapAdvance(e){
+      if(e.target.closest('#onboardSkipBtn')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      finish(false);
+    }
+    document.addEventListener('click', screenTapAdvance, true);
   });
 }
 
