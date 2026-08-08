@@ -924,14 +924,14 @@ function timeLabel(ts){
   return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
 }
 
-// Дата + час до всяка бележка — не само час, за да е ясно от кой ден е
+// Само дата (без час) до всяка бележка — за да е ясно от кой ден е
 // бележката дори в плоски изгледи (резултати от търсене, филтър по
 // категория), които смесват бележки от различни дни без ден-заглавия.
 function dateTimeLabel(ts){
   const d = new Date(ts);
   const dd = String(d.getDate()).padStart(2,'0');
   const mm = String(d.getMonth()+1).padStart(2,'0');
-  return `${dd}.${mm}.${d.getFullYear()} · ${timeLabel(ts)}`;
+  return `${dd}.${mm}.${d.getFullYear()}`;
 }
 
 function applyTheme(){
@@ -1786,7 +1786,7 @@ function itemRow(item, noteId, isSub){
       <div class="swipe-bg complete" aria-hidden="true">${ICONS.check} ${t().tagDone}</div>
       <div class="swipe-bg delete" aria-hidden="true">${t().deleteAria} ${ICONS.trash}</div>
       <div class="note ${item.status}" data-swipe-key="${key}" data-note="${noteId}" data-sub="${isSub?item.id:''}">
-      <div class="note-top">${tagText ? `<span class="tag">${tagText}</span>` : ''}<span class="time">${dateTimeLabel(item.createdAt)}</span></div>
+      <div class="note-top"><span class="time">${dateTimeLabel(item.createdAt)}</span>${tagText ? `<span class="tag">${tagText}</span>` : ''}</div>
       <div class="note-main">
         <div class="dot" data-action="cycle" data-note="${noteId}" data-sub="${isSub?item.id:''}">${icon}</div>
         <div class="body">
