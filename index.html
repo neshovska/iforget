@@ -336,6 +336,12 @@
   .profile-panel .form-msg{font-size:11.5px;line-height:1.4;display:none;}
   .profile-panel .form-msg.error{color:var(--danger);display:block;}
   .profile-panel .form-msg.success{color:var(--green);display:block;}
+  .profile-panel .admin-stats{display:flex;flex-direction:column;gap:2px;padding:2px;}
+  .profile-panel .stat-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:6px 4px;font-size:12.5px;color:var(--text-dim);
+  }
+  .profile-panel .stat-row b{font-size:14px;font-weight:700;color:var(--accent);}
   .profile-panel .sub-form-actions{display:flex;gap:8px;}
   .profile-panel .sub-form-actions button{
     -webkit-appearance:none;appearance:none;flex:1;border-radius:8px;padding:8px;
@@ -717,7 +723,8 @@ const ICONS = {
   chevronUp: '<svg class="ic" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>',
   trash: '<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
   plus: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
-  flame: '<svg class="ic" viewBox="0 0 24 24" width="12" height="12" fill="currentColor" stroke="none"><path d="M12 2c1 3-3 4-3 8a3 3 0 0 0 6 0c1.2 1 2 2.6 2 4.2A5.2 5.2 0 0 1 6.8 19c-2.8-2.2-3-6.4-.6-9.4C7.6 7.8 9 6 12 2z"></path></svg>'
+  flame: '<svg class="ic" viewBox="0 0 24 24" width="12" height="12" fill="currentColor" stroke="none"><path d="M12 2c1 3-3 4-3 8a3 3 0 0 0 6 0c1.2 1 2 2.6 2 4.2A5.2 5.2 0 0 1 6.8 19c-2.8-2.2-3-6.4-.6-9.4C7.6 7.8 9 6 12 2z"></path></svg>',
+  chart: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>'
 };
 
 // Текстове за двата езика — БГ (по подразбиране) и EN. t() връща обекта за
@@ -771,7 +778,11 @@ const STRINGS = {
     expandAria: 'Разгъни', collapseAria: 'Свий',
     deletedUndo: 'Бележката е изтрита.', undoBtn: 'Отмени', deleteAria: 'Изтрий',
     ctxEdit: 'Редактирай', ctxDelete: 'Изтрий', ctxAddSub: 'Добави подбележка',
-    tagDeleted: 'Изтрити'
+    tagDeleted: 'Изтрити',
+    statsTitle: 'Статистика', statsLoading: 'Зареждане...',
+    statsError: 'Неуспешно зареждане на статистиката.',
+    statsTotal: 'Общо регистрирани', statsDay: 'Днес',
+    statsWeek: 'Тази седмица', statsMonth: 'Този месец', statsYear: 'Тази година'
   },
   en: {
     searchAria: 'Search', searchPlaceholder: 'Search text or date (e.g. 06.08, tuesday)...',
@@ -820,7 +831,11 @@ const STRINGS = {
     expandAria: 'Expand', collapseAria: 'Collapse',
     deletedUndo: 'Note deleted.', undoBtn: 'Undo', deleteAria: 'Delete',
     ctxEdit: 'Edit', ctxDelete: 'Delete', ctxAddSub: 'Add sub-note',
-    tagDeleted: 'Deleted'
+    tagDeleted: 'Deleted',
+    statsTitle: 'Statistics', statsLoading: 'Loading...',
+    statsError: 'Failed to load statistics.',
+    statsTotal: 'Total registered', statsDay: 'Today',
+    statsWeek: 'This week', statsMonth: 'This month', statsYear: 'This year'
   }
 };
 function t(){ return STRINGS[lang]; }
@@ -1101,6 +1116,12 @@ function renderProfileMenu(){
   html += `<hr>`;
   html += `<button type="button" class="action" data-action="change-password">${ICONS.pencil}${s.changePassword}</button>`;
   html += `<button type="button" class="action" data-action="change-email">${ICONS.pencil}${s.changeEmail}</button>`;
+  // "Статистика" — само за административния акаунт (isSatoriUser(), виж по-горе),
+  // не се вижда от никой друг потребител на приложението.
+  if(isSatoriUser()){
+    html += `<hr>`;
+    html += `<button type="button" class="action" data-action="admin-stats">${ICONS.chart}${s.statsTitle}</button>`;
+  }
   html += `<hr>`;
   html += `<button type="button" class="action danger" data-action="logout">${ICONS.close}${s.logoutBtn}</button>`;
   panel.innerHTML = html;
@@ -1116,7 +1137,53 @@ function renderProfileMenu(){
   });
   panel.querySelector('[data-action="change-password"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderPasswordForm(); });
   panel.querySelector('[data-action="change-email"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderEmailForm(); });
+  const statsBtn = panel.querySelector('[data-action="admin-stats"]');
+  if(statsBtn) statsBtn.addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderAdminStats(); });
   panel.querySelector('[data-action="logout"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); closeProfilePanel(); signOutUser(); });
+}
+
+// Статистика за админ акаунта — общ брой регистрирани (документи в users/,
+// т.е. хора, запазили поне 1 бележка) + активни дневно/седмично/месечно/
+// годишно по lastSeen (виж touchLastSeen(), пишем го веднъж на сесия при
+// зареждане). Изисква Firestore правилата да позволяват четене на цялата
+// users/ колекция за този конкретен имейл (виж бележката в чата/commit-а).
+function renderAdminStats(){
+  const s = t();
+  const panel = document.getElementById('profilePanel');
+  panel.innerHTML = `<div class="sub-form"><div class="form-msg" style="display:block;">${s.statsLoading}</div></div>`;
+  db.collection('users').get().then(snap=>{
+    const now = Date.now();
+    const DAY = 86400000;
+    let total = 0, dau = 0, wau = 0, mau = 0, yau = 0;
+    snap.forEach(doc=>{
+      total++;
+      const seen = doc.data().lastSeen;
+      if(!seen) return;
+      const age = now - seen;
+      if(age <= DAY) dau++;
+      if(age <= 7*DAY) wau++;
+      if(age <= 30*DAY) mau++;
+      if(age <= 365*DAY) yau++;
+    });
+    panel.innerHTML = `
+      <div class="admin-stats">
+        <div class="stat-row"><span>${s.statsTotal}</span><b>${total}</b></div>
+        <div class="stat-row"><span>${s.statsDay}</span><b>${dau}</b></div>
+        <div class="stat-row"><span>${s.statsWeek}</span><b>${wau}</b></div>
+        <div class="stat-row"><span>${s.statsMonth}</span><b>${mau}</b></div>
+        <div class="stat-row"><span>${s.statsYear}</span><b>${yau}</b></div>
+      </div>
+      <hr>
+      <button type="button" class="action" data-action="stats-back">${ICONS.close}${s.cancelAria}</button>`;
+    panel.querySelector('[data-action="stats-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
+  }).catch(err=>{
+    console.error('admin stats failed', err);
+    panel.innerHTML = `
+      <div class="form-msg error" style="display:block;">${s.statsError}</div>
+      <hr>
+      <button type="button" class="action" data-action="stats-back">${ICONS.close}${s.cancelAria}</button>`;
+    panel.querySelector('[data-action="stats-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
+  });
 }
 
 function renderPasswordForm(){
@@ -1217,12 +1284,21 @@ function loadFromCloud(uid){
     hideAuthScreen();
     setTimeout(()=>scrollToBottom(false), 0);
     maybeFocusQuickAdd();
+    touchLastSeen(docRef);
   }).catch(err=>{
     console.error('cloud load failed', err);
     render();
     hideAuthScreen();
     maybeFocusQuickAdd();
   });
+}
+
+// Записва "видяна за последно" — веднъж на сесия/отваряне, не при всяко save()
+// — ползва се само от renderAdminStats() за дневна/седмична/месечна/годишна
+// бройка активни потребители. Fire-and-forget, грешка тук не бива да пречи
+// на нищо друго в приложението.
+function touchLastSeen(docRef){
+  docRef.set({ lastSeen: Date.now() }, { merge:true }).catch(err=>console.error('touchLastSeen failed', err));
 }
 
 // Home Screen quick-add — manifest.json дефинира shortcut "Нова бележка",
