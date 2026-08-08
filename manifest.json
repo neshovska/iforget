@@ -1,7 +1,7 @@
 {
   "name": "IForget",
   "short_name": "IForget",
-  "description": "Бележки, синхронизирани в облака.",
+  "description": "Помни това, което има значение.",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#0A0A0C",
