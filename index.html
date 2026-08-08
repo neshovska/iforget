@@ -242,7 +242,15 @@
   .auth-screen.show{display:flex;}
   .auth-card{max-width:320px;width:100%;}
   .auth-card h1{font-size:28px;font-weight:800;color:var(--accent);margin:0 0 8px;letter-spacing:.3px;}
-  .auth-card p{font-size:14px;color:var(--text-dim);line-height:1.55;margin:0 0 24px;}
+  .auth-card p{font-size:14px;color:var(--text-dim);line-height:1.55;margin:0 0 20px;}
+  /* Кратък списък с най-важните функции над формата за вход — първото,
+     което вижда нов човек, преди изобщо да е влязъл. */
+  .auth-features{
+    list-style:none;margin:0 0 24px;padding:0;
+    display:flex;flex-direction:column;gap:10px;text-align:left;
+  }
+  .auth-features li{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--text-dim);line-height:1.4;}
+  .auth-features .ico{font-size:15px;flex-shrink:0;width:20px;text-align:center;}
   /* Форма за вход/регистрация с имейл + парола — алтернатива на Google,
      за да не се минава задължително през Google-екрана (виж setAuthMode()/
      handleEmailAuthSubmit() в скрипта). */
@@ -591,6 +599,12 @@
   <div class="auth-card">
     <h1>IForget</h1>
     <p id="authSubtitle">Твоите бележки, синхронизирани в облака — влез, за да продължиш.</p>
+    <ul class="auth-features" id="authFeatures">
+      <li><span class="ico">☁️</span><span id="authFeat1">Синхронизация в облака — на всяко устройство</span></li>
+      <li><span class="ico">👆</span><span id="authFeat2">Swipe жестове — завърши или изтрий с едно движение</span></li>
+      <li><span class="ico">🔥</span><span id="authFeat3">Streak — малко мотивация всеки ден</span></li>
+      <li><span class="ico">🏷️</span><span id="authFeat4">Тагове, подбележки и бързо търсене</span></li>
+    </ul>
     <div id="authFormWrap">
       <form id="emailAuthForm" class="email-auth-form">
         <input type="email" id="authEmail" class="auth-input" placeholder="Имейл" autocomplete="email" required>
@@ -729,6 +743,10 @@ const STRINGS = {
     confirmImport: 'Възстановяването ще замени текущите бележки с тези от файла. Продължи?',
     importSuccess: 'Бележките са възстановени успешно.', importError: 'Файлът не можа да се прочете — провери дали е валиден резервен файл.',
     authSubtitle: 'Твоите бележки, синхронизирани в облака — влез, за да продължиш.',
+    authFeat1: 'Синхронизация в облака — на всяко устройство',
+    authFeat2: 'Swipe жестове — завърши или изтрий с едно движение',
+    authFeat3: 'Streak — малко мотивация всеки ден',
+    authFeat4: 'Тагове, подбележки и бързо търсене',
     authLoadingText: 'Зареждане...', authError: 'Неуспешен вход. Опитай отново.',
     confirmLogout: 'Да излезеш ли от акаунта?', profileAria: 'Профил',
     emailPlaceholder: 'Имейл', passwordPlaceholder: 'Парола', confirmPasswordPlaceholder: 'Потвърди парола',
@@ -782,6 +800,10 @@ const STRINGS = {
     confirmImport: 'Restoring will replace your current notes with the ones from the file. Continue?',
     importSuccess: 'Notes restored successfully.', importError: "Could not read the file — make sure it's a valid backup file.",
     authSubtitle: 'Your notes, synced to the cloud — sign in to continue.',
+    authFeat1: 'Cloud sync — on every device',
+    authFeat2: 'Swipe gestures — complete or delete in one move',
+    authFeat3: 'Streak — a little daily motivation',
+    authFeat4: 'Tags, sub-notes and quick search',
     authLoadingText: 'Loading...', authError: 'Sign-in failed. Please try again.',
     confirmLogout: 'Sign out of your account?', profileAria: 'Profile',
     emailPlaceholder: 'Email', passwordPlaceholder: 'Password', confirmPasswordPlaceholder: 'Confirm password',
@@ -956,6 +978,10 @@ function applyStaticText(){
   document.getElementById('noteCancelBtn').setAttribute('aria-label', s.cancelAria);
   document.getElementById('catBtn').setAttribute('aria-label', s.categoriesAria);
   document.getElementById('authSubtitle').textContent = s.authSubtitle;
+  document.getElementById('authFeat1').textContent = s.authFeat1;
+  document.getElementById('authFeat2').textContent = s.authFeat2;
+  document.getElementById('authFeat3').textContent = s.authFeat3;
+  document.getElementById('authFeat4').textContent = s.authFeat4;
   document.getElementById('authLoading').textContent = s.authLoadingText;
   document.getElementById('userChip').setAttribute('aria-label', s.profileAria);
   document.getElementById('authEmail').setAttribute('placeholder', s.emailPlaceholder);
