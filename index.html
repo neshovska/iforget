@@ -230,27 +230,6 @@
   }
   .ctx-menu button.danger{color:var(--danger);}
 
-  /* Панел "Настройки" — резервно копие (Export/Import), защото localStorage
-     НЕ е гарантирано трайно съхранение: Safari на iOS може да го изчисти
-     (особено при икона на началния екран, дълго неотваряне на приложението
-     или ниско свободно място) — виж requestPersistentStorage() и
-     exportNotes()/importNotesFromFile(). Позициониран динамично под бутона,
-     по същия начин като .tag-picker. */
-  .settings-panel{
-    display:none;position:fixed;z-index:25;background:var(--card);border:1px solid var(--border);
-    border-radius:12px;padding:8px;box-shadow:0 10px 30px rgba(0,0,0,.35);width:240px;
-  }
-  .settings-panel.show{display:block;}
-  .settings-panel button.action{
-    width:100%;text-align:left;background:none;border:none;color:var(--text);font-size:13px;font-weight:600;
-    padding:8px;border-radius:8px;display:flex;align-items:center;gap:8px;font-family:inherit;
-  }
-  .settings-panel button.action:active{background:var(--card-2);}
-  .settings-panel hr{border:none;border-top:1px solid var(--border);margin:4px 0;}
-  .settings-panel .hint{
-    font-size:11px;line-height:1.45;color:var(--text-dim);padding:6px 8px 2px;
-  }
-
   /* Екран за вход — покрива цялото приложение (position:fixed inset:0, най-
      високият z-index в страницата), докато Firebase Auth не потвърди активна
      сесия. Бележките вече живеят в Firestore, разделени по потребител
@@ -587,7 +566,6 @@
       <button id="themeBtn" class="icon-btn" aria-label="Тема"></button>
       <button id="catBtn" class="icon-btn" aria-label="Категории"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L4 3a1 1 0 0 0-1 1l.24 5.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.35-4.35a2 2 0 0 0 0-2.82Z"></path><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor" stroke="none"></circle></svg></button>
       <button id="searchBtn" class="icon-btn" aria-label="Търсене"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
-      <button id="settingsBtn" class="icon-btn" aria-label="Настройки"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
       <button id="userChip" class="user-chip" aria-label="Профил" style="display:none"></button>
     </div>
   </div>
@@ -602,7 +580,6 @@
 
 <div class="tag-picker" id="tagPicker"></div>
 <div class="ctx-menu" id="ctxMenu"></div>
-<div class="settings-panel" id="settingsPanel"></div>
 <div class="profile-panel" id="profilePanel"></div>
 <input type="file" id="importFileInput" accept="application/json,.json" style="display:none">
 
@@ -978,7 +955,6 @@ function applyStaticText(){
   document.getElementById('langBtn').textContent = s.langToggle;
   document.getElementById('noteCancelBtn').setAttribute('aria-label', s.cancelAria);
   document.getElementById('catBtn').setAttribute('aria-label', s.categoriesAria);
-  document.getElementById('settingsBtn').setAttribute('aria-label', s.settingsAria);
   document.getElementById('authSubtitle').textContent = s.authSubtitle;
   document.getElementById('authLoading').textContent = s.authLoadingText;
   document.getElementById('userChip').setAttribute('aria-label', s.profileAria);
@@ -1116,6 +1092,9 @@ function renderProfileMenu(){
   html += `<hr>`;
   html += `<button type="button" class="action" data-action="change-password">${ICONS.pencil}${s.changePassword}</button>`;
   html += `<button type="button" class="action" data-action="change-email">${ICONS.pencil}${s.changeEmail}</button>`;
+  html += `<hr>`;
+  html += `<button type="button" class="action" data-action="export">${ICONS.download}${s.exportBackup}</button>`;
+  html += `<button type="button" class="action" data-action="import">${ICONS.upload}${s.importBackup}</button>`;
   // "Статистика" — само за административния акаунт (isSatoriUser(), виж по-горе),
   // не се вижда от никой друг потребител на приложението.
   if(isSatoriUser()){
@@ -1137,6 +1116,8 @@ function renderProfileMenu(){
   });
   panel.querySelector('[data-action="change-password"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderPasswordForm(); });
   panel.querySelector('[data-action="change-email"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderEmailForm(); });
+  panel.querySelector('[data-action="export"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); exportNotes(); closeProfilePanel(); });
+  panel.querySelector('[data-action="import"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); document.getElementById('importFileInput').click(); });
   const statsBtn = panel.querySelector('[data-action="admin-stats"]');
   if(statsBtn) statsBtn.addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderAdminStats(); });
   panel.querySelector('[data-action="logout"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); closeProfilePanel(); signOutUser(); });
@@ -1777,39 +1758,13 @@ function importNotesFromFile(file){
       notes = parsed;
       notes.forEach(n=>{ if(!n.subs) n.subs = []; if(n.tag===undefined) n.tag = null; });
       save(); render();
-      closeSettingsPanel();
+      closeProfilePanel();
       window.alert(t().importSuccess);
     }catch(err){
       window.alert(t().importError);
     }
   };
   reader.readAsText(file);
-}
-
-function openSettingsPanel(anchorEl){
-  const html = `
-    <button class="action" data-action="export"><span>${ICONS.download}</span>${t().exportBackup}</button>
-    <button class="action" data-action="import"><span>${ICONS.upload}</span>${t().importBackup}</button>
-    <hr><div class="hint">${t().backupHint}</div>`;
-  const panel = document.getElementById('settingsPanel');
-  panel.innerHTML = html;
-  const rect = anchorEl.getBoundingClientRect();
-  panel.style.top = (rect.bottom + 4) + 'px';
-  panel.style.right = (window.innerWidth - rect.right) + 'px';
-  panel.classList.add('show');
-
-  panel.querySelector('[data-action="export"]').addEventListener('mousedown', e=>{
-    e.preventDefault();
-    exportNotes();
-    closeSettingsPanel();
-  });
-  panel.querySelector('[data-action="import"]').addEventListener('mousedown', e=>{
-    e.preventDefault();
-    document.getElementById('importFileInput').click();
-  });
-}
-function closeSettingsPanel(){
-  document.getElementById('settingsPanel').classList.remove('show');
 }
 
 function escapeHtml(s){
@@ -2185,7 +2140,7 @@ function closeSearchRow(){ searchRow.classList.remove('open'); searchBtn.classLi
 searchBtn.addEventListener('click', ()=>{
   const open = searchRow.classList.toggle('open');
   searchBtn.classList.toggle('active', open);
-  if(open){ closeCatRow(); closeSettingsPanel(); closeProfilePanel(); }
+  if(open){ closeCatRow(); closeProfilePanel(); }
   updateTopbarHeight();
   if(open){ searchInput.focus(); }
   else{ searchQuery=''; searchInput.value=''; render(); }
@@ -2202,7 +2157,7 @@ document.getElementById('searchClear').addEventListener('click', ()=>{
 catBtn.addEventListener('click', ()=>{
   const open = catRow.classList.toggle('open');
   catBtn.classList.toggle('active', open);
-  if(open){ closeSearchRow(); closeSettingsPanel(); closeProfilePanel(); }
+  if(open){ closeSearchRow(); closeProfilePanel(); }
   updateTopbarHeight();
 });
 catRow.addEventListener('click', e=>{
@@ -2212,16 +2167,6 @@ catRow.addEventListener('click', e=>{
   render();
 });
 
-// Настройки (резервно копие) — плаващ панел, аналогичен на tag-picker,
-// закачен под settingsBtn; затваря се взаимно с реда за търсене/категории.
-const settingsBtn = document.getElementById('settingsBtn');
-settingsBtn.addEventListener('click', ()=>{
-  const panel = document.getElementById('settingsPanel');
-  const isOpen = panel.classList.contains('show');
-  if(isOpen){ closeSettingsPanel(); return; }
-  closeSearchRow(); closeCatRow(); closeProfilePanel();
-  openSettingsPanel(settingsBtn);
-});
 document.getElementById('importFileInput').addEventListener('change', e=>{
   const file = e.target.files[0];
   if(file) importNotesFromFile(file);
@@ -2235,12 +2180,12 @@ userChip.addEventListener('click', ()=>{
   const panel = document.getElementById('profilePanel');
   const isOpen = panel.classList.contains('show');
   if(isOpen){ closeProfilePanel(); return; }
-  closeSearchRow(); closeCatRow(); closeSettingsPanel();
+  closeSearchRow(); closeCatRow();
   openProfilePanel(userChip);
 });
 
-// Затваря tag-picker-а/настройките/профила при клик извън тях (и извън
-// бутоните, които ги отварят).
+// Затваря tag-picker-а/контекстното меню/профила при клик извън тях (и
+// извън бутоните, които ги отварят).
 document.addEventListener('mousedown', e=>{
   const picker = document.getElementById('tagPicker');
   if(picker.classList.contains('show') && !picker.contains(e.target) && !e.target.closest('[data-action="tag-open"]')){
@@ -2249,10 +2194,6 @@ document.addEventListener('mousedown', e=>{
   const ctxMenu = document.getElementById('ctxMenu');
   if(ctxMenu.classList.contains('show') && !ctxMenu.contains(e.target)){
     closeCtxMenu();
-  }
-  const panel = document.getElementById('settingsPanel');
-  if(panel.classList.contains('show') && !panel.contains(e.target) && e.target !== settingsBtn && !settingsBtn.contains(e.target)){
-    closeSettingsPanel();
   }
   const profPanel = document.getElementById('profilePanel');
   if(profPanel.classList.contains('show') && !profPanel.contains(e.target) && e.target !== userChip && !userChip.contains(e.target)){
