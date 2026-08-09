@@ -926,6 +926,7 @@ let addingSubFor = null;
 let searchQuery = '';
 let categoryFilter = null; // null = "Всички"; 'personal' | 'work' | произволен таг
 let activeTagNoteId = null; // коя бележка е отворена в момента в tag-picker-а
+let tagPickerAnchor = null; // елементът, спрямо който е позициониран tag-picker-ът (за repositionTagPickerOnScroll())
 let expandedNotes = new Set(); // ключове (item.id или noteId::subId) на ръчно разгънати дълги бележки
 let ctxMenuNote = null; // {noteId, subId} на бележката с отворено long-press меню
 let ctxActiveWrap = null; // .note-wrap елементът, който в момента "изпъква" (виж openCtxMenu/closeCtxMenu)
@@ -2637,8 +2638,37 @@ function setNoteTag(noteId, tag){
 // (position:fixed, viewport-относителни координати). Произволните тагове
 // НЕ се показват тук като готови бутони за избор — те са моментни, пишат се
 // наново всеки път; само Личен/Работни са трайните бързи опции.
+// Пресмята/прилага позицията на picker-а спрямо ТЕКУЩАТА позиция на
+// anchorEl — извиква се и при отваряне, и на всеки скрол, докато е отворен
+// (виж repositionTagPickerOnScroll() по-долу). Нужно е, защото при нова
+// бележка страницата се скролва плавно (scrollToBottom(true)) — ако
+// потребителят тапне "+ таг" веднага, докато скролът все още тече,
+// getBoundingClientRect() в момента на отваряне връща МЕЖДИННА позиция,
+// не крайната; без проследяване picker-ът увисва там, където е бил
+// тагчето по средата на анимацията, а не където накрая застава.
+function positionTagPicker(anchorEl){
+  const picker = document.getElementById('tagPicker');
+  const rect = anchorEl.getBoundingClientRect();
+  const pickerH = picker.offsetHeight;
+  const gap = 4;
+  let top;
+  if(rect.bottom + gap + pickerH <= window.innerHeight - 8){
+    top = rect.bottom + gap; // под тагчето — предпочитан вариант
+  }else if(rect.top - gap - pickerH >= 8){
+    top = rect.top - gap - pickerH; // няма място долу → над тагчето
+  }else{
+    top = Math.max(8, Math.min(rect.bottom + gap, window.innerHeight - pickerH - 8)); // клампва в екрана
+  }
+  picker.style.top = top + 'px';
+  picker.style.left = Math.min(Math.max(8, rect.left), window.innerWidth - 176) + 'px';
+}
+function repositionTagPickerOnScroll(){
+  if(tagPickerAnchor) positionTagPicker(tagPickerAnchor);
+}
+
 function openTagPicker(noteId, anchorEl){
   activeTagNoteId = noteId;
+  tagPickerAnchor = anchorEl;
   let html = `
     <button data-set="personal"><span class="sw" style="background:var(--tag-personal)"></span>${t().tagPersonal}</button>
     <button data-set="work"><span class="sw" style="background:var(--tag-work)"></span>${t().tagWork}</button>`;
@@ -2654,20 +2684,8 @@ function openTagPicker(noteId, anchorEl){
   const picker = document.getElementById('tagPicker');
   picker.innerHTML = html;
   picker.classList.add('show'); // трябва да е видим ПРЕДИ да измерим offsetHeight
-
-  const rect = anchorEl.getBoundingClientRect();
-  const pickerH = picker.offsetHeight;
-  const gap = 4;
-  let top;
-  if(rect.bottom + gap + pickerH <= window.innerHeight - 8){
-    top = rect.bottom + gap; // под тагчето — предпочитан вариант
-  }else if(rect.top - gap - pickerH >= 8){
-    top = rect.top - gap - pickerH; // няма място долу → над тагчето
-  }else{
-    top = Math.max(8, Math.min(rect.bottom + gap, window.innerHeight - pickerH - 8)); // клампва в екрана
-  }
-  picker.style.top = top + 'px';
-  picker.style.left = Math.min(Math.max(8, rect.left), window.innerWidth - 176) + 'px';
+  positionTagPicker(anchorEl);
+  window.addEventListener('scroll', repositionTagPickerOnScroll, {passive:true});
 
   picker.querySelectorAll('button[data-set]').forEach(b=>{
     b.addEventListener('mousedown', e=>{
@@ -2696,6 +2714,8 @@ function openTagPicker(noteId, anchorEl){
 function closeTagPicker(){
   document.getElementById('tagPicker').classList.remove('show');
   activeTagNoteId = null;
+  tagPickerAnchor = null;
+  window.removeEventListener('scroll', repositionTagPickerOnScroll);
 }
 
 // Падащо меню за избор на език — 5 възможности (bg/en/ru/de/es), позиционирано
