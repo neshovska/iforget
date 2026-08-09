@@ -290,6 +290,24 @@
     border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 8px;
     font-size:13px;outline:none;font-family:inherit;box-sizing:border-box;
   }
+  /* Повторение (Никога/Всеки ден/Всяка седмица) — три чипа, широчината им
+     (width:auto + flex:1) трябва изрично да пребие .ctx-menu button{width:
+     100%;...} по-долу (по-специфично, .ctx-menu .reminder-repeat-row button
+     е два класа), иначе всеки чип щеше да заеме целия ред. */
+  .ctx-menu .reminder-repeat-label{
+    font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;
+    color:var(--text-dim);padding:0 6px 5px;
+  }
+  .ctx-menu .reminder-repeat-row{display:flex;gap:6px;padding:0 4px 8px;}
+  .ctx-menu .reminder-repeat-row button{
+    flex:1;width:auto;-webkit-appearance:none;appearance:none;
+    background:var(--card-2);border:1px solid var(--border);color:var(--text-dim);
+    border-radius:8px;padding:7px 4px;font-size:11.5px;font-weight:700;font-family:inherit;
+    text-align:center;justify-content:center;
+  }
+  .ctx-menu .reminder-repeat-row button.active{
+    background:rgba(var(--accent-rgb),.14);border-color:var(--accent-dim);color:var(--accent);
+  }
   .ctx-menu .reminder-hint{
     font-size:11px;line-height:1.5;color:var(--text-dim);padding:0 6px 10px;
   }
@@ -1191,7 +1209,8 @@ const ICONS = {
   trend: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 6"></polyline><polyline points="15 6 21 6 21 12"></polyline></svg>',
   calendar: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>',
   chevronLeft: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>',
-  chevronRight: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>'
+  chevronRight: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>',
+  repeat: '<svg class="ic" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>'
 };
 
 // Текстове за двата езика — БГ (по подразбиране) и EN. t() връща обекта за
@@ -1261,6 +1280,8 @@ const STRINGS = {
     reminderInactiveHint: 'Напомнянията ще изпращат push нотификация, след като IForget излезе в App Store / Google Play. Засега датата само се запазва.',
     reminderDateLabel: 'Дата', reminderTimeLabel: 'Час',
     reminderSaveBtn: 'Запази', reminderRemoveBtn: 'Премахни напомнянето',
+    reminderRepeatLabel: 'Повторение', reminderRepeatNone: 'Никога',
+    reminderRepeatDaily: 'Всеки ден', reminderRepeatWeekly: 'Всяка седмица',
     tagDeleted: 'Изтрити',
     statsTitle: 'Статистика', statsLoading: 'Зареждане...',
     statsError: 'Неуспешно зареждане на статистиката.',
@@ -1348,6 +1369,8 @@ const STRINGS = {
     reminderInactiveHint: 'Reminders will send a push notification once IForget is available on the App Store / Google Play. For now the date is just saved.',
     reminderDateLabel: 'Date', reminderTimeLabel: 'Time',
     reminderSaveBtn: 'Save', reminderRemoveBtn: 'Remove reminder',
+    reminderRepeatLabel: 'Repeat', reminderRepeatNone: 'Never',
+    reminderRepeatDaily: 'Every day', reminderRepeatWeekly: 'Every week',
     tagDeleted: 'Deleted',
     statsTitle: 'Statistics', statsLoading: 'Loading...',
     statsError: 'Failed to load statistics.',
@@ -1435,6 +1458,8 @@ const STRINGS = {
     reminderInactiveHint: 'Напоминания будут отправлять push-уведомление, когда IForget появится в App Store / Google Play. Пока дата просто сохраняется.',
     reminderDateLabel: 'Дата', reminderTimeLabel: 'Время',
     reminderSaveBtn: 'Сохранить', reminderRemoveBtn: 'Удалить напоминание',
+    reminderRepeatLabel: 'Повтор', reminderRepeatNone: 'Никогда',
+    reminderRepeatDaily: 'Каждый день', reminderRepeatWeekly: 'Каждую неделю',
     tagDeleted: 'Удалённые',
     statsTitle: 'Статистика', statsLoading: 'Загрузка...',
     statsError: 'Не удалось загрузить статистику.',
@@ -1522,6 +1547,8 @@ const STRINGS = {
     reminderInactiveHint: 'Erinnerungen senden eine Push-Benachrichtigung, sobald IForget im App Store / bei Google Play verfügbar ist. Vorerst wird nur das Datum gespeichert.',
     reminderDateLabel: 'Datum', reminderTimeLabel: 'Uhrzeit',
     reminderSaveBtn: 'Speichern', reminderRemoveBtn: 'Erinnerung entfernen',
+    reminderRepeatLabel: 'Wiederholung', reminderRepeatNone: 'Nie',
+    reminderRepeatDaily: 'Täglich', reminderRepeatWeekly: 'Wöchentlich',
     tagDeleted: 'Gelöscht',
     statsTitle: 'Statistik', statsLoading: 'Wird geladen...',
     statsError: 'Statistik konnte nicht geladen werden.',
@@ -1609,6 +1636,8 @@ const STRINGS = {
     reminderInactiveHint: 'Los recordatorios enviarán una notificación push cuando IForget esté disponible en App Store / Google Play. Por ahora solo se guarda la fecha.',
     reminderDateLabel: 'Fecha', reminderTimeLabel: 'Hora',
     reminderSaveBtn: 'Guardar', reminderRemoveBtn: 'Quitar recordatorio',
+    reminderRepeatLabel: 'Repetición', reminderRepeatNone: 'Nunca',
+    reminderRepeatDaily: 'Cada día', reminderRepeatWeekly: 'Cada semana',
     tagDeleted: 'Eliminadas',
     statsTitle: 'Estadísticas', statsLoading: 'Cargando...',
     statsError: 'No se pudieron cargar las estadísticas.',
@@ -1845,7 +1874,8 @@ function loadLocalCache(){
         if(n.tag===undefined) n.tag = null;
         if(n.reminderAt===undefined) n.reminderAt = null;
         if(n.color===undefined) n.color = null;
-        n.subs.forEach(s=>{ if(s.reminderAt===undefined) s.reminderAt = null; if(s.color===undefined) s.color = null; });
+        if(n.reminderRepeat===undefined) n.reminderRepeat = null;
+        n.subs.forEach(s=>{ if(s.reminderAt===undefined) s.reminderAt = null; if(s.color===undefined) s.color = null; if(s.reminderRepeat===undefined) s.reminderRepeat = null; });
       });
   try{
     const rawOrder = localStorage.getItem(TAG_ORDER_KEY);
@@ -2157,11 +2187,29 @@ function calendarNotesCountForKey(key){
   notes.forEach(n=>{ if(localDateStr(n.createdAt) === key) cnt++; });
   return cnt;
 }
+// Дали напомняне (reminderAt + евентуално reminderRepeat) "пада" на дадена
+// дата (dateKey, ГГГГ-ММ-ДД локален формат) — брои и повтарящите се
+// напомняния занапред от първоначалната им дата (виж renderCtxMenuReminder()),
+// не само еднократните. Ползва се от calendarRemindersCountForKey() по-долу,
+// за да "изгрее" реминдър на всеки бъдещ ден, в който реално ще се повтори.
+function reminderOccursOnDate(reminderAt, reminderRepeat, dateKey){
+  if(!reminderAt) return false;
+  const startKey = localDateStr(reminderAt);
+  if(!reminderRepeat) return startKey === dateKey;
+  if(dateKey < startKey) return false; // повторенията текат само НАПРЕД от първоначалната дата
+  if(reminderRepeat === 'daily') return true;
+  if(reminderRepeat === 'weekly'){
+    const startDow = new Date(reminderAt).getDay();
+    const [y, m, d] = dateKey.split('-').map(Number);
+    return new Date(y, m - 1, d).getDay() === startDow;
+  }
+  return false;
+}
 function calendarRemindersCountForKey(key){
   let cnt = 0;
   notes.forEach(n=>{
-    if(n.reminderAt && localDateStr(n.reminderAt) === key) cnt++;
-    (n.subs || []).forEach(sub=>{ if(sub.reminderAt && localDateStr(sub.reminderAt) === key) cnt++; });
+    if(reminderOccursOnDate(n.reminderAt, n.reminderRepeat, key)) cnt++;
+    (n.subs || []).forEach(sub=>{ if(reminderOccursOnDate(sub.reminderAt, sub.reminderRepeat, key)) cnt++; });
   });
   return cnt;
 }
@@ -2439,7 +2487,8 @@ function loadFromCloud(uid){
         if(n.tag===undefined) n.tag = null;
         if(n.reminderAt===undefined) n.reminderAt = null;
         if(n.color===undefined) n.color = null;
-        n.subs.forEach(s=>{ if(s.reminderAt===undefined) s.reminderAt = null; if(s.color===undefined) s.color = null; });
+        if(n.reminderRepeat===undefined) n.reminderRepeat = null;
+        n.subs.forEach(s=>{ if(s.reminderAt===undefined) s.reminderAt = null; if(s.color===undefined) s.color = null; if(s.reminderRepeat===undefined) s.reminderRepeat = null; });
       });
     }else if(notes.length){
       docRef.set({ notes }, { merge:true }).catch(err=>console.error('initial cloud upload failed', err));
@@ -2831,7 +2880,7 @@ function addNote(text){
   if(!text) return;
   notes.push({
     id: 'n'+Date.now()+Math.random().toString(36).slice(2,6),
-    text, createdAt: Date.now(), status: 'open', subs: [], tag: null, reminderAt: null, color: null
+    text, createdAt: Date.now(), status: 'open', subs: [], tag: null, reminderAt: null, reminderRepeat: null, color: null
   });
   save(); render();
   setTimeout(()=>scrollToBottom(true), 0);
@@ -2844,7 +2893,7 @@ function addSub(noteId, text){
   if(!n) return;
   n.subs.push({
     id: 's'+Date.now()+Math.random().toString(36).slice(2,6),
-    text, createdAt: Date.now(), status: 'open', reminderAt: null, color: null
+    text, createdAt: Date.now(), status: 'open', reminderAt: null, reminderRepeat: null, color: null
   });
   addingSubFor = null;
   save(); render();
@@ -3368,17 +3417,27 @@ function pad2(n){ return String(n).padStart(2, '0'); }
 function dateInputValue(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
 function timeInputValue(d){ return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
 
-// Форма за дата/час на напомнянето — заменя списъка с бутони в СЪЩИЯ
-// #ctxMenu (воалът/изпъкването остават). Функцията е видима отсега, но
-// умишлено обозначена като все още неактивна (реални push нотификации
+// Форма за дата/час/повторение на напомнянето — заменя списъка с бутони в
+// СЪЩИЯ #ctxMenu (воалът/изпъкването остават). Функцията е видима отсега,
+// но умишлено обозначена като все още неактивна (реални push нотификации
 // изискват приложението да е в App Store/Google Play — чист PWA не може).
-// Само пази датата в бележката, за да е готово за после.
+// Само пази датата (+повторението) в бележката, за да е готово за после.
+// Повторението (reminderRepeat: null|'daily'|'weekly') се пази в локална
+// selectedRepeat променлива, докато формата е отворена (само класове се
+// местят при тап върху чиповете, без да пресъздаваме менюто) и се записва
+// в item чак при "Запази".
 function renderCtxMenuReminder(noteId, subId){
   const s = t();
   const item = subId ? findSub(noteId, subId) : findNote(noteId);
   if(!item) return;
   const menu = document.getElementById('ctxMenu');
   const existing = item.reminderAt ? new Date(item.reminderAt) : null;
+  let selectedRepeat = item.reminderRepeat || 'none';
+  const repeatOptions = [
+    {val: 'none', label: s.reminderRepeatNone},
+    {val: 'daily', label: s.reminderRepeatDaily},
+    {val: 'weekly', label: s.reminderRepeatWeekly},
+  ];
   menu.innerHTML = `
     <button type="button" class="reminder-back" data-ctx="reminder-back">${ICONS.arrowLeft}${s.onboardBack}</button>
     <div class="reminder-head">${ICONS.bell}${item.reminderAt ? s.ctxEditReminder : s.ctxAddReminder}</div>
@@ -3386,12 +3445,23 @@ function renderCtxMenuReminder(noteId, subId){
       <input type="date" id="reminderDateInput" aria-label="${s.reminderDateLabel}" value="${existing ? dateInputValue(existing) : ''}">
       <input type="time" id="reminderTimeInput" aria-label="${s.reminderTimeLabel}" value="${existing ? timeInputValue(existing) : ''}">
     </div>
+    <div class="reminder-repeat-label">${s.reminderRepeatLabel}</div>
+    <div class="reminder-repeat-row">` + repeatOptions.map(o =>
+      `<button type="button" data-repeat="${o.val}" class="${o.val === selectedRepeat ? 'active' : ''}">${o.label}</button>`
+    ).join('') + `</div>
     <div class="reminder-hint">${s.reminderInactiveHint}</div>
     <div class="reminder-actions">
       <button type="button" class="primary" data-ctx="reminder-save">${s.reminderSaveBtn}</button>
       ${item.reminderAt ? `<button type="button" class="danger" data-ctx="reminder-remove">${s.reminderRemoveBtn}</button>` : ''}
     </div>`;
 
+  menu.querySelectorAll('.reminder-repeat-row button').forEach(b=>{
+    b.addEventListener('mousedown', e=>{
+      e.preventDefault();
+      selectedRepeat = b.dataset.repeat;
+      menu.querySelectorAll('.reminder-repeat-row button').forEach(x=>x.classList.toggle('active', x === b));
+    });
+  });
   menu.querySelector('[data-ctx="reminder-back"]').addEventListener('mousedown', e=>{
     e.preventDefault();
     renderCtxMenuMain(noteId, subId);
@@ -3404,6 +3474,7 @@ function renderCtxMenuReminder(noteId, subId){
       const dt = new Date(`${dEl.value}T${tEl.value || '09:00'}:00`);
       if(!isNaN(dt.getTime())) item.reminderAt = dt.getTime();
     }
+    item.reminderRepeat = selectedRepeat === 'none' ? null : selectedRepeat;
     closeCtxMenu();
     save(); render();
   });
@@ -3412,6 +3483,7 @@ function renderCtxMenuReminder(noteId, subId){
     removeBtn.addEventListener('mousedown', e=>{
       e.preventDefault();
       item.reminderAt = null;
+      item.reminderRepeat = null;
       closeCtxMenu();
       save(); render();
     });
@@ -3494,7 +3566,8 @@ function importNotesFromFile(file){
         if(n.tag===undefined) n.tag = null;
         if(n.reminderAt===undefined) n.reminderAt = null;
         if(n.color===undefined) n.color = null;
-        n.subs.forEach(s=>{ if(s.reminderAt===undefined) s.reminderAt = null; if(s.color===undefined) s.color = null; });
+        if(n.reminderRepeat===undefined) n.reminderRepeat = null;
+        n.subs.forEach(s=>{ if(s.reminderAt===undefined) s.reminderAt = null; if(s.color===undefined) s.color = null; if(s.reminderRepeat===undefined) s.reminderRepeat = null; });
       });
       save(); render();
       closeProfilePanel();
@@ -3605,7 +3678,7 @@ function itemRow(item, noteId, isSub){
           <div class="txt${!isExpanded ? ' clamped' : ''}" data-key="${key}" data-action="edit" data-note="${noteId}" data-sub="${isSub?item.id:''}">${escapeHtml(item.text)}</div>
           <div class="meta">
             ${!isSub ? tagPillHtml(item, noteId) : ''}
-            ${item.reminderAt ? `<span class="reminder-badge">${ICONS.bell}${reminderLabel(item.reminderAt)}</span>` : ''}
+            ${item.reminderAt ? `<span class="reminder-badge">${ICONS.bell}${reminderLabel(item.reminderAt)}${item.reminderRepeat ? ICONS.repeat : ''}</span>` : ''}
             ${!isSub && addingSubFor !== noteId ? `<button class="add-sub-link" data-action="sub-open" data-note="${noteId}">${t().addSubLink}</button>` : ''}
             <button class="expand-toggle" data-action="toggle-expand" data-key="${key}" style="display:${isExpanded?'inline-flex':'none'}" aria-label="${isExpanded?t().collapseAria:t().expandAria}">${isExpanded?t().collapseAria:t().expandAria}${isExpanded?ICONS.chevronUp:ICONS.chevronDown}</button>
           </div>
