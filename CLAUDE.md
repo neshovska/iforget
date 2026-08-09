@@ -31,7 +31,7 @@ custom domain).
 
 Бележка:
 ```
-{ id, text, status: 'open'|'progress'|'done', createdAt, completedAt, tag, reminderAt, color: null|hex, subs: [] }
+{ id, text, status: 'open'|'progress'|'done', createdAt, completedAt, tag, reminderAt, reminderRepeat: null|'daily'|'weekly', color: null|hex, subs: [] }
 ```
 Подбележка: същата форма, но без собствен `tag` (само основните бележки имат
 tag-picker в интерфейса).
@@ -105,6 +105,17 @@ Firestore документ `users/{uid}` също съдържа `tagOrder: stri
   бутони молив/кошче са премахнати от картите — редакция е през ДВОЕН
   тап/клик върху текста (умишлено не единичен, за да не се влиза случайно
   в редакция докато четеш/скролваш), swipe, или това меню.
+- **Повтарящи се напомняния** (`item.reminderRepeat: null|'daily'|'weekly'`,
+  чипове "Никога/Всеки ден/Всяка седмица" във формата за напомняне,
+  `renderCtxMenuReminder()`) — избраното се пази в локална `selectedRepeat`
+  променлива, докато формата е отворена, записва се в `item` чак при
+  "Запази". Значката на картата показва малка repeat иконка до датата/часа,
+  ако е зададено повторение (`ICONS.repeat`). `reminderOccursOnDate()`
+  генерира занапред всички дни, в които даден реминдър реално ще се
+  повтори (daily = всеки ден от старта нататък; weekly = същия ден от
+  седмицата) — ползва се от `calendarRemindersCountForKey()`, за да
+  "изгрее" повтарящо се напомняне на ВСЕКИ бъдещ ден в календара, не само
+  на първоначалната дата.
 - **Личен цвят на бележка** ("Цвят" в long-press менюто,
   `renderCtxMenuColor()`, `item.color`) — маркира само конкретната
   бележка/подбележка, палитра СЪЩАТА като `PROFILE_COLORS` в профила (за
