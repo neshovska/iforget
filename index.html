@@ -200,10 +200,16 @@
   .cat-chip.active .n{color:var(--accent);}
   /* Потребителските тагове (data-reorder="1") могат да се разместват с
      дълго натискане + провлачване (виж attachCatRowDrag()) — Всички/
-     В прогрес/Работни/Лични/Satori/Изтрити са фиксирани и нямат тоя атрибут.
+     Работни/Лични/Satori/Изтрити са фиксирани и нямат тоя атрибут.
      touch-action:none само тук (не на целия ред) — иначе нормалният вертикален
-     скрол на страницата би се "закачал" при допир до произволен чип. */
-  .cat-chip[data-reorder="1"]{touch-action:none;}
+     скрол на страницата би се "закачал" при допир до произволен чип.
+     -webkit-touch-callout/-webkit-user-select:none спират собствения
+     дълъг-натиск на iOS Safari (избор на текст/callout меню), който иначе
+     "открадва" жеста преди да стигнем до нашия таймер за drag. */
+  .cat-chip[data-reorder="1"]{
+    touch-action:none;-webkit-touch-callout:none;
+    -webkit-user-select:none;user-select:none;
+  }
   .cat-chip.dragging{
     opacity:.6;box-shadow:0 6px 18px rgba(0,0,0,.35);transform:scale(1.06);
     position:relative;z-index:5;
@@ -651,8 +657,9 @@
   }
 
   /* Заглавие на статус-секция — стои над всички дневни блокове с дадения
-     статус, за да личи ясно разделението Приключени / В прогрес / Активни,
-     отделно от групирането по дата вътре във всяка секция. */
+     статус, за да личи ясно разделението Приключени / Активни (в прогрес +
+     open в един общ хронологичен поток, виж render()), отделно от
+     групирането по дата вътре във всяка секция. */
   .status-section{
     display:flex;align-items:center;gap:8px;margin:22px 4px 2px;
     font-size:12.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
@@ -1059,12 +1066,7 @@ let notes = [];
 let editingKey = null;
 let addingSubFor = null;
 let searchQuery = '';
-let categoryFilter = null; // null = "Всички"; PROGRESS_FILTER (по статус) | 'personal' | 'work' | произволен таг
-// Спец. стойност за categoryFilter — филтрира по СТАТУС (progress), не по
-// таг (виж render()/renderCatRow()). Няма как да съвпадне с истински
-// потребителски таг, защото setNoteTag() пази само каквото е въведено в
-// текстовото поле, а долна черта в началото не е обичаен вход.
-const PROGRESS_FILTER = '__progress__';
+let categoryFilter = null; // null = "Всички"; 'personal' | 'work' | DELETED_TAG | произволен таг
 // Ред на потребителските тагове в реда с категории — по подразбиране празен
 // (тогава orderedCustomTags() пада на азбучен ред), пълни се при първото
 // разместване (виж attachCatRowDrag()) и се пази локално + в облака (виж
@@ -1201,7 +1203,7 @@ const STRINGS = {
     today: 'Днес', yesterday: 'Вчера', noNotes: 'Няма бележки',
     results: 'Резултати', noResultsFor: q => `Няма намерени бележки за "${q}"`,
     tagProgress: 'в прогрес', tagDone: 'завършено',
-    sectionDone: 'Приключени', sectionProgress: 'В прогрес', sectionActive: 'Активни',
+    sectionDone: 'Приключени', sectionActive: 'Активни',
     confirmDelete: 'Да изтрия ли тази бележка?',
     dayNames: ['Неделя','Понеделник','Вторник','Сряда','Четвъртък','Петък','Събота'],
     monthNames: ['Януари','Февруари','Март','Април','Май','Юни','Юли','Август','Септември','Октомври','Ноември','Декември'],
@@ -1287,7 +1289,7 @@ const STRINGS = {
     today: 'Today', yesterday: 'Yesterday', noNotes: 'No notes',
     results: 'Results', noResultsFor: q => `No notes found for "${q}"`,
     tagProgress: 'in progress', tagDone: 'done',
-    sectionDone: 'Completed', sectionProgress: 'In progress', sectionActive: 'Active',
+    sectionDone: 'Completed', sectionActive: 'Active',
     confirmDelete: 'Delete this note?',
     dayNames: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
     monthNames: ['January','February','March','April','May','June','July','August','September','October','November','December'],
@@ -1373,7 +1375,7 @@ const STRINGS = {
     today: 'Сегодня', yesterday: 'Вчера', noNotes: 'Нет заметок',
     results: 'Результаты', noResultsFor: q => `Заметки для "${q}" не найдены`,
     tagProgress: 'в процессе', tagDone: 'выполнено',
-    sectionDone: 'Выполненные', sectionProgress: 'В процессе', sectionActive: 'Активные',
+    sectionDone: 'Выполненные', sectionActive: 'Активные',
     confirmDelete: 'Удалить эту заметку?',
     dayNames: ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'],
     monthNames: ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'],
@@ -1459,7 +1461,7 @@ const STRINGS = {
     today: 'Heute', yesterday: 'Gestern', noNotes: 'Keine Notizen',
     results: 'Ergebnisse', noResultsFor: q => `Keine Notizen gefunden für "${q}"`,
     tagProgress: 'in Bearbeitung', tagDone: 'erledigt',
-    sectionDone: 'Erledigt', sectionProgress: 'In Bearbeitung', sectionActive: 'Aktiv',
+    sectionDone: 'Erledigt', sectionActive: 'Aktiv',
     confirmDelete: 'Diese Notiz löschen?',
     dayNames: ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'],
     monthNames: ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'],
@@ -1545,7 +1547,7 @@ const STRINGS = {
     today: 'Hoy', yesterday: 'Ayer', noNotes: 'Sin notas',
     results: 'Resultados', noResultsFor: q => `No se encontraron notas para "${q}"`,
     tagProgress: 'en curso', tagDone: 'hecho',
-    sectionDone: 'Completadas', sectionProgress: 'En curso', sectionActive: 'Activas',
+    sectionDone: 'Completadas', sectionActive: 'Activas',
     confirmDelete: '¿Eliminar esta nota?',
     dayNames: ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'],
     monthNames: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
@@ -3459,7 +3461,7 @@ function tagClass(tag){
 // категории (виж tagOrder/saveTagOrder()/attachCatRowDrag() по-долу).
 // Тагове, все още незаписани в tagOrder (новосъздадени, преди първото
 // разместване), се добавят накрая по азбучен ред. Вградените тагове
-// (Всички/В прогрес/Работни/Лични/Satori/Изтрити) са ФИКСИРАНИ — виж
+// (Всички/Работни/Лични/Satori/Изтрити) са ФИКСИРАНИ — виж
 // renderCatRow(), не минават през тази функция.
 function orderedCustomTags(){
   const inUse = new Set();
@@ -3549,10 +3551,10 @@ function subsBlock(note){
   return html;
 }
 
-// Всеки статус е отделен блок с ясно заглавие (status-section), подреден
-// отгоре надолу: Приключени → В прогрес → Активни (най-близо до лентата за
-// писане). Вътре във всеки блок бележките вървят хронологично по дни
-// (най-старите горе).
+// Всеки статус-блок има ясно заглавие (status-section): Приключени (излизат
+// отделно най-горе) → Активни (в прогрес + open в ЕДИН общ хронологичен
+// поток, най-близо до лентата за писане). Вътре във всеки блок бележките
+// вървят хронологично по дни (най-старите горе).
 function statusGroupHtml(items, forceTodayIfEmpty){
   const byDay = {};
   items.forEach(n=>{
@@ -3578,33 +3580,27 @@ function sectionHeader(label, count, cls){
 }
 
 // Пресъздава чиповете в реда с категории. Фиксиран старт (винаги в тази
-// последователност, не се разместват): Всички → В прогрес (филтър по
-// СТАТУС, виж PROGRESS_FILTER) → Работни → Лични → Satori (само за
-// съответния акаунт). След това потребителските тагове, по реда от
-// orderedCustomTags() — те МОГАТ да се разместват с дълго натискане +
-// провлачване (виж attachCatRowDrag(), data-reorder="1" по-долу). Накрая
-// "Изтрити", ако има поне 1 бележка в кошчето. Вика се при всеки render()
-// (и по време на разместване), за да са бройките и активното състояние
-// винаги верни.
+// последователност, не се разместват): Всички → Работни → Лични → Satori
+// (само за съответния акаунт) → Изтрити (винаги видим, дори празно кошче —
+// закачен като останалите фиксирани, не се крие). След това потребителските
+// тагове, по реда от orderedCustomTags() — те МОГАТ да се разместват с
+// дълго натискане + провлачване (виж attachCatRowDrag(), data-reorder="1"
+// по-долу). Вика се при всеки render() (и по време на разместване), за да
+// са бройките и активното състояние винаги верни.
 function renderCatRow(){
   const counts = {};
-  let progressCount = 0;
-  notes.forEach(n=>{
-    if(n.tag) counts[n.tag] = (counts[n.tag]||0) + 1;
-    if((n.status||'open') === 'progress' && n.tag !== DELETED_TAG) progressCount++;
-  });
+  notes.forEach(n=>{ if(n.tag) counts[n.tag] = (counts[n.tag]||0) + 1; });
   const chip = (cat, label, count, extraAttrs) =>
     `<button class="cat-chip${categoryFilter===cat?' active':''}" data-action="cat-filter" data-cat="${escapeHtml(cat)}"${extraAttrs||''}>${label}${count?`<span class="n">${count}</span>`:''}</button>`;
 
   let html = chip('', t().catAll, 0);
-  html += chip(PROGRESS_FILTER, t().sectionProgress, progressCount);
   html += chip('work', t().tagWork, counts['work']||0);
   html += chip('personal', t().tagPersonal, counts['personal']||0);
   if(isSatoriUser()) html += chip(SATORI_TAG, 'Satori', counts[SATORI_TAG]||0);
+  html += chip(DELETED_TAG, escapeHtml(tagLabel(DELETED_TAG)), counts[DELETED_TAG]||0);
   orderedCustomTags().forEach(tg=>{
     html += chip(tg, escapeHtml(tagLabel(tg)), counts[tg]||0, ' data-reorder="1"');
   });
-  if(notes.some(n=>n.tag === DELETED_TAG)) html += chip(DELETED_TAG, escapeHtml(tagLabel(DELETED_TAG)), counts[DELETED_TAG]||0);
   document.getElementById('catRow').innerHTML = html;
 }
 
@@ -3614,12 +3610,24 @@ function renderCatRow(){
 // постоянния #catRow контейнер), не се закача наново при всеки renderCatRow()
 // — движение/пускане слушат на document, защото самите чипове се
 // пресъздават по средата на влаченето (при всяка размяна на позиция).
+//
+// ВАЖНО: и обикновеният ТАП (филтриране по таг) за тези чипове се обработва
+// РЪЧНО тук (pointerup), НЕ през делегирания catRow 'click' по-долу —
+// иначе на реални тъч устройства (iOS Safari) нито тапването, нито
+// провлачването проработваха. Причина: touch-action:none (нужно за самото
+// провлачване) кара браузъра да предаде ЦЯЛОТО управление на жеста на JS и
+// на практика спира да "синтезира" последващ click след докосване, а без
+// e.preventDefault() при pointerdown iOS понякога стартира собствен дълъг-
+// натиск (callout/избор на текст), който открадва жеста, преди изобщо да
+// стигнем до нашия таймер. -webkit-touch-callout/-webkit-user-select:none
+// (виж CSS-а на .cat-chip[data-reorder="1"]) изключват точно това.
 function attachCatRowDrag(){
   const LONG_PRESS_MS = 480;
   let pressTimer = null;
   let startX = 0, startY = 0;
   let draggingTag = null;
   let moved = false;
+  let pendingChip = null; // чипът от pointerdown, докато чакаме дали ще стане drag или обикновен тап
 
   function cleanup(){
     clearTimeout(pressTimer);
@@ -3655,9 +3663,12 @@ function attachCatRowDrag(){
   catRow.addEventListener('pointerdown', e=>{
     const chip = e.target.closest('.cat-chip[data-reorder="1"]');
     if(!chip) return;
+    e.preventDefault(); // виж коментара над функцията
     startX = e.clientX; startY = e.clientY; moved = false;
+    pendingChip = chip;
     clearTimeout(pressTimer);
     pressTimer = setTimeout(()=>{
+      pendingChip = null;
       draggingTag = chip.dataset.cat;
       // Нормализираме tagOrder до текущия видим ред (включва и тагове, все
       // още незаписани в него) — от тук нататък разместванията работят по
@@ -3674,9 +3685,19 @@ function attachCatRowDrag(){
   // таймера — не искаме да "открадваме" обикновен тап (филтриране по таг).
   catRow.addEventListener('pointermove', e=>{
     if(draggingTag || !pressTimer) return;
-    if(Math.abs(e.clientX - startX) > 8 || Math.abs(e.clientY - startY) > 8) clearTimeout(pressTimer);
+    if(Math.abs(e.clientX - startX) > 8 || Math.abs(e.clientY - startY) > 8){ clearTimeout(pressTimer); pendingChip = null; }
   });
-  catRow.addEventListener('pointerup', ()=>clearTimeout(pressTimer));
+  // Пускане ПРЕДИ да е минал LONG_PRESS_MS = обикновен тап — прилагаме
+  // филтъра директно тук (виж коментара над функцията защо не разчитаме на
+  // нативния 'click' за тези чипове).
+  catRow.addEventListener('pointerup', ()=>{
+    clearTimeout(pressTimer);
+    if(pendingChip){
+      categoryFilter = pendingChip.dataset.cat || null;
+      pendingChip = null;
+      render();
+    }
+  });
 }
 
 function render(){
@@ -3716,17 +3737,12 @@ function render(){
   }
 
   // Филтър по категория: плосък списък (както при търсене), без разделяне
-  // по статус — просто всички бележки с избрания таг (или, за PROGRESS_FILTER,
-  // всички "в прогрес" независимо от тага), най-новите горе.
+  // по статус — просто всички бележки с избрания таг, най-новите горе.
   if(categoryFilter){
-    const isProgressFilter = categoryFilter === PROGRESS_FILTER;
-    const filtered = notes
-      .filter(n => isProgressFilter ? ((n.status||'open') === 'progress' && n.tag !== DELETED_TAG) : n.tag === categoryFilter)
-      .sort((a,b)=>b.createdAt-a.createdAt);
-    const label = isProgressFilter ? t().sectionProgress : tagLabel(categoryFilter);
+    const filtered = notes.filter(n => n.tag === categoryFilter).sort((a,b)=>b.createdAt-a.createdAt);
     const html = filtered.length
       ? `<div class="day-block">
-          <div class="day-label">${escapeHtml(label)}<span class="count">${filtered.length}</span></div>
+          <div class="day-label">${escapeHtml(tagLabel(categoryFilter))}<span class="count">${filtered.length}</span></div>
           ${filtered.map(n=>itemRow(n, n.id, false)).join('')}
         </div>`
       : `<div class="empty">${t().noNotesForTag}</div>`;
@@ -3945,6 +3961,10 @@ catRow.addEventListener('click', e=>{
   if(tagDragActive){ tagDragActive = false; return; }
   const chip = e.target.closest('[data-action="cat-filter"]');
   if(!chip) return;
+  // Чиповете с data-reorder="1" (потребителските тагове) вече се обработват
+  // РЪЧНО в attachCatRowDrag() (pointerup) — не разчитаме на нативния click
+  // за тях (виж коментара там защо). Тук остават само фиксираните чипове.
+  if(chip.dataset.reorder === '1') return;
   categoryFilter = chip.dataset.cat || null;
   render();
 });
