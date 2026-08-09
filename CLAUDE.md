@@ -336,7 +336,14 @@ Firestore документ `users/{uid}` също съдържа `tagOrder: stri
 пише с чести правописни грешки/фонетична транслитерация, но намеренията
 обикновено стават ясни от контекста; при истинска неяснота — питай.
 
-## Брандиран линк за забравена парола — КОДЪТ Е ГОТОВ, чака deploy
+## Брандиран линк за забравена парола — ДЕПЛОЙНАТО И РАБОТЕЩО (потвърдено)
+
+Домейн верифициран в Resend (SuperHosting.bg DNS: DKIM/SPF/MX/DMARC
+записи), `RESEND_API_KEY` secret зададен, `firebase deploy --only
+functions,firestore:rules` мина успешно, реален тест през "Забравена
+парола?" на iforget.eu потвърди — писмото идва от `noreply@iforget.eu`.
+(Ако тестваш пак и видиш стар подател — кеширана страница в браузъра,
+hard refresh `Cmd+Shift+R` решава, не е бъг в кода — вече се е случвало.)
 
 Firebase-генерираните reset линкове винаги сочат към `*.firebaseapp.com`
 (iforget.eu е на GitHub Pages, не Firebase Hosting, затова Console
@@ -372,15 +379,14 @@ nodemailer**, защото имейлът е Resend (`noreply@iforget.eu`, са�
    вече е обновена да вика тази функция (`functionsInstance.httpsCallable(
    'sendBrandedPasswordReset')`) вместо стария `auth.sendPasswordResetEmail()`.
 
-**Остава (действие от потребителя, извън repo-то, не мога аз да го
-направя тук):**
-1. `firebase login` + `firebase use iforgetbg` (локално, на нейния компютър).
-2. `firebase functions:secrets:set RESEND_API_KEY` — праща я, когато я
-   поиска (НИКОГА не се пише в repo-то/код — secret е в Google Cloud
-   Secret Manager).
-3. `firebase deploy --only functions,firestore:rules` — деплойва
-   функцията И новия `password_reset_throttle` rules блок наведнъж.
-4. Реален тест — "Забравена парола" от тестов акаунт, провери имейла.
+Всички стъпки по-долу вече са изпълнени от потребителя (запазено само за
+референция, ако функцията трябва да се пре-деплойва след бъдещи промени
+в `functions/index.js`):
+1. `firebase login` + `firebase use iforgetbg` (локално, на компютъра ѝ).
+2. `firebase functions:secrets:set RESEND_API_KEY` (НИКОГА не се пише в
+   repo-то/код — secret е в Google Cloud Secret Manager).
+3. `firebase deploy --only functions,firestore:rules`.
+4. Реален тест — потвърдено работещо.
 
 ## Планирани задачи (за после, не сега)
 - **Споделени бележки/тагове между няколко акаунта** (напр. споделен
