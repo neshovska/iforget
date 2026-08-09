@@ -480,15 +480,22 @@
   .profile-panel .profile-email{
     font-size:11.5px;color:var(--text-dim);word-break:break-all;margin:0 0 10px;padding:0 2px;
   }
-  .profile-panel .color-row{display:flex;gap:7px;margin:0 0 10px;padding:0 2px;flex-wrap:wrap;}
-  .profile-panel .color-sw{
+  /* .color-row/.color-sw НЕ са скопирани само в .profile-panel — ползват се
+     и в .ctx-menu (виж renderCtxMenuColor()), за да е визуално еднакъв
+     изборът на цвят на бележка с избора на акцентен цвят в профила. */
+  .color-row{display:flex;gap:7px;margin:0 0 10px;padding:0 2px;flex-wrap:wrap;}
+  .color-sw{
     -webkit-appearance:none;appearance:none;
     width:20px;height:20px;border-radius:50%;border:2px solid transparent;padding:0;flex-shrink:0;
   }
-  .profile-panel .color-sw.active{border-color:var(--text);}
-  /* "По подразбиране" — двуцветно квадратче (син/кафяв), показва че тук
-     акцентният цвят следва темата, вместо да е фиксиран override. */
-  .profile-panel .color-sw.default-sw{background:linear-gradient(135deg, #5B96FF 50%, #8C5A2B 50%) !important;}
+  .color-sw.active{border-color:var(--text);}
+  /* "По подразбиране/без цвят" — двуцветно квадратче (син/кафяв). */
+  .color-sw.default-sw{background:linear-gradient(135deg, #5B96FF 50%, #8C5A2B 50%) !important;}
+  .ctx-menu .color-row{padding:4px 6px 8px;}
+  /* .ctx-menu button{width:100%;padding:...;border-radius:8px;...} по-долу
+     иначе разтяга кръгчетата на цвят в широки правоъгълни плочки —
+     .ctx-menu .color-sw е по-специфично (два класа) и печели. */
+  .ctx-menu .color-sw{width:20px;height:20px;padding:0;border-radius:50%;flex-shrink:0;}
   .profile-panel hr{border:none;border-top:1px solid var(--border);margin:6px 0;}
   .profile-panel button.action, .profile-panel a.action{
     -webkit-appearance:none;appearance:none;width:100%;text-align:left;background:none;border:none;
@@ -754,7 +761,7 @@
   .swipe-bg.complete{background:var(--green);justify-content:flex-start;}
   .swipe-bg.delete{background:var(--danger);justify-content:flex-end;}
   .note{
-    background:var(--card);border:1px solid var(--border);border-radius:11px;
+    background-color:var(--card);border:1px solid var(--border);border-radius:11px;
     padding:8px 10px;display:flex;flex-direction:column;gap:2px;position:relative;
     touch-action:pan-y;transition:transform .22s ease,background-color .15s ease,box-shadow .15s ease;
   }
@@ -766,9 +773,20 @@
      Тънка светла вътрешна граница отгоре продава усещане за стъклена
      повърхност. */
   html.glass-notes .note{
-    background:rgba(var(--card-rgb),.4);
+    background-color:rgba(var(--card-rgb),.4);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 6px 18px rgba(0,0,0,.16);
   }
+  /* Личен цвят на бележка (виж renderCtxMenuColor()/item.color) — тънък
+     полупрозрачен слой ВЪРХУ съществуващия background-color (нарочно
+     background-COLOR навсякъде по-горе/долу, никъде "background" shorthand
+     — иначе би нулирал background-image тук). Точно затова автоматично
+     работи правилно и в двата режима без отделни правила за всяка комбинация:
+     в плътен режим background-color е непрозрачен → резултатът е плътна
+     карта с видим цветови нюанс; в прозрачен (glass) режим background-color
+     вече е rgba(...) → двата полупрозрачни слоя се комбинират и остават
+     полупрозрачни, както поиска потребителят. --nc се задава inline
+     (style="--nc:R,G,B") в itemRow(). */
+  .note[data-colored]{background-image:linear-gradient(rgba(var(--nc),.4), rgba(var(--nc),.4));}
   .note.swiping{transition:none;}
   .note-top{display:flex;justify-content:flex-start;align-items:center;gap:6px;}
   .note-main{display:flex;align-items:flex-start;gap:8px;flex-direction:row-reverse;}
@@ -824,24 +842,24 @@
   .subs{margin:6px 0 0 15px;padding-left:9px;border-left:2px solid var(--border);}
   /* Един-два нюанса по-светло от основните бележки (--card), за да си
      личат ясно като "по-леки" вложени елементи. */
-  .subs .note{padding:6px 8px;background:#34415C;}
-  html.glass-notes .subs .note{background:rgba(var(--card2-rgb),.4);}
+  .subs .note{padding:6px 8px;background-color:#34415C;}
+  html.glass-notes .subs .note{background-color:rgba(var(--card2-rgb),.4);}
   .subs .note-wrap{margin-bottom:4px;}
   /* В светлата тема разменяме местата — основните бележки по-тъмни
      (--card-2), подбележките по-светли (--card), обратно на тъмната тема.
      Пипаме само тук, не самите --card/--card-2 стойности (те се ползват и
      другаде — бутони, полета и т.н. — и не бива да се променят). */
-  :root[data-theme="light"] .note{background:var(--card-2);}
-  html.glass-notes[data-theme="light"] .note{background:rgba(var(--card2-rgb),.4);}
+  :root[data-theme="light"] .note{background-color:var(--card-2);}
+  html.glass-notes[data-theme="light"] .note{background-color:rgba(var(--card2-rgb),.4);}
   /* По-светло от основните бележки (--card-2), но с един нюанс по-тъмно от
      предишната стойност (#FDFBF3, беше почти бяло) — по заявка. */
-  :root[data-theme="light"] .subs .note{background:#F7EFDD;}
+  :root[data-theme="light"] .subs .note{background-color:#F7EFDD;}
   /* Само по-ниска плътност на СЪЩИЯ тон (--card2-rgb) не се четеше като
      разлика тук — двете полупрозрачни ленти се сливаха визуално върху
      фоновата снимка. Затова подбележката ползва по-светлия тон (--card-rgb,
      същият като основните бележки в тъмната тема/плътния вариант) вместо
      по-тъмния --card2-rgb, за да е реално различима като по-светла. */
-  html.glass-notes[data-theme="light"] .subs .note{background:rgba(var(--card-rgb),.45);}
+  html.glass-notes[data-theme="light"] .subs .note{background-color:rgba(var(--card-rgb),.45);}
   .add-sub-row{margin-top:6px;}
   .add-sub-link{
     background:none;border:none;color:var(--accent-dim);font-size:12.5px;
@@ -1253,6 +1271,7 @@ const STRINGS = {
     deletedUndo: 'Бележката е изтрита.', undoBtn: 'Отмени', deleteAria: 'Изтрий',
     ctxEdit: 'Редактирай', ctxDelete: 'Изтрий', ctxAddSub: 'Добави подбележка',
     ctxShare: 'Сподели', shareCopied: 'Копирано в клипборда.',
+    ctxColor: 'Цвят', noteColorNone: 'Без цвят',
     ctxAddReminder: 'Добави напомняне', ctxEditReminder: 'Промени напомняне',
     reminderInactiveHint: 'Напомнянията ще изпращат push нотификация, след като IForget излезе в App Store / Google Play. Засега датата само се запазва.',
     reminderDateLabel: 'Дата', reminderTimeLabel: 'Час',
@@ -1339,6 +1358,7 @@ const STRINGS = {
     deletedUndo: 'Note deleted.', undoBtn: 'Undo', deleteAria: 'Delete',
     ctxEdit: 'Edit', ctxDelete: 'Delete', ctxAddSub: 'Add sub-note',
     ctxShare: 'Share', shareCopied: 'Copied to clipboard.',
+    ctxColor: 'Color', noteColorNone: 'No color',
     ctxAddReminder: 'Add reminder', ctxEditReminder: 'Edit reminder',
     reminderInactiveHint: 'Reminders will send a push notification once IForget is available on the App Store / Google Play. For now the date is just saved.',
     reminderDateLabel: 'Date', reminderTimeLabel: 'Time',
@@ -1425,6 +1445,7 @@ const STRINGS = {
     deletedUndo: 'Заметка удалена.', undoBtn: 'Отменить', deleteAria: 'Удалить',
     ctxEdit: 'Редактировать', ctxDelete: 'Удалить', ctxAddSub: 'Добавить подзаметку',
     ctxShare: 'Поделиться', shareCopied: 'Скопировано в буфер обмена.',
+    ctxColor: 'Цвет', noteColorNone: 'Без цвета',
     ctxAddReminder: 'Добавить напоминание', ctxEditReminder: 'Изменить напоминание',
     reminderInactiveHint: 'Напоминания будут отправлять push-уведомление, когда IForget появится в App Store / Google Play. Пока дата просто сохраняется.',
     reminderDateLabel: 'Дата', reminderTimeLabel: 'Время',
@@ -1511,6 +1532,7 @@ const STRINGS = {
     deletedUndo: 'Notiz gelöscht.', undoBtn: 'Rückgängig', deleteAria: 'Löschen',
     ctxEdit: 'Bearbeiten', ctxDelete: 'Löschen', ctxAddSub: 'Unternotiz hinzufügen',
     ctxShare: 'Teilen', shareCopied: 'In die Zwischenablage kopiert.',
+    ctxColor: 'Farbe', noteColorNone: 'Keine Farbe',
     ctxAddReminder: 'Erinnerung hinzufügen', ctxEditReminder: 'Erinnerung ändern',
     reminderInactiveHint: 'Erinnerungen senden eine Push-Benachrichtigung, sobald IForget im App Store / bei Google Play verfügbar ist. Vorerst wird nur das Datum gespeichert.',
     reminderDateLabel: 'Datum', reminderTimeLabel: 'Uhrzeit',
@@ -1597,6 +1619,7 @@ const STRINGS = {
     deletedUndo: 'Nota eliminada.', undoBtn: 'Deshacer', deleteAria: 'Eliminar',
     ctxEdit: 'Editar', ctxDelete: 'Eliminar', ctxAddSub: 'Añadir subnota',
     ctxShare: 'Compartir', shareCopied: 'Copiado al portapapeles.',
+    ctxColor: 'Color', noteColorNone: 'Sin color',
     ctxAddReminder: 'Añadir recordatorio', ctxEditReminder: 'Editar recordatorio',
     reminderInactiveHint: 'Los recordatorios enviarán una notificación push cuando IForget esté disponible en App Store / Google Play. Por ahora solo se guarda la fecha.',
     reminderDateLabel: 'Fecha', reminderTimeLabel: 'Hora',
@@ -1836,7 +1859,8 @@ function loadLocalCache(){
         if(!n.subs) n.subs = [];
         if(n.tag===undefined) n.tag = null;
         if(n.reminderAt===undefined) n.reminderAt = null;
-        n.subs.forEach(s=>{ if(s.reminderAt===undefined) s.reminderAt = null; });
+        if(n.color===undefined) n.color = null;
+        n.subs.forEach(s=>{ if(s.reminderAt===undefined) s.reminderAt = null; if(s.color===undefined) s.color = null; });
       });
   try{
     const rawOrder = localStorage.getItem(TAG_ORDER_KEY);
@@ -2444,7 +2468,8 @@ function loadFromCloud(uid){
         if(!n.subs) n.subs = [];
         if(n.tag===undefined) n.tag = null;
         if(n.reminderAt===undefined) n.reminderAt = null;
-        n.subs.forEach(s=>{ if(s.reminderAt===undefined) s.reminderAt = null; });
+        if(n.color===undefined) n.color = null;
+        n.subs.forEach(s=>{ if(s.reminderAt===undefined) s.reminderAt = null; if(s.color===undefined) s.color = null; });
       });
     }else if(notes.length){
       docRef.set({ notes }, { merge:true }).catch(err=>console.error('initial cloud upload failed', err));
@@ -2836,7 +2861,7 @@ function addNote(text){
   if(!text) return;
   notes.push({
     id: 'n'+Date.now()+Math.random().toString(36).slice(2,6),
-    text, createdAt: Date.now(), status: 'open', subs: [], tag: null, reminderAt: null
+    text, createdAt: Date.now(), status: 'open', subs: [], tag: null, reminderAt: null, color: null
   });
   save(); render();
   setTimeout(()=>scrollToBottom(true), 0);
@@ -2849,7 +2874,7 @@ function addSub(noteId, text){
   if(!n) return;
   n.subs.push({
     id: 's'+Date.now()+Math.random().toString(36).slice(2,6),
-    text, createdAt: Date.now(), status: 'open', reminderAt: null
+    text, createdAt: Date.now(), status: 'open', reminderAt: null, color: null
   });
   addingSubFor = null;
   save(); render();
@@ -3283,9 +3308,9 @@ function closeCtxMenu(){
   ctxMenuNote = null;
 }
 
-// Основният изглед на менюто — Редактирай / Добави подбележка / Напомняне /
-// Сподели / Изтрий. Извиква се и при отваряне, и при "Назад" от формата
-// за напомняне (виж renderCtxMenuReminder()).
+// Основният изглед на менюто — Редактирай / Добави подбележка / Цвят /
+// Напомняне / Сподели / Изтрий. Извиква се и при отваряне, и при "Назад" от
+// формите за цвят/напомняне (виж renderCtxMenuColor()/renderCtxMenuReminder()).
 function renderCtxMenuMain(noteId, subId){
   const s = t();
   const item = subId ? findSub(noteId, subId) : findNote(noteId);
@@ -3293,6 +3318,7 @@ function renderCtxMenuMain(noteId, subId){
   if(!subId){
     html += `<button data-ctx="addsub">${ICONS.plus}${s.ctxAddSub}</button>`;
   }
+  html += `<button data-ctx="color">${ICONS.droplet}${s.ctxColor}</button>`;
   html += `<button data-ctx="reminder">${ICONS.bell}${item && item.reminderAt ? s.ctxEditReminder : s.ctxAddReminder}</button>`;
   html += `<button data-ctx="share">${ICONS.share}${s.ctxShare}</button>`;
   html += `<button class="danger" data-ctx="delete">${ICONS.trash}${s.ctxDelete}</button>`;
@@ -3306,6 +3332,10 @@ function renderCtxMenuMain(noteId, subId){
       const noteId2 = ctxMenuNote.noteId, subId2 = ctxMenuNote.subId;
       if(action === 'reminder'){
         renderCtxMenuReminder(noteId2, subId2); // остава отворено — само сменя изгледа
+        return;
+      }
+      if(action === 'color'){
+        renderCtxMenuColor(noteId2, subId2); // остава отворено — само сменя изгледа
         return;
       }
       closeCtxMenu();
@@ -3382,6 +3412,40 @@ function renderCtxMenuReminder(noteId, subId){
   }
 }
 
+// Форма за избор на цвят — заменя списъка с бутони в СЪЩИЯ #ctxMenu (воалът/
+// изпъкването остават), същия принцип като renderCtxMenuReminder(). Цветовете
+// са СЪЩИТЕ като в профила (PROFILE_COLORS/.color-sw) — за визуална
+// консистентност. Маркира само конкретната бележка/подбележка (item.color),
+// не глобална настройка. Рендирането на цвета (виж itemRow()/CSS
+// .note[data-colored]) автоматично уважава прозрачния (glass) режим — виж
+// коментара при .note[data-colored] в <style>.
+function renderCtxMenuColor(noteId, subId){
+  const s = t();
+  const item = subId ? findSub(noteId, subId) : findNote(noteId);
+  if(!item) return;
+  const current = item.color || '';
+  const menu = document.getElementById('ctxMenu');
+  menu.innerHTML = `
+    <button type="button" class="reminder-back" data-ctx="color-back">${ICONS.arrowLeft}${s.onboardBack}</button>
+    <div class="reminder-head">${ICONS.droplet}${s.ctxColor}</div>
+    <div class="color-row">` + PROFILE_COLORS.map(c =>
+      `<button type="button" class="color-sw${c===current?' active':''}${c===''?' default-sw':''}" data-color="${c}" style="${c?`background:${c}`:''}" aria-label="${c || s.noteColorNone}"></button>`
+    ).join('') + `</div>`;
+
+  menu.querySelector('[data-ctx="color-back"]').addEventListener('mousedown', e=>{
+    e.preventDefault();
+    renderCtxMenuMain(noteId, subId);
+  });
+  menu.querySelectorAll('.color-sw').forEach(b=>{
+    b.addEventListener('mousedown', e=>{
+      e.preventDefault();
+      item.color = b.dataset.color || null;
+      closeCtxMenu();
+      save(); render();
+    });
+  });
+}
+
 // Споделяне на текста на бележка/подбележка — Web Share API, ако е наличен
 // (iOS/Android показват истинското меню за споделяне); иначе копира в
 // клипборда като разумен резервен вариант (напр. десктоп браузъри).
@@ -3423,7 +3487,8 @@ function importNotesFromFile(file){
         if(!n.subs) n.subs = [];
         if(n.tag===undefined) n.tag = null;
         if(n.reminderAt===undefined) n.reminderAt = null;
-        n.subs.forEach(s=>{ if(s.reminderAt===undefined) s.reminderAt = null; });
+        if(n.color===undefined) n.color = null;
+        n.subs.forEach(s=>{ if(s.reminderAt===undefined) s.reminderAt = null; if(s.color===undefined) s.color = null; });
       });
       save(); render();
       closeProfilePanel();
@@ -3477,6 +3542,20 @@ function tagPillHtml(item, noteId){
   return `<button class="tag-pill ${cls}" data-action="tag-open" data-note="${noteId}">${label}</button>`;
 }
 
+// hex ('#6E8FBF') → "R,G,B" низ за rgba(var(--nc), α) в CSS (виж
+// .note[data-colored] в <style>). null при невалиден вход.
+function hexToRgb(hex){
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return m ? `${parseInt(m[1],16)},${parseInt(m[2],16)},${parseInt(m[3],16)}` : null;
+}
+// data-colored + inline --nc custom property за itemRow() по-долу — само
+// когато бележката/подбележката има зададен личен цвят (виж
+// renderCtxMenuColor()). Празен низ иначе (без атрибути, нормален вид).
+function noteColorAttr(item){
+  if(!item.color) return '';
+  const rgb = hexToRgb(item.color);
+  return rgb ? ` data-colored style="--nc:${rgb};"` : '';
+}
 function itemRow(item, noteId, isSub){
   const key = isSub ? noteId+'::'+item.id : item.id;
   const icon = item.status === 'done' ? ICONS.checkSmall : '';
@@ -3488,7 +3567,7 @@ function itemRow(item, noteId, isSub){
     // същият ред дот+тяло, обвит отделно от .note-top (виж нормалния изглед
     // по-долу) — при редакция просто няма нужда от горен ред с дата/час.
     return `<div class="note-wrap">
-      <div class="note ${item.status}">
+      <div class="note ${item.status}"${noteColorAttr(item)}>
         <div class="note-main">
           <div class="dot">${icon}</div>
           <div class="body">
@@ -3512,7 +3591,7 @@ function itemRow(item, noteId, isSub){
     <div class="swipe-shell">
       <div class="swipe-bg complete" aria-hidden="true">${ICONS.check} ${t().tagDone}</div>
       <div class="swipe-bg delete" aria-hidden="true">${t().deleteAria} ${ICONS.trash}</div>
-      <div class="note ${item.status}" data-swipe-key="${key}" data-note="${noteId}" data-sub="${isSub?item.id:''}">
+      <div class="note ${item.status}" data-swipe-key="${key}" data-note="${noteId}" data-sub="${isSub?item.id:''}"${noteColorAttr(item)}>
       <div class="note-top"><span class="time">${dateTimeLabel(item.createdAt)}</span>${tagText ? `<span class="tag">${tagText}</span>` : ''}</div>
       <div class="note-main">
         <div class="dot" data-action="cycle" data-note="${noteId}" data-sub="${isSub?item.id:''}">${icon}</div>
