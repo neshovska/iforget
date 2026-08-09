@@ -3124,9 +3124,22 @@ function visibleViewportBox(){
   const vv = window.visualViewport;
   return vv ? {top: vv.offsetTop, height: vv.height} : {top: 0, height: window.innerHeight};
 }
+// Хоризонтално подравнява плаващ picker/меню спрямо КРАЯ на самата бележка
+// (картата), не спрямо тапнатия елемент вътре в нея — по изрична заявка,
+// двата прозорчета (tag-picker/ctx-menu) да "свършват" точно където
+// свършва бележката. В нормален (десен) режим това е ДЯСНОТО краче на
+// картата (popup.right === card.right); в "Режим за лявата ръка" всичко е
+// огледално, затова тук е ЛЯВОТО краче (popup.left === card.left) — иначе
+// popup-ът щеше да изскача далеч от тапнатия елемент за левичари.
+function edgeAlignedLeft(cardRect, popupW){
+  const left = leftHanded ? cardRect.left : cardRect.right - popupW;
+  return Math.min(Math.max(8, left), window.innerWidth - popupW - 8);
+}
 function positionTagPicker(anchorEl){
   const picker = document.getElementById('tagPicker');
   const rect = anchorEl.getBoundingClientRect();
+  const cardRect = (anchorEl.closest('.note') || anchorEl).getBoundingClientRect();
+  const pickerW = picker.offsetWidth;
   const pickerH = picker.offsetHeight;
   const gap = 4;
   const vp = visibleViewportBox();
@@ -3140,7 +3153,7 @@ function positionTagPicker(anchorEl){
     top = Math.max(vp.top + 8, Math.min(rect.bottom + gap, vBottom - pickerH - 8)); // клампва във видимата зона
   }
   picker.style.top = top + 'px';
-  picker.style.left = Math.min(Math.max(8, rect.left), window.innerWidth - 176) + 'px';
+  picker.style.left = edgeAlignedLeft(cardRect, pickerW) + 'px';
 }
 function repositionTagPickerOnScroll(){
   if(tagPickerAnchor) positionTagPicker(tagPickerAnchor);
@@ -3268,6 +3281,7 @@ function openCtxMenu(noteId, subId, anchorEl){
   ctxActiveWrap = wrapEl;
 
   menu.classList.add('show');
+  const menuW = menu.offsetWidth;
   const menuH = menu.offsetHeight;
   const gap = 10;
   let top;
@@ -3279,7 +3293,7 @@ function openCtxMenu(noteId, subId, anchorEl){
     top = Math.max(8, Math.min(rect.bottom + gap, window.innerHeight - menuH - 8));
   }
   menu.style.top = top + 'px';
-  menu.style.left = Math.min(Math.max(8, rect.left), window.innerWidth - 196) + 'px';
+  menu.style.left = edgeAlignedLeft(rect, menuW) + 'px';
 }
 function closeCtxMenu(){
   document.getElementById('ctxMenu').classList.remove('show');
