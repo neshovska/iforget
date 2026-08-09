@@ -492,7 +492,7 @@
      .settings-panel/.tag-picker — закачен под userChip. */
   .profile-panel{
     display:none;position:fixed;z-index:25;background:var(--card);border:1px solid var(--border);
-    border-radius:12px;padding:10px;box-shadow:0 10px 30px rgba(0,0,0,.35);width:230px;
+    border-radius:12px;padding:10px;box-shadow:0 10px 30px rgba(0,0,0,.35);width:254px;
   }
   .profile-panel.show{display:block;}
   .profile-panel .profile-email{
@@ -517,10 +517,15 @@
   .profile-panel hr{border:none;border-top:1px solid var(--border);margin:6px 0;}
   .profile-panel button.action, .profile-panel a.action{
     -webkit-appearance:none;appearance:none;width:100%;text-align:left;background:none;border:none;
-    color:var(--text);font-size:13px;font-weight:600;padding:8px;border-radius:8px;
+    color:var(--text);font-size:13px;font-weight:500;padding:8px;border-radius:8px;
     display:flex;align-items:center;gap:8px;font-family:inherit;box-sizing:border-box;
     text-decoration:none;cursor:pointer;
   }
+  /* Етикетите на бутоните обвити в собствен span (виж profileActionLabel()
+     по-долу) — white-space:nowrap + text-overflow:ellipsis върху НЕГО (не
+     върху самия .action flex контейнер, за да не пипа иконата/стрелката) —
+     целта е максимално изречение на ред, без грозно чупене на 2 реда. */
+  .profile-panel .action-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;}
   .profile-panel button.action:active, .profile-panel a.action:active{background:var(--card-2);}
   .profile-panel button.action.danger{color:var(--danger);}
   /* Разгъващи се групи (акордеон) в горното меню на профила —
@@ -539,11 +544,12 @@
   .profile-panel .action-chev.open{transform:rotate(180deg);}
   .profile-panel .group-content{max-height:0;overflow:hidden;transition:max-height .25s ease, opacity .2s ease;opacity:0;}
   .profile-panel .group-content.open{opacity:1;}
-  .profile-panel .group-content .action{padding-left:30px;font-size:12.5px;}
-  .profile-panel .group-content hr{margin:4px 0 4px 30px;width:calc(100% - 30px);}
+  .profile-panel .group-content .action{padding-left:22px;font-size:12.5px;}
+  .profile-panel .group-content hr{margin:4px 0 4px 22px;width:calc(100% - 22px);}
   /* По ситен шрифт за "Поверителност"/"Общи условия" в групата Помощ —
-     по-малко визуално тегло от истинските действия (обратна връзка и т.н.). */
-  .profile-panel a.action.small-link{font-size:11px;color:var(--text-dim);}
+     по-малко визуално тегло от истинските действия (обратна връзка и т.н.),
+     още по-дребен от преди (10px) по изрична молба. */
+  .profile-panel a.action.small-link{font-size:10px;font-weight:400;color:var(--text-dim);}
   .profile-panel .sub-form{display:flex;flex-direction:column;gap:8px;padding:2px;}
   .profile-panel .sub-form input{
     -webkit-appearance:none;appearance:none;width:100%;background:var(--card-2);border:1px solid var(--border);
@@ -2048,37 +2054,37 @@ function renderProfileMenu(){
   html += `<hr>`;
 
   html += profileGroupBlock('view', ICONS.droplet, s.profileGroupView, `
-    <button type="button" class="action" data-action="toggle-glass-notes">${ICONS.droplet}${s.glassNotesToggle}${glassNotes ? ICONS.check : ''}</button>
-    <button type="button" class="action" data-action="toggle-left-handed">${ICONS.flip}${s.leftHandedMode}${leftHanded ? ICONS.check : ''}</button>
+    <button type="button" class="action" data-action="toggle-glass-notes">${ICONS.droplet}${L(s.glassNotesToggle)}${glassNotes ? ICONS.check : ''}</button>
+    <button type="button" class="action" data-action="toggle-left-handed">${ICONS.flip}${L(s.leftHandedMode)}${leftHanded ? ICONS.check : ''}</button>
   `);
 
   let dataContent = `
-    <button type="button" class="action" data-action="my-review">${ICONS.trend}${s.reviewBtn}</button>
-    <button type="button" class="action" data-action="calendar">${ICONS.calendar}${s.calendarBtn}</button>
-    <button type="button" class="action" data-action="export">${ICONS.download}${s.exportBackup}</button>
-    <button type="button" class="action" data-action="import">${ICONS.upload}${s.importBackup}</button>
+    <button type="button" class="action" data-action="my-review">${ICONS.trend}${L(s.reviewBtn)}</button>
+    <button type="button" class="action" data-action="calendar">${ICONS.calendar}${L(s.calendarBtn)}</button>
+    <button type="button" class="action" data-action="export">${ICONS.download}${L(s.exportBackup)}</button>
+    <button type="button" class="action" data-action="import">${ICONS.upload}${L(s.importBackup)}</button>
   `;
   // "Статистика" — само за административния акаунт (isSatoriUser(), виж по-горе),
   // не се вижда от никой друг потребител на приложението.
   if(isSatoriUser()){
-    dataContent += `<hr><button type="button" class="action" data-action="admin-stats">${ICONS.chart}${s.statsTitle}</button>`;
+    dataContent += `<hr><button type="button" class="action" data-action="admin-stats">${ICONS.chart}${L(s.statsTitle)}</button>`;
   }
   html += profileGroupBlock('data', ICONS.calendar, s.profileGroupData, dataContent);
 
   html += profileGroupBlock('account', ICONS.pencil, s.profileGroupAccount, `
-    <button type="button" class="action" data-action="change-password">${ICONS.pencil}${s.changePassword}</button>
-    <button type="button" class="action" data-action="change-email">${ICONS.pencil}${s.changeEmail}</button>
+    <button type="button" class="action" data-action="change-password">${ICONS.pencil}${L(s.changePassword)}</button>
+    <button type="button" class="action" data-action="change-email">${ICONS.pencil}${L(s.changeEmail)}</button>
     <hr>
-    <button type="button" class="action danger" data-action="logout">${ICONS.close}${s.logoutBtn}</button>
-    <button type="button" class="action danger" data-action="delete-account">${ICONS.trash}${s.deleteAccount}</button>
+    <button type="button" class="action danger" data-action="logout">${ICONS.close}${L(s.logoutBtn)}</button>
+    <button type="button" class="action danger" data-action="delete-account">${ICONS.trash}${L(s.deleteAccount)}</button>
   `);
 
   // Помощ — Поверителност/Общи условия по ситен шрифт (.small-link) по
   // изрична молба — по-малко визуално тегло от истинските действия.
   html += profileGroupBlock('help', ICONS.mail, s.profileGroupHelp, `
-    <a class="action" href="mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('IForget — обратна връзка')}">${ICONS.mail}${s.feedbackBtn}</a>
-    <a class="action small-link" href="privacy.html" target="_blank" rel="noopener">${ICONS.shield}${s.privacyLink}</a>
-    <a class="action small-link" href="terms.html" target="_blank" rel="noopener">${ICONS.doc}${s.termsLink}</a>
+    <a class="action" href="mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('IForget — обратна връзка')}">${ICONS.mail}${L(s.feedbackBtn)}</a>
+    <a class="action small-link" href="privacy.html" target="_blank" rel="noopener">${ICONS.shield}${L(s.privacyLink)}</a>
+    <a class="action small-link" href="terms.html" target="_blank" rel="noopener">${ICONS.doc}${L(s.termsLink)}</a>
   `);
 
   panel.innerHTML = html;
@@ -2154,11 +2160,18 @@ function renderProfileMenu(){
   }
 }
 
+// Текстът на етикета на всеки бутон в менюто на профила е обвит в собствен
+// <span class="action-label"> (CSS: white-space:nowrap+text-overflow:ellipsis
+// само върху него, не върху целия .action flex контейнер) — целта е
+// максимално изречение на ред, без грозно чупене на 2 реда (виж CSS
+// .profile-panel .action-label по-горе).
+function L(text){ return `<span class="action-label">${text}</span>`; }
+
 // Помощна функция за една група в акордеона на профила — виж
 // renderProfileMenu(). innerHtml е готовият markup на бутоните вътре.
 function profileGroupBlock(key, icon, label, innerHtml){
   return `<div class="group-block">
-    <button type="button" class="action group-toggle" data-group="${key}">${icon}${label}<span class="action-chev">${ICONS.chevronDown}</span></button>
+    <button type="button" class="action group-toggle" data-group="${key}">${icon}${L(label)}<span class="action-chev">${ICONS.chevronDown}</span></button>
     <div class="group-content" data-group-content="${key}">${innerHtml}</div>
   </div>`;
 }
