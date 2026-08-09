@@ -562,6 +562,26 @@
   .profile-panel .month-dot{width:5px;height:5px;border-radius:50%;}
   .profile-panel .month-dot.past{background:var(--text-dim);}
   .profile-panel .month-dot.future{background:var(--gold);}
+  /* Годишен heatmap изглед — 12 мини-месеца в скролваем контейнер, БЕЗ
+     числа на дните (нарочно — истински heatmap стил), само квадратчета с
+     нарастваща наситеност според calendarHeatBucket() (.b1/.b2/.b3). */
+  .profile-panel .year-scroll{max-height:300px;overflow-y:auto;padding-right:2px;}
+  .profile-panel .year-month{margin-bottom:12px;}
+  .profile-panel .year-month:last-child{margin-bottom:0;}
+  .profile-panel .year-month-label{
+    font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;
+    color:var(--text-dim);margin-bottom:5px;
+  }
+  .profile-panel .year-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+  .profile-panel .year-cell{aspect-ratio:1;border-radius:3px;background:var(--card-2);}
+  .profile-panel .year-cell.empty-cell{background:none;}
+  .profile-panel .year-cell.past.b1{background:var(--text-dim);opacity:.35;}
+  .profile-panel .year-cell.past.b2{background:var(--text-dim);opacity:.65;}
+  .profile-panel .year-cell.past.b3{background:var(--text-dim);opacity:1;}
+  .profile-panel .year-cell.future.b1{background:var(--gold);opacity:.4;}
+  .profile-panel .year-cell.future.b2{background:var(--gold);opacity:.7;}
+  .profile-panel .year-cell.future.b3{background:var(--gold);opacity:1;}
+  .profile-panel .year-cell.today{outline:1.5px solid var(--accent);outline-offset:-1.5px;}
   .profile-panel .calendar-legend{
     display:flex;gap:14px;margin-top:12px;padding-top:12px;
     border-top:1px solid var(--border);font-size:11px;color:var(--text-dim);
@@ -1191,7 +1211,7 @@ const STRINGS = {
     reviewBtn: 'Твоят преглед', reviewSub: 'Базирано на бележките, които добавяш всяка седмица/месец.',
     reviewWeek: 'Тази седмица', reviewMonth: 'Този месец', reviewCompleted: 'Завършени', reviewOf: 'от',
     reviewStreak: n => `${n} дни подред поне с 1 завършена бележка`,
-    calendarBtn: 'Календар', calendarWeekTab: 'Седмица', calendarMonthTab: 'Месец',
+    calendarBtn: 'Календар', calendarWeekTab: 'Седмица', calendarMonthTab: 'Месец', calendarYearTab: 'Година',
     calendarLegendPast: 'бележки', calendarLegendFuture: 'напомняния',
     dowShort: ['Пон','Вт','Ср','Чет','Пет','Съб','Нед'],
     onboardDemoText: 'Това е бележка — тапни текста два пъти, за да я редактираш.',
@@ -1277,7 +1297,7 @@ const STRINGS = {
     reviewBtn: 'Your review', reviewSub: 'Based on the notes you add each week/month.',
     reviewWeek: 'This week', reviewMonth: 'This month', reviewCompleted: 'Completed', reviewOf: 'of',
     reviewStreak: n => `${n} days in a row with at least 1 completed note`,
-    calendarBtn: 'Calendar', calendarWeekTab: 'Week', calendarMonthTab: 'Month',
+    calendarBtn: 'Calendar', calendarWeekTab: 'Week', calendarMonthTab: 'Month', calendarYearTab: 'Year',
     calendarLegendPast: 'notes', calendarLegendFuture: 'reminders',
     dowShort: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
     onboardDemoText: 'This is a note — tap the text twice to edit it.',
@@ -1363,7 +1383,7 @@ const STRINGS = {
     reviewBtn: 'Твой обзор', reviewSub: 'На основе заметок, которые ты добавляешь каждую неделю/месяц.',
     reviewWeek: 'На этой неделе', reviewMonth: 'В этом месяце', reviewCompleted: 'Завершено', reviewOf: 'из',
     reviewStreak: n => `${n} дней подряд минимум с 1 завершённой заметкой`,
-    calendarBtn: 'Календарь', calendarWeekTab: 'Неделя', calendarMonthTab: 'Месяц',
+    calendarBtn: 'Календарь', calendarWeekTab: 'Неделя', calendarMonthTab: 'Месяц', calendarYearTab: 'Год',
     calendarLegendPast: 'заметки', calendarLegendFuture: 'напоминания',
     dowShort: ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
     onboardDemoText: 'Это заметка — нажми на текст дважды, чтобы её отредактировать.',
@@ -1449,7 +1469,7 @@ const STRINGS = {
     reviewBtn: 'Deine Übersicht', reviewSub: 'Basierend auf den Notizen, die du jede Woche/jeden Monat hinzufügst.',
     reviewWeek: 'Diese Woche', reviewMonth: 'Diesen Monat', reviewCompleted: 'Erledigt', reviewOf: 'von',
     reviewStreak: n => `${n} Tage in Folge mit mindestens 1 erledigten Notiz`,
-    calendarBtn: 'Kalender', calendarWeekTab: 'Woche', calendarMonthTab: 'Monat',
+    calendarBtn: 'Kalender', calendarWeekTab: 'Woche', calendarMonthTab: 'Monat', calendarYearTab: 'Jahr',
     calendarLegendPast: 'Notizen', calendarLegendFuture: 'Erinnerungen',
     dowShort: ['Mo','Di','Mi','Do','Fr','Sa','So'],
     onboardDemoText: 'Das ist eine Notiz — tippe zweimal auf den Text, um sie zu bearbeiten.',
@@ -1535,7 +1555,7 @@ const STRINGS = {
     reviewBtn: 'Tu resumen', reviewSub: 'Basado en las notas que añades cada semana/mes.',
     reviewWeek: 'Esta semana', reviewMonth: 'Este mes', reviewCompleted: 'Completadas', reviewOf: 'de',
     reviewStreak: n => `${n} días seguidos con al menos 1 nota completada`,
-    calendarBtn: 'Calendario', calendarWeekTab: 'Semana', calendarMonthTab: 'Mes',
+    calendarBtn: 'Calendario', calendarWeekTab: 'Semana', calendarMonthTab: 'Mes', calendarYearTab: 'Año',
     calendarLegendPast: 'notas', calendarLegendFuture: 'recordatorios',
     dowShort: ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'],
     onboardDemoText: 'Esto es una nota — toca el texto dos veces para editarla.',
@@ -2065,6 +2085,14 @@ function calendarRemindersCountForKey(key){
   });
   return cnt;
 }
+// Ниво на интензитет за годишния heatmap изглед (виж .year-cell.b1/.b2/.b3
+// по-долу) — 0 = празно, 1/2/3 = нарастваща наситеност на цвета според броя.
+function calendarHeatBucket(count){
+  if(count <= 0) return 0;
+  if(count <= 2) return 1;
+  if(count <= 5) return 2;
+  return 3;
+}
 
 function renderCalendarView(mode){
   if(mode) calendarMode = mode;
@@ -2092,7 +2120,7 @@ function renderCalendarView(mode){
         <span class="marker ${markerCls}">${count > 0 ? count : '–'}</span>
       </div>`;
     }).join('') + `</div>`;
-  } else {
+  } else if(calendarMode === 'month'){
     const year = calendarRefDate.getFullYear();
     const month = calendarRefDate.getMonth();
     rangeLabel = `${s.monthNames[month]} ${year}`;
@@ -2114,6 +2142,35 @@ function renderCalendarView(mode){
       </div>`;
     }
     bodyHtml = `<div class="month-grid">` + s.dowShort.map(dw => `<div class="month-dow">${dw}</div>`).join('') + cells + `</div>`;
+  } else {
+    // Годишен изглед — 12 мини-месеца, всеки като heatmap (без числа на
+    // дните, само квадратчета с нарастваща наситеност — виж
+    // calendarHeatBucket()), в скролваем контейнер (виж .year-scroll).
+    const year = calendarRefDate.getFullYear();
+    rangeLabel = `${year}`;
+    let monthsHtml = '';
+    for(let m = 0; m < 12; m++){
+      const firstOfMonth = new Date(year, m, 1);
+      const leading = (firstOfMonth.getDay() + 6) % 7;
+      const daysInMonth = new Date(year, m + 1, 0).getDate();
+      let cells = '';
+      for(let i = 0; i < leading; i++) cells += `<div class="year-cell empty-cell"></div>`;
+      for(let day = 1; day <= daysInMonth; day++){
+        const d = new Date(year, m, day);
+        const key = dateStr(d.getTime());
+        const isToday = key === todayKey;
+        const isFuture = key >= todayKey;
+        const count = isFuture ? calendarRemindersCountForKey(key) : calendarNotesCountForKey(key);
+        const bucket = calendarHeatBucket(count);
+        const heatCls = bucket > 0 ? `${isFuture ? 'future' : 'past'} b${bucket}` : '';
+        cells += `<div class="year-cell ${heatCls}${isToday ? ' today' : ''}"></div>`;
+      }
+      monthsHtml += `<div class="year-month">
+        <div class="year-month-label">${s.monthNames[m]}</div>
+        <div class="year-grid">${cells}</div>
+      </div>`;
+    }
+    bodyHtml = `<div class="year-scroll">${monthsHtml}</div>`;
   }
 
   panel.innerHTML = `
@@ -2121,6 +2178,7 @@ function renderCalendarView(mode){
       <div class="calendar-tabs">
         <button type="button" class="calendar-tab${calendarMode === 'week' ? ' active' : ''}" data-cal-tab="week">${s.calendarWeekTab}</button>
         <button type="button" class="calendar-tab${calendarMode === 'month' ? ' active' : ''}" data-cal-tab="month">${s.calendarMonthTab}</button>
+        <button type="button" class="calendar-tab${calendarMode === 'year' ? ' active' : ''}" data-cal-tab="year">${s.calendarYearTab}</button>
       </div>
       <div class="calendar-nav">
         <button type="button" data-cal-nav="prev">${ICONS.chevronLeft}</button>
@@ -2148,7 +2206,8 @@ function renderCalendarView(mode){
       e.preventDefault(); e.stopPropagation();
       const dir = b.dataset.calNav === 'next' ? 1 : -1;
       if(calendarMode === 'week') calendarRefDate.setDate(calendarRefDate.getDate() + 7 * dir);
-      else calendarRefDate.setMonth(calendarRefDate.getMonth() + dir);
+      else if(calendarMode === 'month') calendarRefDate.setMonth(calendarRefDate.getMonth() + dir);
+      else calendarRefDate.setFullYear(calendarRefDate.getFullYear() + dir);
       renderCalendarView();
     });
   });
