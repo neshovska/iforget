@@ -695,7 +695,7 @@
   /* Един-два нюанса по-светли от основните бележки (--card-2) — виж
      заявката на потребителя, подбележките трябва ясно да изпъкват като
      по-леки/по-светли спрямо родителската си бележка. */
-  :root[data-theme="light"] .subs .note{background:#FFFDF8;}
+  :root[data-theme="light"] .subs .note{background:#FDFBF3;}
   /* ВАЖНО: тук НЕ ползваме rgba() на #F7EEDC (почти идентичен на --page-bg
      в светлата тема) — на 40% прозрачност изчезваше почти напълно на фона,
      докато основните бележки (--card2-rgb, по-тъмен тон) оставаха видимо
@@ -1538,9 +1538,9 @@ function dayLabel(ts){
   const now = new Date(); now.setHours(0,0,0,0);
   const y = new Date(now); y.setDate(y.getDate()-1);
   const dd = new Date(d); dd.setHours(0,0,0,0);
-  // Датата (ден + месец), без името на деня от седмицата — по-кратко и
-  // чисто заглавие на групата, използвана навсякъде по-долу.
-  const dateOnly = d.getDate() + ' ' + t().monthNames[d.getMonth()];
+  // Формат дд.мм.гггг — същият, който се ползва навсякъде другаде в
+  // приложението (виж dateTimeLabel()).
+  const dateOnly = String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear();
   if(dd.getTime() === now.getTime()) return t().today + ' - ' + dateOnly;
   if(dd.getTime() === y.getTime()) return t().yesterday + ' - ' + dateOnly;
   return dateOnly;
