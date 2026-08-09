@@ -233,8 +233,9 @@
   }
 
   /* Контекстно меню при задържане (long-press) върху бележка — Редактирай /
-     Добави подбележка / Изтрий, вместо отделни постоянно видими иконки.
-     Позициониран динамично, аналогично на .tag-picker (виж openCtxMenu()). */
+     Добави подбележка / Сподели / Изтрий, вместо отделни постоянно видими
+     иконки. Позициониран ПОД (или НАД, ако няма място) бележката — виж
+     openCtxMenu() — умишлено не върху центъра ѝ, за да не я скрива. */
   .ctx-menu{
     display:none;position:fixed;z-index:26;background:var(--card);border:1px solid var(--border);
     border-radius:12px;padding:6px;box-shadow:0 10px 30px rgba(0,0,0,.35);min-width:180px;
@@ -245,6 +246,29 @@
     padding:9px 10px;border-radius:8px;display:flex;align-items:center;gap:9px;font-family:inherit;
   }
   .ctx-menu button.danger{color:var(--danger);}
+
+  /* Замъглен воал зад "изпъкналата" бележка, докато контекстното меню е
+     отворено — истински визуален spotlight (за разлика от онбординг демото,
+     което е чисто декоративно). Кликването върху него затваря менюто (виж
+     глобалния mousedown outside-click listener — backdrop-ът е извън
+     #ctxMenu, значи вече минава през същата логика, не е нужен отделен
+     handler). */
+  .ctx-backdrop{
+    display:none;position:fixed;inset:0;z-index:25;
+    background:rgba(0,0,0,.4);
+    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  }
+  .ctx-backdrop.show{display:block;}
+  /* "Изпъкналата" група (бележка + подбележките ѝ, ако има) — виж
+     openCtxMenu()/closeCtxMenu(). Леко уголемяване + сянка, над воала.
+     border-radius тук е само за формата на сянката (самите карти вътре си
+     имат собствен border-radius). */
+  .note-wrap.ctx-active{
+    position:relative;z-index:26;border-radius:11px;
+    transform:scale(1.035);
+    box-shadow:0 16px 38px rgba(0,0,0,.45);
+    transition:transform .18s ease,box-shadow .18s ease;
+  }
 
   /* Обучение при първи вход (виж runOnboardingTour() накрая на скрипта) —
      иконките в топбара "изпъкват" една по една с леко златно сияние, после
@@ -747,6 +771,7 @@
 
 <div class="tag-picker" id="tagPicker"></div>
 <div class="tag-picker" id="langPicker"></div>
+<div class="ctx-backdrop" id="ctxBackdrop"></div>
 <div class="ctx-menu" id="ctxMenu"></div>
 <div class="ctx-menu" id="onboardCtxDemo" style="pointer-events:none;" aria-hidden="true"></div>
 <div class="onboard-tip" id="onboardTip"></div>
@@ -852,6 +877,7 @@ let categoryFilter = null; // null = "Всички"; 'personal' | 'work' | пр�
 let activeTagNoteId = null; // коя бележка е отворена в момента в tag-picker-а
 let expandedNotes = new Set(); // ключове (item.id или noteId::subId) на ръчно разгънати дълги бележки
 let ctxMenuNote = null; // {noteId, subId} на бележката с отворено long-press меню
+let ctxActiveWrap = null; // .note-wrap елементът, който в момента "изпъква" (виж openCtxMenu/closeCtxMenu)
 let theme = localStorage.getItem(THEME_KEY) || 'dark';
 let lang = localStorage.getItem(LANG_KEY) || 'bg';
 const BUILTIN_TAGS = ['personal', 'work'];
@@ -946,7 +972,8 @@ const ICONS = {
   mail: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z" stroke="none" fill="none"></path><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M2 7l10 6 10-6"></path></svg>',
   shield: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6l-8-4z"></path></svg>',
   doc: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>',
-  droplet: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5s7 7.6 7 12.5a7 7 0 0 1-14 0c0-4.9 7-12.5 7-12.5z"></path></svg>'
+  droplet: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5s7 7.6 7 12.5a7 7 0 0 1-14 0c0-4.9 7-12.5 7-12.5z"></path></svg>',
+  share: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"></line><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line></svg>'
 };
 
 // Текстове за двата езика — БГ (по подразбиране) и EN. t() връща обекта за
@@ -1010,6 +1037,7 @@ const STRINGS = {
     expandAria: 'Разгъни', collapseAria: 'Свий',
     deletedUndo: 'Бележката е изтрита.', undoBtn: 'Отмени', deleteAria: 'Изтрий',
     ctxEdit: 'Редактирай', ctxDelete: 'Изтрий', ctxAddSub: 'Добави подбележка',
+    ctxShare: 'Сподели', shareCopied: 'Копирано в клипборда.',
     tagDeleted: 'Изтрити',
     statsTitle: 'Статистика', statsLoading: 'Зареждане...',
     statsError: 'Неуспешно зареждане на статистиката.',
@@ -1085,6 +1113,7 @@ const STRINGS = {
     expandAria: 'Expand', collapseAria: 'Collapse',
     deletedUndo: 'Note deleted.', undoBtn: 'Undo', deleteAria: 'Delete',
     ctxEdit: 'Edit', ctxDelete: 'Delete', ctxAddSub: 'Add sub-note',
+    ctxShare: 'Share', shareCopied: 'Copied to clipboard.',
     tagDeleted: 'Deleted',
     statsTitle: 'Statistics', statsLoading: 'Loading...',
     statsError: 'Failed to load statistics.',
@@ -1160,6 +1189,7 @@ const STRINGS = {
     expandAria: 'Развернуть', collapseAria: 'Свернуть',
     deletedUndo: 'Заметка удалена.', undoBtn: 'Отменить', deleteAria: 'Удалить',
     ctxEdit: 'Редактировать', ctxDelete: 'Удалить', ctxAddSub: 'Добавить подзаметку',
+    ctxShare: 'Поделиться', shareCopied: 'Скопировано в буфер обмена.',
     tagDeleted: 'Удалённые',
     statsTitle: 'Статистика', statsLoading: 'Загрузка...',
     statsError: 'Не удалось загрузить статистику.',
@@ -1235,6 +1265,7 @@ const STRINGS = {
     expandAria: 'Ausklappen', collapseAria: 'Einklappen',
     deletedUndo: 'Notiz gelöscht.', undoBtn: 'Rückgängig', deleteAria: 'Löschen',
     ctxEdit: 'Bearbeiten', ctxDelete: 'Löschen', ctxAddSub: 'Unternotiz hinzufügen',
+    ctxShare: 'Teilen', shareCopied: 'In die Zwischenablage kopiert.',
     tagDeleted: 'Gelöscht',
     statsTitle: 'Statistik', statsLoading: 'Wird geladen...',
     statsError: 'Statistik konnte nicht geladen werden.',
@@ -1310,6 +1341,7 @@ const STRINGS = {
     expandAria: 'Expandir', collapseAria: 'Contraer',
     deletedUndo: 'Nota eliminada.', undoBtn: 'Deshacer', deleteAria: 'Eliminar',
     ctxEdit: 'Editar', ctxDelete: 'Eliminar', ctxAddSub: 'Añadir subnota',
+    ctxShare: 'Compartir', shareCopied: 'Copiado al portapapeles.',
     tagDeleted: 'Eliminadas',
     statsTitle: 'Estadísticas', statsLoading: 'Cargando...',
     statsError: 'No se pudieron cargar las estadísticas.',
@@ -2035,6 +2067,7 @@ function showOnboardCtxDemo(noteEl){
   demo.innerHTML = `
     <button type="button" tabindex="-1">${ICONS.pencil}${s.ctxEdit}</button>
     <button type="button" tabindex="-1">${ICONS.plus}${s.ctxAddSub}</button>
+    <button type="button" tabindex="-1">${ICONS.share}${s.ctxShare}</button>
     <button type="button" class="danger" tabindex="-1">${ICONS.trash}${s.ctxDelete}</button>`;
   demo.classList.add('show');
   const rect = noteEl.getBoundingClientRect();
@@ -2590,24 +2623,45 @@ function setLang(code){
   render();
 }
 
-// Контекстно меню при задържане (long-press) върху бележка — вижда се веднага
-// централно спрямо бележката (за разлика от tag-picker, който виси под
-// тапнатия елемент), защото задържането може да стане навсякъде по картата.
+// Контекстно меню при задържане (long-press) върху бележка — самата бележка
+// (заедно с подбележките ѝ, ако има — виж .closest('.note-wrap')) леко
+// "изпъква" над замъглен воал (spotlight), а менюто се показва ПОД нея
+// (или НАД, ако няма достатъчно място долу) — умишлено НЕ върху центъра ѝ,
+// за да не я скрива.
 function openCtxMenu(noteId, subId, anchorEl){
   ctxMenuNote = {noteId, subId};
+  const wrapEl = anchorEl.closest('.note-wrap') || anchorEl;
   let html = `<button data-ctx="edit">${ICONS.pencil}${t().ctxEdit}</button>`;
   if(!subId){
     html += `<button data-ctx="addsub">${ICONS.plus}${t().ctxAddSub}</button>`;
   }
+  html += `<button data-ctx="share">${ICONS.share}${t().ctxShare}</button>`;
   html += `<button class="danger" data-ctx="delete">${ICONS.trash}${t().ctxDelete}</button>`;
   const menu = document.getElementById('ctxMenu');
   menu.innerHTML = html;
+
+  // Измерваме позицията на бележката ПРЕДИ да добавим .ctx-active (която
+  // пуска transform:scale с преход) — достатъчно точно за позициониране на
+  // менюто, а и е детерминирано (без да чакаме анимацията).
+  const rect = wrapEl.getBoundingClientRect();
+
+  document.getElementById('ctxBackdrop').classList.add('show');
+  wrapEl.classList.add('ctx-active');
+  ctxActiveWrap = wrapEl;
+
   menu.classList.add('show');
-  const rect = anchorEl.getBoundingClientRect();
   const menuH = menu.offsetHeight;
-  const top = Math.max(8, Math.min(rect.top + rect.height/2 - menuH/2, window.innerHeight - menuH - 8));
+  const gap = 10;
+  let top;
+  if(rect.bottom + gap + menuH <= window.innerHeight - 8){
+    top = rect.bottom + gap; // под бележката — предпочитан вариант
+  }else if(rect.top - gap - menuH >= 8){
+    top = rect.top - gap - menuH; // няма място долу → над бележката
+  }else{
+    top = Math.max(8, Math.min(rect.bottom + gap, window.innerHeight - menuH - 8));
+  }
   menu.style.top = top + 'px';
-  menu.style.left = Math.min(rect.left + 12, window.innerWidth - 196) + 'px';
+  menu.style.left = Math.min(Math.max(8, rect.left), window.innerWidth - 196) + 'px';
 
   menu.querySelectorAll('button[data-ctx]').forEach(b=>{
     b.addEventListener('mousedown', e=>{
@@ -2625,6 +2679,8 @@ function openCtxMenu(noteId, subId, anchorEl){
         render();
         const inp = document.querySelector('.sub-input[data-note="'+noteId2+'"]');
         if(inp) inp.focus();
+      }else if(action === 'share'){
+        shareItem(noteId2, subId2);
       }else if(action === 'delete'){
         deleteBySwipe(noteId2, subId2);
       }
@@ -2633,7 +2689,24 @@ function openCtxMenu(noteId, subId, anchorEl){
 }
 function closeCtxMenu(){
   document.getElementById('ctxMenu').classList.remove('show');
+  document.getElementById('ctxBackdrop').classList.remove('show');
+  if(ctxActiveWrap) ctxActiveWrap.classList.remove('ctx-active');
+  ctxActiveWrap = null;
   ctxMenuNote = null;
+}
+
+// Споделяне на текста на бележка/подбележка — Web Share API, ако е наличен
+// (iOS/Android показват истинското меню за споделяне); иначе копира в
+// клипборда като разумен резервен вариант (напр. десктоп браузъри).
+function shareItem(noteId, subId){
+  const item = subId ? findSub(noteId, subId) : findNote(noteId);
+  if(!item) return;
+  const text = item.text;
+  if(navigator.share){
+    navigator.share({text}).catch(()=>{});
+  }else if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=> window.alert(t().shareCopied)).catch(()=>{});
+  }
 }
 
 // Резервно копие на бележките — вече Firestore е основното трайно
