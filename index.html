@@ -548,8 +548,12 @@
   .profile-panel .group-content hr{margin:4px 0 4px 22px;width:calc(100% - 22px);}
   /* По ситен шрифт за "Поверителност"/"Общи условия" в групата Помощ —
      по-малко визуално тегло от истинските действия (обратна връзка и т.н.),
-     още по-дребен от преди (10px) по изрична молба. */
+     още по-дребен от преди (10px) по изрична молба. Текстът (.action-label)
+     е златист (var(--gold)) — иконата НЕ, остава сива/приглушена (наследява
+     var(--text-dim) от .small-link, тъй като не е дете на .action-label,
+     а неин "брат" елемент) — по изрична молба само текстът да е златист. */
   .profile-panel a.action.small-link{font-size:10px;font-weight:400;color:var(--text-dim);}
+  .profile-panel a.action.small-link .action-label{color:var(--gold);}
   .profile-panel .sub-form{display:flex;flex-direction:column;gap:8px;padding:2px;}
   .profile-panel .sub-form input{
     -webkit-appearance:none;appearance:none;width:100%;background:var(--card-2);border:1px solid var(--border);
