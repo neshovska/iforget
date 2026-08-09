@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IForget — Политика за поверителност</title>
+<style>
+  /* Самостоятелна страница, палитрата е копие на тъмната тема на основното
+     приложение (виж index.html), за визуална консистентност. Написана е
+     само на български + английски (виж таб-превключвателя долу) — не е
+     превеждана на ru/de/es, тъй като юридически текст изисква по-внимателен
+     превод от текстовете в самото приложение. */
+  :root{
+    --bg:#141B2E; --card:#1D2941; --border:#38496B;
+    --text:#F0F3F9; --text-dim:#98A3B9; --accent:#5B96FF; --accent-dim:#3D71C4;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
+    padding:32px 20px 60px;
+  }
+  .wrap{max-width:640px;margin:0 auto;}
+  h1{font-size:24px;font-weight:800;color:var(--accent);margin:0 0 4px;letter-spacing:.2px;}
+  .updated{font-size:12.5px;color:var(--text-dim);margin:0 0 22px;}
+  .langtabs{display:flex;gap:6px;margin-bottom:26px;}
+  .langtabs button{
+    -webkit-appearance:none;appearance:none;background:var(--card);border:1px solid var(--border);
+    color:var(--text-dim);border-radius:9px;padding:7px 14px;font-size:12.5px;font-weight:700;
+    font-family:inherit;cursor:pointer;
+  }
+  .langtabs button.active{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+  h2{font-size:16px;font-weight:700;color:var(--text);margin:26px 0 8px;}
+  p,li{font-size:14px;line-height:1.65;color:var(--text-dim);}
+  p{margin:0 0 12px;}
+  ul{margin:0 0 12px;padding-left:20px;}
+  li{margin-bottom:5px;}
+  strong{color:var(--text);}
+  a{color:var(--accent-dim);}
+  .back-link{
+    display:inline-block;margin-top:30px;color:var(--accent-dim);font-size:13px;
+    font-weight:600;text-decoration:none;
+  }
+  .lang-block{display:none;}
+  .lang-block.active{display:block;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="langtabs">
+    <button type="button" class="active" data-lang="bg">Български</button>
+    <button type="button" data-lang="en">English</button>
+  </div>
+
+  <div class="lang-block active" id="block-bg">
+    <h1>Политика за поверителност</h1>
+    <p class="updated">Последна актуализация: 9 август 2026 г.</p>
+
+    <p>IForget (достъпно на <strong>iforget.eu</strong>) е приложение за лични бележки. Тази страница обяснява какви данни се събират, защо, и какви права имаш.</p>
+
+    <h2>Какви данни събираме</h2>
+    <ul>
+      <li><strong>Имейл адрес</strong> — за създаване и разпознаване на акаунта ти.</li>
+      <li><strong>Парола</strong> — обработва се изцяло от Firebase Authentication (Google); ние никога не виждаме и не съхраняваме паролата ти в четим вид.</li>
+      <li><strong>Съдържанието на бележките ти</strong> — текст, тагове, статус, дати — за да работи синхронизацията между устройства.</li>
+      <li><strong>Дата на последна активност</strong> — само за да поддържаме приложението и да виждаме дали работи стабилно.</li>
+      <li><strong>Локални предпочитания</strong> (тема, език, цвят, режим за лявата ръка) — пазят се само на твоето устройство (localStorage), не се качват никъде.</li>
+    </ul>
+
+    <h2>Къде се съхраняват данните</h2>
+    <p>Всички данни се пазят във Firebase (услуга на Google) — Authentication за акаунта и Firestore за бележките. Не използваме реклами, не продаваме и не споделяме данните ти с трети страни за маркетинг цели.</p>
+
+    <h2>Твоите права</h2>
+    <ul>
+      <li><strong>Достъп</strong> — виждаш всичките си данни директно в приложението по всяко време.</li>
+      <li><strong>Изтегляне</strong> — бутон "Запази резервно копие" в профила изнася всичките ти бележки като файл.</li>
+      <li><strong>Изтриване</strong> — бутон "Изтрий профила" в профила трие акаунта и всички бележки завинаги и незабавно.</li>
+      <li><strong>Корекция</strong> — можеш да редактираш бележките и имейла си директно в приложението.</li>
+    </ul>
+
+    <h2>Изтрити бележки</h2>
+    <p>Изтрита бележка отива в "Кошче" за 10 дни (за да можеш да я върнеш по грешка), след което се трие окончателно и автоматично.</p>
+
+    <h2>Бисквитки и локално съхранение</h2>
+    <p>Не използваме проследяващи бисквитки на трети страни. Локалното съхранение (localStorage) на браузъра се ползва единствено за по-бързо зареждане офлайн и за запазване на визуалните ти предпочитания.</p>
+
+    <h2>Деца</h2>
+    <p>IForget не е насочено умишлено към деца под 16 години.</p>
+
+    <h2>Промени в тази политика</h2>
+    <p>При съществени промени датата най-горе на тази страница ще бъде обновена.</p>
+
+    <h2>Контакт</h2>
+    <p>За въпроси относно поверителността: <a href="mailto:neshovska@yahoo.com">neshovska@yahoo.com</a></p>
+
+    <a class="back-link" href="index.html">← Обратно към IForget</a>
+  </div>
+
+  <div class="lang-block" id="block-en">
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: August 9, 2026</p>
+
+    <p>IForget (available at <strong>iforget.eu</strong>) is a personal note-taking app. This page explains what data is collected, why, and what rights you have.</p>
+
+    <h2>What we collect</h2>
+    <ul>
+      <li><strong>Email address</strong> — to create and identify your account.</li>
+      <li><strong>Password</strong> — handled entirely by Firebase Authentication (Google); we never see or store your password in readable form.</li>
+      <li><strong>Your note content</strong> — text, tags, status, dates — so sync across devices works.</li>
+      <li><strong>Last-active timestamp</strong> — only to help us keep the app running reliably.</li>
+      <li><strong>Local preferences</strong> (theme, language, color, left-handed mode) — stored only on your device (localStorage), never uploaded.</li>
+    </ul>
+
+    <h2>Where data is stored</h2>
+    <p>All data is kept in Firebase (a Google service) — Authentication for your account and Firestore for your notes. We don't run ads and don't sell or share your data with third parties for marketing.</p>
+
+    <h2>Your rights</h2>
+    <ul>
+      <li><strong>Access</strong> — see all your data any time, directly in the app.</li>
+      <li><strong>Export</strong> — the "Save backup" button in your profile exports all your notes as a file.</li>
+      <li><strong>Deletion</strong> — the "Delete account" button in your profile permanently and immediately removes your account and all notes.</li>
+      <li><strong>Correction</strong> — edit your notes and email directly in the app.</li>
+    </ul>
+
+    <h2>Deleted notes</h2>
+    <p>A deleted note goes to "Trash" for 10 days (so you can undo a mistake), then is permanently and automatically removed.</p>
+
+    <h2>Cookies and local storage</h2>
+    <p>We don't use third-party tracking cookies. Browser localStorage is used only for faster offline loading and to remember your visual preferences.</p>
+
+    <h2>Children</h2>
+    <p>IForget is not knowingly directed at children under 16.</p>
+
+    <h2>Changes to this policy</h2>
+    <p>Material changes will be reflected by updating the date at the top of this page.</p>
+
+    <h2>Contact</h2>
+    <p>Privacy questions: <a href="mailto:neshovska@yahoo.com">neshovska@yahoo.com</a></p>
+
+    <a class="back-link" href="index.html">← Back to IForget</a>
+  </div>
+</div>
+<script>
+  document.querySelectorAll('.langtabs button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.langtabs button').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.lang-block').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('block-'+btn.dataset.lang).classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

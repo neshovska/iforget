@@ -330,6 +330,9 @@
   }
   .auth-toggle-mode{font-size:13px;color:var(--text-dim);margin-top:12px;}
   .auth-loading{font-size:13px;color:var(--text-dim);margin-top:18px;}
+  .auth-legal-links{margin-top:20px;font-size:11px;color:var(--text-dim);}
+  .auth-legal-links a{color:var(--text-dim);text-decoration:underline;}
+  .auth-legal-links span{margin:0 5px;}
 
   /* Кръгло "профилче" в топбара — инициал на имейла (цветът му е избираем,
      виж .color-sw по-долу), тапва се за отваряне на .profile-panel. */
@@ -365,12 +368,13 @@
      акцентният цвят следва темата, вместо да е фиксиран override. */
   .profile-panel .color-sw.default-sw{background:linear-gradient(135deg, #5B96FF 50%, #8C5A2B 50%) !important;}
   .profile-panel hr{border:none;border-top:1px solid var(--border);margin:6px 0;}
-  .profile-panel button.action{
+  .profile-panel button.action, .profile-panel a.action{
     -webkit-appearance:none;appearance:none;width:100%;text-align:left;background:none;border:none;
     color:var(--text);font-size:13px;font-weight:600;padding:8px;border-radius:8px;
-    display:flex;align-items:center;gap:8px;font-family:inherit;
+    display:flex;align-items:center;gap:8px;font-family:inherit;box-sizing:border-box;
+    text-decoration:none;cursor:pointer;
   }
-  .profile-panel button.action:active{background:var(--card-2);}
+  .profile-panel button.action:active, .profile-panel a.action:active{background:var(--card-2);}
   .profile-panel button.action.danger{color:var(--danger);}
   .profile-panel .sub-form{display:flex;flex-direction:column;gap:8px;padding:2px;}
   .profile-panel .sub-form input{
@@ -614,6 +618,22 @@
   }
   .jump-btn.show{display:flex;}
 
+  /* Банер за непотвърден имейл — виж updateVerifyBanner() в скрипта. Тънка
+     лента веднага под topbar-а, ненатрапчива (не блокира нищо, само
+     напомня + бутон "изпрати пак" с 60 сек охлаждане). */
+  .verify-banner{
+    display:none;align-items:center;justify-content:space-between;gap:10px;
+    background:rgba(var(--gold-rgb),.14);border-bottom:1px solid rgba(var(--gold-rgb),.3);
+    color:var(--gold);font-size:12px;padding:8px 16px;
+  }
+  .verify-banner span{line-height:1.4;}
+  .verify-banner button{
+    -webkit-appearance:none;appearance:none;background:none;border:none;
+    color:var(--gold);font-weight:700;font-size:12px;padding:4px 6px;flex-shrink:0;
+    text-decoration:underline;font-family:inherit;
+  }
+  .verify-banner button:disabled{opacity:.5;text-decoration:none;}
+
   /* Undo тост при swipe-изтриване — плаваща лента над bottombar, изчезва
      сама след няколко секунди (виж showUndoToast()/hideUndoToast()). */
   .undo-toast{
@@ -671,6 +691,13 @@
   </div>
 </div>
 
+<!-- Банер за непотвърден имейл — виж updateVerifyBanner() в скрипта.
+     Ненатрапчив, не блокира приложението, само напомня. -->
+<div class="verify-banner" id="verifyBanner" style="display:none">
+  <span id="verifyBannerText"></span>
+  <button type="button" id="verifyResendBtn"></button>
+</div>
+
 <div class="pull-refresh" id="pullRefresh"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2z"></path></svg></div>
 
 <div class="tag-picker" id="tagPicker"></div>
@@ -719,6 +746,11 @@
       </div>
     </div>
     <div class="auth-loading" id="authLoading" style="display:none;">Зареждане...</div>
+    <div class="auth-legal-links">
+      <a href="privacy.html" target="_blank" rel="noopener" id="authPrivacyLink">Политика за поверителност</a>
+      <span>·</span>
+      <a href="terms.html" target="_blank" rel="noopener" id="authTermsLink">Общи условия</a>
+    </div>
   </div>
 </div>
 
@@ -781,6 +813,9 @@ const TRASH_RETENTION_MS = 10 * 24 * 60 * 60 * 1000;
 // заявка), не се показва на никой друг потребител на приложението.
 const SATORI_TAG = 'satori';
 const SATORI_EMAIL = 'neshovska@yahoo.com';
+// Имейл за бутона "Обратна връзка" в профила (виж renderProfileMenu()) —
+// същият акаунт като админ статистиката, докато няма отделен support адрес.
+const SUPPORT_EMAIL = SATORI_EMAIL;
 function isSatoriUser(){
   return !!(currentUser && currentUser.email && currentUser.email.toLowerCase() === SATORI_EMAIL);
 }
@@ -854,7 +889,10 @@ const ICONS = {
   plus: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
   flame: '<svg class="ic" viewBox="0 0 24 24" width="12" height="12" fill="currentColor" stroke="none"><path d="M12 2c1 3-3 4-3 8a3 3 0 0 0 6 0c1.2 1 2 2.6 2 4.2A5.2 5.2 0 0 1 6.8 19c-2.8-2.2-3-6.4-.6-9.4C7.6 7.8 9 6 12 2z"></path></svg>',
   chart: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>',
-  flip: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 8 3 12 7 16"></polyline><polyline points="17 8 21 12 17 16"></polyline><line x1="3" y1="12" x2="21" y2="12"></line></svg>'
+  flip: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 8 3 12 7 16"></polyline><polyline points="17 8 21 12 17 16"></polyline><line x1="3" y1="12" x2="21" y2="12"></line></svg>',
+  mail: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z" stroke="none" fill="none"></path><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M2 7l10 6 10-6"></path></svg>',
+  shield: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6l-8-4z"></path></svg>',
+  doc: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>'
 };
 
 // Текстове за двата езика — БГ (по подразбиране) и EN. t() връща обекта за
@@ -930,7 +968,10 @@ const STRINGS = {
     onboardStep4: 'Плъзни надясно за бързо завършване, наляво за изтриване — винаги можеш да отмениш.',
     onboardStepCtx: 'Задръж пръст върху бележка (без да местиш), за да отвориш бързо меню — Редактирай, Добави подбележка, Изтрий.',
     onboardStep5: 'Готово! Пиши първата си истинска бележка тук долу.',
-    onboardNext: 'Напред', onboardBack: 'Назад', onboardGotIt: 'Разбрах', onboardSkip: 'Пропусни обучението'
+    onboardNext: 'Напред', onboardBack: 'Назад', onboardGotIt: 'Разбрах', onboardSkip: 'Пропусни обучението',
+    verifyBannerText: 'Провери пощата си и потвърди имейла си — линкът е изпратен при регистрацията.',
+    verifyResendBtn: 'Изпрати линк отново', verifyEmailSent: 'Изпратихме нов линк за потвърждение.',
+    feedbackBtn: 'Обратна връзка', privacyLink: 'Политика за поверителност', termsLink: 'Общи условия'
   },
   en: {
     searchAria: 'Search', searchPlaceholder: 'Search text or date (e.g. 06.08, tuesday)...',
@@ -1001,7 +1042,10 @@ const STRINGS = {
     onboardStep4: 'Swipe right to complete instantly, left to delete — you can always undo.',
     onboardStepCtx: 'Press and hold a note (without moving) to open a quick menu — Edit, Add sub-note, Delete.',
     onboardStep5: "That's it! Write your first real note down here.",
-    onboardNext: 'Next', onboardBack: 'Back', onboardGotIt: 'Got it', onboardSkip: 'Skip tutorial'
+    onboardNext: 'Next', onboardBack: 'Back', onboardGotIt: 'Got it', onboardSkip: 'Skip tutorial',
+    verifyBannerText: 'Check your inbox and confirm your email — the link was sent when you signed up.',
+    verifyResendBtn: 'Resend link', verifyEmailSent: 'Sent a new confirmation link.',
+    feedbackBtn: 'Feedback', privacyLink: 'Privacy Policy', termsLink: 'Terms of Service'
   },
   ru: {
     searchAria: 'Поиск', searchPlaceholder: 'Поиск по тексту или дате (напр. 06.08, вторник)...',
@@ -1072,7 +1116,10 @@ const STRINGS = {
     onboardStep4: 'Свайп вправо — быстрое завершение, влево — удаление, всегда можно отменить.',
     onboardStepCtx: 'Нажми и удерживай заметку (не двигая), чтобы открыть быстрое меню — Редактировать, Добавить подзаметку, Удалить.',
     onboardStep5: 'Готово! Напиши свою первую настоящую заметку здесь.',
-    onboardNext: 'Далее', onboardBack: 'Назад', onboardGotIt: 'Понятно', onboardSkip: 'Пропустить обучение'
+    onboardNext: 'Далее', onboardBack: 'Назад', onboardGotIt: 'Понятно', onboardSkip: 'Пропустить обучение',
+    verifyBannerText: 'Проверьте почту и подтвердите email — ссылка была отправлена при регистрации.',
+    verifyResendBtn: 'Отправить ссылку снова', verifyEmailSent: 'Отправили новую ссылку для подтверждения.',
+    feedbackBtn: 'Обратная связь', privacyLink: 'Политика конфиденциальности', termsLink: 'Условия использования'
   },
   de: {
     searchAria: 'Suche', searchPlaceholder: 'Suche nach Text oder Datum (z. B. 06.08, Dienstag)...',
@@ -1143,7 +1190,10 @@ const STRINGS = {
     onboardStep4: 'Wische nach rechts, um sofort zu erledigen, nach links zum Löschen — du kannst es immer rückgängig machen.',
     onboardStepCtx: 'Halte eine Notiz gedrückt (ohne zu bewegen), um ein Schnellmenü zu öffnen — Bearbeiten, Unternotiz hinzufügen, Löschen.',
     onboardStep5: 'Fertig! Schreib hier unten deine erste echte Notiz.',
-    onboardNext: 'Weiter', onboardBack: 'Zurück', onboardGotIt: 'Verstanden', onboardSkip: 'Einführung überspringen'
+    onboardNext: 'Weiter', onboardBack: 'Zurück', onboardGotIt: 'Verstanden', onboardSkip: 'Einführung überspringen',
+    verifyBannerText: 'Bitte bestätige deine E-Mail-Adresse — der Link wurde bei der Registrierung gesendet.',
+    verifyResendBtn: 'Link erneut senden', verifyEmailSent: 'Neuer Bestätigungslink wurde gesendet.',
+    feedbackBtn: 'Feedback', privacyLink: 'Datenschutzerklärung', termsLink: 'Nutzungsbedingungen'
   },
   es: {
     searchAria: 'Buscar', searchPlaceholder: 'Buscar por texto o fecha (p. ej. 06.08, martes)...',
@@ -1214,7 +1264,10 @@ const STRINGS = {
     onboardStep4: 'Desliza a la derecha para completar al instante, a la izquierda para eliminar — siempre puedes deshacerlo.',
     onboardStepCtx: 'Mantén pulsada una nota (sin moverla) para abrir un menú rápido — Editar, Añadir subnota, Eliminar.',
     onboardStep5: '¡Listo! Escribe tu primera nota real aquí abajo.',
-    onboardNext: 'Siguiente', onboardBack: 'Atrás', onboardGotIt: 'Entendido', onboardSkip: 'Saltar introducción'
+    onboardNext: 'Siguiente', onboardBack: 'Atrás', onboardGotIt: 'Entendido', onboardSkip: 'Saltar introducción',
+    verifyBannerText: 'Revisa tu correo y confirma tu email — el enlace se envió al registrarte.',
+    verifyResendBtn: 'Reenviar enlace', verifyEmailSent: 'Enviamos un nuevo enlace de confirmación.',
+    feedbackBtn: 'Comentarios', privacyLink: 'Política de privacidad', termsLink: 'Términos de uso'
   }
 };
 function t(){ return STRINGS[lang]; }
@@ -1371,7 +1424,34 @@ function applyStaticText(){
   document.getElementById('authPasswordConfirm').setAttribute('placeholder', s.confirmPasswordPlaceholder);
   document.getElementById('forgotPasswordBtn').textContent = s.forgotPassword;
   document.getElementById('undoToastBtn').textContent = s.undoBtn;
+  document.getElementById('verifyBannerText').textContent = s.verifyBannerText;
+  document.getElementById('verifyResendBtn').textContent = s.verifyResendBtn;
+  document.getElementById('authPrivacyLink').textContent = s.privacyLink;
+  document.getElementById('authTermsLink').textContent = s.termsLink;
   setAuthMode(authMode); // презарежда надписите "Вход"/"Регистрация" на текущия език
+}
+
+// Банер за непотвърден имейл — показва се само ако текущият потребител е
+// влязъл, но currentUser.emailVerified е false. Не блокира приложението,
+// само напомня; бутонът "изпрати пак" презпраща линка с 60 сек охлаждане,
+// за да не се спами Firebase изпращането.
+let verifyResendCooldown = false;
+function updateVerifyBanner(){
+  const banner = document.getElementById('verifyBanner');
+  const show = !!(currentUser && !currentUser.emailVerified);
+  banner.style.display = show ? 'flex' : 'none';
+}
+function resendVerifyEmail(){
+  if(verifyResendCooldown || !currentUser) return;
+  verifyResendCooldown = true;
+  const btn = document.getElementById('verifyResendBtn');
+  btn.disabled = true;
+  currentUser.sendEmailVerification()
+    .then(()=> window.alert(t().verifyEmailSent))
+    .catch(err=> console.error('resend verification failed', err))
+    .finally(()=>{
+      setTimeout(()=>{ verifyResendCooldown = false; btn.disabled = false; }, 60000);
+    });
 }
 
 // Локалният кеш (localStorage) — зарежда се веднага при отваряне на
@@ -1434,9 +1514,16 @@ function handleEmailAuthSubmit(e){
     }
   }
   showAuthScreen(true);
-  const action = authMode === 'signin'
-    ? auth.signInWithEmailAndPassword(email, password)
-    : auth.createUserWithEmailAndPassword(email, password);
+  const isSignup = authMode === 'signup';
+  const action = isSignup
+    ? auth.createUserWithEmailAndPassword(email, password)
+    : auth.signInWithEmailAndPassword(email, password);
+  if(isSignup){
+    // При регистрация изпращаме линк за потвърждение веднага — не
+    // блокираме приложението, докато не се потвърди (виж
+    // updateVerifyBanner()), само напомняме с банер.
+    action.then(cred => cred.user && cred.user.sendEmailVerification().catch(()=>{}));
+  }
   action.catch(err=>{
     console.error('email auth failed', err);
     showAuthScreen(false);
@@ -1511,6 +1598,10 @@ function renderProfileMenu(){
     html += `<hr>`;
     html += `<button type="button" class="action" data-action="admin-stats">${ICONS.chart}${s.statsTitle}</button>`;
   }
+  html += `<hr>`;
+  html += `<a class="action" href="mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('IForget — обратна връзка')}">${ICONS.mail}${s.feedbackBtn}</a>`;
+  html += `<a class="action" href="privacy.html" target="_blank" rel="noopener">${ICONS.shield}${s.privacyLink}</a>`;
+  html += `<a class="action" href="terms.html" target="_blank" rel="noopener">${ICONS.doc}${s.termsLink}</a>`;
   html += `<hr>`;
   html += `<button type="button" class="action danger" data-action="logout">${ICONS.close}${s.logoutBtn}</button>`;
   html += `<button type="button" class="action danger" data-action="delete-account">${ICONS.trash}${s.deleteAccount}</button>`;
@@ -1997,6 +2088,7 @@ function maybeFocusQuickAdd(){
 auth.onAuthStateChanged(user=>{
   currentUser = user;
   updateUserChip(user);
+  updateVerifyBanner();
   if(user){
     loadFromCloud(user.uid);
   }else{
@@ -3054,6 +3146,7 @@ document.getElementById('toggleAuthModeBtn').addEventListener('mousedown', e=>{
   e.preventDefault();
   setAuthMode(authMode === 'signin' ? 'signup' : 'signin');
 });
+document.getElementById('verifyResendBtn').addEventListener('mousedown', e=>{ e.preventDefault(); resendVerifyEmail(); });
 
 applyTheme();
 applyAccentColor();

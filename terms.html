@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IForget — Общи условия</title>
+<style>
+  :root{
+    --bg:#141B2E; --card:#1D2941; --border:#38496B;
+    --text:#F0F3F9; --text-dim:#98A3B9; --accent:#5B96FF; --accent-dim:#3D71C4;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
+    padding:32px 20px 60px;
+  }
+  .wrap{max-width:640px;margin:0 auto;}
+  h1{font-size:24px;font-weight:800;color:var(--accent);margin:0 0 4px;letter-spacing:.2px;}
+  .updated{font-size:12.5px;color:var(--text-dim);margin:0 0 22px;}
+  .langtabs{display:flex;gap:6px;margin-bottom:26px;}
+  .langtabs button{
+    -webkit-appearance:none;appearance:none;background:var(--card);border:1px solid var(--border);
+    color:var(--text-dim);border-radius:9px;padding:7px 14px;font-size:12.5px;font-weight:700;
+    font-family:inherit;cursor:pointer;
+  }
+  .langtabs button.active{background:var(--accent);color:var(--bg);border-color:var(--accent);}
+  h2{font-size:16px;font-weight:700;color:var(--text);margin:26px 0 8px;}
+  p,li{font-size:14px;line-height:1.65;color:var(--text-dim);}
+  p{margin:0 0 12px;}
+  ul{margin:0 0 12px;padding-left:20px;}
+  li{margin-bottom:5px;}
+  strong{color:var(--text);}
+  a{color:var(--accent-dim);}
+  .back-link{
+    display:inline-block;margin-top:30px;color:var(--accent-dim);font-size:13px;
+    font-weight:600;text-decoration:none;
+  }
+  .lang-block{display:none;}
+  .lang-block.active{display:block;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="langtabs">
+    <button type="button" class="active" data-lang="bg">Български</button>
+    <button type="button" data-lang="en">English</button>
+  </div>
+
+  <div class="lang-block active" id="block-bg">
+    <h1>Общи условия</h1>
+    <p class="updated">Последна актуализация: 9 август 2026 г.</p>
+
+    <p>Тези условия уреждат ползването на IForget (<strong>iforget.eu</strong>), приложение за лични бележки. Регистрирайки акаунт, приемаш условията по-долу.</p>
+
+    <h2>Услугата</h2>
+    <p>IForget е инструмент за лични бележки със синхронизация в облака. В момента е <strong>безплатен</strong>. Ако това се промени в бъдеще, ще бъдеш уведомен предварително преди да важи за твоя акаунт.</p>
+
+    <h2>Твоят акаунт</h2>
+    <ul>
+      <li>Отговаряш за пазенето на паролата си в тайна.</li>
+      <li>Отговаряш за съдържанието, което записваш в бележките си.</li>
+      <li>Един акаунт е за лично ползване от един човек.</li>
+    </ul>
+
+    <h2>Позволено ползване</h2>
+    <p>IForget е замислено за лични бележки. Моля, не го използвай за съхранение или споделяне на незаконно съдържание. Запазваме си правото да спрем достъп до акаунт при явна злоупотреба.</p>
+
+    <h2>Наличност на услугата</h2>
+    <p>Полагаме грижа приложението да работи стабилно, но не можем да гарантираме 100% непрекъсваемост (напр. поддръжка, технически проблеми с Firebase/GitHub Pages). Препоръчваме редовно "Запази резервно копие" от профила си.</p>
+
+    <h2>Собственост на съдържанието</h2>
+    <p>Бележките, които пишеш, си остават твои. Кодът и дизайнът на самото приложение са собственост на разработчика му.</p>
+
+    <h2>Изтриване на акаунт</h2>
+    <p>Можеш да изтриеш акаунта си по всяко време от профила — действието е незабавно и необратимо (изтрива и всички бележки).</p>
+
+    <h2>Отказ от отговорност</h2>
+    <p>Услугата се предоставя "както е", без гаранции. Не носим отговорност за загуба на данни — затова е налична функцията за резервно копие, препоръчваме да я ползваш периодично.</p>
+
+    <h2>Приложимо право</h2>
+    <p>Тези условия се уреждат от законодателството на Република България.</p>
+
+    <h2>Промени в условията</h2>
+    <p>При съществени промени датата най-горе на тази страница ще бъде обновена.</p>
+
+    <h2>Контакт</h2>
+    <p>Въпроси: <a href="mailto:neshovska@yahoo.com">neshovska@yahoo.com</a></p>
+
+    <a class="back-link" href="index.html">← Обратно към IForget</a>
+  </div>
+
+  <div class="lang-block" id="block-en">
+    <h1>Terms of Service</h1>
+    <p class="updated">Last updated: August 9, 2026</p>
+
+    <p>These terms govern your use of IForget (<strong>iforget.eu</strong>), a personal note-taking app. By creating an account, you agree to the terms below.</p>
+
+    <h2>The service</h2>
+    <p>IForget is a personal note-taking tool with cloud sync. It is currently <strong>free</strong>. If that ever changes, you'll be notified in advance before it applies to your account.</p>
+
+    <h2>Your account</h2>
+    <ul>
+      <li>You're responsible for keeping your password secret.</li>
+      <li>You're responsible for the content you store in your notes.</li>
+      <li>One account is for personal use by one person.</li>
+    </ul>
+
+    <h2>Acceptable use</h2>
+    <p>IForget is meant for personal notes. Please don't use it to store or share illegal content. We reserve the right to suspend access on clear abuse.</p>
+
+    <h2>Service availability</h2>
+    <p>We take care to keep the app running reliably, but can't guarantee 100% uptime (e.g. maintenance, technical issues with Firebase/GitHub Pages). We recommend using "Save backup" from your profile regularly.</p>
+
+    <h2>Content ownership</h2>
+    <p>The notes you write remain yours. The app's code and design belong to its developer.</p>
+
+    <h2>Account deletion</h2>
+    <p>You can delete your account at any time from your profile — this is immediate and irreversible (it also deletes all your notes).</p>
+
+    <h2>Disclaimer</h2>
+    <p>The service is provided "as is", without warranties. We're not liable for data loss — that's why the backup feature exists; we recommend using it periodically.</p>
+
+    <h2>Governing law</h2>
+    <p>These terms are governed by the laws of the Republic of Bulgaria.</p>
+
+    <h2>Changes to these terms</h2>
+    <p>Material changes will be reflected by updating the date at the top of this page.</p>
+
+    <h2>Contact</h2>
+    <p>Questions: <a href="mailto:neshovska@yahoo.com">neshovska@yahoo.com</a></p>
+
+    <a class="back-link" href="index.html">← Back to IForget</a>
+  </div>
+</div>
+<script>
+  document.querySelectorAll('.langtabs button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.langtabs button').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.lang-block').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('block-'+btn.dataset.lang).classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>
