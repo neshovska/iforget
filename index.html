@@ -681,7 +681,9 @@
      бележки (без десен margin тук) — тесният им вид идва само от ляв отстъп
      (margin+padding+border), не от асиметрично стесняване от двете страни. */
   .subs{margin:6px 0 0 15px;padding-left:9px;border-left:2px solid var(--border);}
-  .subs .note{padding:6px 8px;background:var(--card-2);}
+  /* Един-два нюанса по-светло от основните бележки (--card), за да си
+     личат ясно като "по-леки" вложени елементи. */
+  .subs .note{padding:6px 8px;background:#34415C;}
   html.glass-notes .subs .note{background:rgba(var(--card2-rgb),.4);}
   .subs .note-wrap{margin-bottom:4px;}
   /* В светлата тема разменяме местата — основните бележки по-тъмни
@@ -690,9 +692,10 @@
      другаде — бутони, полета и т.н. — и не бива да се променят). */
   :root[data-theme="light"] .note{background:var(--card-2);}
   html.glass-notes[data-theme="light"] .note{background:rgba(var(--card2-rgb),.4);}
-  /* Малко по-тъмни от чисто --card (не колкото основните бележки, за да си
-     личи разликата), между двата тона. */
-  :root[data-theme="light"] .subs .note{background:#F7EEDC;}
+  /* Един-два нюанса по-светли от основните бележки (--card-2) — виж
+     заявката на потребителя, подбележките трябва ясно да изпъкват като
+     по-леки/по-светли спрямо родителската си бележка. */
+  :root[data-theme="light"] .subs .note{background:var(--card);}
   /* ВАЖНО: тук НЕ ползваме rgba() на #F7EEDC (почти идентичен на --page-bg
      в светлата тема) — на 40% прозрачност изчезваше почти напълно на фона,
      докато основните бележки (--card2-rgb, по-тъмен тон) оставаха видимо
