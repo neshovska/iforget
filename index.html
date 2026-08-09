@@ -554,6 +554,36 @@
      а неин "брат" елемент) — по изрична молба само текстът да е златист. */
   .profile-panel a.action.small-link{font-size:10px;font-weight:400;color:var(--text-dim);}
   .profile-panel a.action.small-link .action-label{color:var(--gold);}
+  /* Premium вход/статус в горната част на менюто — виж renderProfileMenu()/
+     hasAdvancedFeatures(). Изцяло скрити елементи, докато premiumLaunched
+     е false (config/premium.enabled в Firestore) — виж CLAUDE.md.
+     ВАЖНО: .profile-panel button.action.premium-cta (3 селектора), НЕ само
+     .profile-panel .premium-cta (2) — иначе .profile-panel button.action{
+     background:none;color:var(--text);...} по-специфично (има и `button`
+     тип селектор) печели и изяжда златистия градиент/цвят тук. Същият
+     капан като .profile-panel button.action.danger по-горе. */
+  .profile-panel button.action.premium-cta{
+    background:linear-gradient(90deg, rgba(var(--gold-rgb),.16), rgba(var(--gold-rgb),.05));
+    border:1px solid var(--gold-dim);color:var(--gold);font-weight:700;margin-bottom:8px;
+  }
+  .profile-panel .premium-badge{
+    display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--gold);
+    padding:8px;margin-bottom:8px;
+  }
+  .profile-panel .premium-plans{display:flex;flex-direction:column;gap:6px;padding:2px 0 8px;}
+  /* Цените (напр. "Годишно — 19.99€/година (-44%)") са по-дълги от типичен
+     етикет — на 254px панел не се събират на ред дори без индент. Тук
+     изрично РАЗРЕШАВАМЕ чупене на 2 реда (override на глобалния nowrap+
+     ellipsis от .action-label) — по-добре 2 реда, отколкото да изчезне
+     "-44%" информацията зад "...". */
+  .profile-panel .premium-plans .action-label{white-space:normal;overflow:visible;text-overflow:clip;}
+  /* renderPremiumPlans() използва .reminder-head/.reminder-hint (същите
+     класове като .ctx-menu, за визуална консистентност), но тия рулс-ове
+     там са скопирани само за .ctx-menu — тук добавяме еквивалент за
+     .profile-panel (същите стойности, копирани нарочно, не де-скопинг на
+     оригинала — по-безопасно, без риск да променим ctx-menu визията). */
+  .profile-panel .reminder-head{display:flex;align-items:center;gap:8px;padding:4px 6px 8px;font-size:13px;font-weight:700;color:var(--text);}
+  .profile-panel .reminder-hint{font-size:11px;line-height:1.5;color:var(--text-dim);padding:0 6px 10px;}
   .profile-panel .sub-form{display:flex;flex-direction:column;gap:8px;padding:2px;}
   .profile-panel .sub-form input{
     -webkit-appearance:none;appearance:none;width:100%;background:var(--card-2);border:1px solid var(--border);
@@ -1161,6 +1191,58 @@ function isSatoriUser(){
   return !!(currentUser && currentUser.email && currentUser.email.toLowerCase() === SATORI_EMAIL);
 }
 
+// ═══════════════════════════════════════════════════════════
+// Premium инфраструктура — ПОДГОТВЕНА, но НЕВИДИМА/НЕАКТИВНА, докато
+// потребителят изрично не "включи ключа" — виж config/premium документа в
+// Firestore по-долу. Идеята: цялата платежна верига (Stripe Checkout →
+// Cloud Function → Firestore entitlement) е готова в кода ОТСЕГА, но
+// нищо не се вижда/предлага на реални потребители, докато `premiumLaunched`
+// не стане true. Тогава "активиране" = само промяна на ЕДИН булев флаг
+// в Firestore Console (document config/premium, поле enabled → true) —
+// БЕЗ redeploy на код, без нищо друго. Виж CLAUDE.md за пълния план.
+//
+// premiumLaunched — глобален "главен ключ" (config/premium.enabled),
+// зареден веднъж при старта на апа (виж loadPremiumConfig() по-долу),
+// НЕЗАВИСИМО от логин статус (публично четимо в Firestore rules) — иначе
+// дори на логин екрана бихме искали да знаем дали да показваме Premium.
+let premiumLaunched = false;
+// userIsPremium — платежен статус на ТЕКУЩИЯ логнат потребител
+// (entitlements/{uid}.premium в Firestore, пишен САМО от Cloud Function-а
+// stripeWebhook през Admin SDK — клиентът никога не може да си самозапише
+// premium:true, виж firestore.rules). Зарежда се при логин, виж
+// loadEntitlement() по-долу; false по подразбиране, докато не се зареди.
+let userIsPremium = false;
+
+// Главна проверка за "разширени" функции (цвят на бележка, напомняне и
+// т.н.) — вика се навсякъде ВМЕСТО директен isSatoriUser() за самите
+// premium функции (не за чисто административни неща като Статистика,
+// които си остават isSatoriUser() отделно). Админ профилът винаги минава,
+// независимо от Stripe статус — вижте изричното изискване в чата.
+function hasAdvancedFeatures(){
+  return isSatoriUser() || userIsPremium;
+}
+
+// Публично четим флаг — работи дори преди логин (config/premium в firestore.rules е
+// allow read: if true;). Fire-and-forget: грешка тук тихо оставя
+// premiumLaunched=false (безопасен default — по-добре скрито, отколкото
+// счупено UI, ако Firestore е недостъпен за момент).
+function loadPremiumConfig(){
+  db.collection('config').doc('premium').get().then(snap=>{
+    premiumLaunched = !!(snap.exists && snap.data().enabled);
+  }).catch(err=>console.error('loadPremiumConfig failed', err));
+}
+
+// entitlements/{uid} — четено САМО за логнатия потребител (виж rules).
+// Извиква се от auth.onAuthStateChanged() при успешен вход, до loadFromCloud().
+function loadEntitlement(uid){
+  db.collection('entitlements').doc(uid).get().then(snap=>{
+    userIsPremium = !!(snap.exists && snap.data().premium);
+  }).catch(err=>{
+    console.error('loadEntitlement failed', err);
+    userIsPremium = false;
+  });
+}
+
 // Firebase — вход с Google + Firestore, за да могат бележките да се
 // синхронизират в облака per потребител (вместо да остават само в
 // localStorage на едно устройство/браузър, виж requestPersistentStorage()
@@ -1290,6 +1372,11 @@ const STRINGS = {
     profileColorDefault: 'По подразбиране', leftHandedMode: 'Режим за лявата ръка',
     glassNotesToggle: 'Прозрачни бележки',
     profileGroupView: 'Изглед', profileGroupData: 'Данни', profileGroupAccount: 'Акаунт', profileGroupHelp: 'Помощ',
+    premiumUpgradeBtn: 'Ъпгрейд до Premium', premiumChoosePlan: 'Избери план',
+    premiumMonthly: 'Месечно — 2.99€/месец', premiumYearly: 'Годишно — 19.99€/година (-44%)',
+    premiumTrialNote: '14 дни безплатен пробен период — картата се пази, но не се таксува веднага. Можеш да откажеш по всяко време.',
+    premiumBack: 'Назад', premiumErrGeneric: 'Нещо се обърка — пробвай пак след малко.',
+    premiumActiveLabel: 'Premium активен',
     emailPlaceholder: 'Имейл', passwordPlaceholder: 'Парола', confirmPasswordPlaceholder: 'Потвърди парола',
     signInBtn: 'Вход', signUpBtn: 'Регистрация',
     noAccountYet: 'Нямаш акаунт?', haveAccountAlready: 'Вече имаш акаунт?',
@@ -1380,6 +1467,11 @@ const STRINGS = {
     profileColorDefault: 'Default', leftHandedMode: 'Left-handed mode',
     glassNotesToggle: 'Transparent notes',
     profileGroupView: 'View', profileGroupData: 'Data', profileGroupAccount: 'Account', profileGroupHelp: 'Help',
+    premiumUpgradeBtn: 'Upgrade to Premium', premiumChoosePlan: 'Choose a plan',
+    premiumMonthly: 'Monthly — €2.99/month', premiumYearly: 'Yearly — €19.99/year (-44%)',
+    premiumTrialNote: '14-day free trial — your card is saved but not charged right away. Cancel anytime.',
+    premiumBack: 'Back', premiumErrGeneric: 'Something went wrong — please try again shortly.',
+    premiumActiveLabel: 'Premium active',
     emailPlaceholder: 'Email', passwordPlaceholder: 'Password', confirmPasswordPlaceholder: 'Confirm password',
     signInBtn: 'Sign in', signUpBtn: 'Sign up',
     noAccountYet: "Don't have an account?", haveAccountAlready: 'Already have an account?',
@@ -1470,6 +1562,11 @@ const STRINGS = {
     profileColorDefault: 'По умолчанию', leftHandedMode: 'Режим для левшей',
     glassNotesToggle: 'Прозрачные заметки',
     profileGroupView: 'Вид', profileGroupData: 'Данные', profileGroupAccount: 'Аккаунт', profileGroupHelp: 'Помощь',
+    premiumUpgradeBtn: 'Перейти на Premium', premiumChoosePlan: 'Выбери план',
+    premiumMonthly: 'Ежемесячно — 2.99€/месяц', premiumYearly: 'Ежегодно — 19.99€/год (-44%)',
+    premiumTrialNote: '14 дней бесплатного пробного периода — карта сохраняется, но не списывается сразу. Можно отменить в любой момент.',
+    premiumBack: 'Назад', premiumErrGeneric: 'Что-то пошло не так — попробуй ещё раз чуть позже.',
+    premiumActiveLabel: 'Premium активен',
     emailPlaceholder: 'Email', passwordPlaceholder: 'Пароль', confirmPasswordPlaceholder: 'Подтверди пароль',
     signInBtn: 'Войти', signUpBtn: 'Регистрация',
     noAccountYet: 'Нет аккаунта?', haveAccountAlready: 'Уже есть аккаунт?',
@@ -1560,6 +1657,11 @@ const STRINGS = {
     profileColorDefault: 'Standard', leftHandedMode: 'Linkshänder-Modus',
     glassNotesToggle: 'Transparente Notizen',
     profileGroupView: 'Ansicht', profileGroupData: 'Daten', profileGroupAccount: 'Konto', profileGroupHelp: 'Hilfe',
+    premiumUpgradeBtn: 'Auf Premium upgraden', premiumChoosePlan: 'Plan wählen',
+    premiumMonthly: 'Monatlich — 2,99€/Monat', premiumYearly: 'Jährlich — 19,99€/Jahr (-44%)',
+    premiumTrialNote: '14 Tage kostenlose Testphase — deine Karte wird gespeichert, aber nicht sofort belastet. Jederzeit kündbar.',
+    premiumBack: 'Zurück', premiumErrGeneric: 'Etwas ist schiefgelaufen — versuch es gleich noch einmal.',
+    premiumActiveLabel: 'Premium aktiv',
     emailPlaceholder: 'E-Mail', passwordPlaceholder: 'Passwort', confirmPasswordPlaceholder: 'Passwort bestätigen',
     signInBtn: 'Anmelden', signUpBtn: 'Registrieren',
     noAccountYet: 'Noch kein Konto?', haveAccountAlready: 'Schon ein Konto?',
@@ -1650,6 +1752,11 @@ const STRINGS = {
     profileColorDefault: 'Predeterminado', leftHandedMode: 'Modo para zurdos',
     glassNotesToggle: 'Notas transparentes',
     profileGroupView: 'Vista', profileGroupData: 'Datos', profileGroupAccount: 'Cuenta', profileGroupHelp: 'Ayuda',
+    premiumUpgradeBtn: 'Actualizar a Premium', premiumChoosePlan: 'Elige un plan',
+    premiumMonthly: 'Mensual — 2,99€/mes', premiumYearly: 'Anual — 19,99€/año (-44%)',
+    premiumTrialNote: '14 días de prueba gratis — tu tarjeta se guarda, pero no se cobra de inmediato. Cancela cuando quieras.',
+    premiumBack: 'Atrás', premiumErrGeneric: 'Algo salió mal — inténtalo de nuevo en un momento.',
+    premiumActiveLabel: 'Premium activo',
     emailPlaceholder: 'Correo electrónico', passwordPlaceholder: 'Contraseña', confirmPasswordPlaceholder: 'Confirma la contraseña',
     signInBtn: 'Iniciar sesión', signUpBtn: 'Registrarse',
     noAccountYet: '¿No tienes cuenta?', haveAccountAlready: '¿Ya tienes cuenta?',
@@ -2085,6 +2192,20 @@ function renderProfileMenu(){
   html += `<div class="color-row">` + PROFILE_COLORS.map(c =>
     `<button type="button" class="color-sw${c===profileColor?' active':''}${c===''?' default-sw':''}" data-color="${c}" style="${c?`background:${c}`:''}" aria-label="${c || s.profileColorDefault}"></button>`
   ).join('') + `</div>`;
+
+  // Premium вход/статус — виж hasAdvancedFeatures()/premiumLaunched по-горе.
+  // ИЗЦЯЛО скрито, докато premiumLaunched е false (главният ключ в Firestore
+  // config/premium.enabled) — точно това е "изключено" състоянието по
+  // подразбиране в момента. Админ профилът НЕ вижда нищо от това (вече има
+  // всичко отключено, а "Premium активен" би било подвеждащо, тъй като не
+  // плаща реално).
+  if(premiumLaunched && !isSatoriUser()){
+    if(userIsPremium){
+      html += `<div class="premium-badge">${ICONS.check}${s.premiumActiveLabel}</div>`;
+    }else{
+      html += `<button type="button" class="action premium-cta" data-action="premium-upgrade">${ICONS.droplet}${L(s.premiumUpgradeBtn)}</button>`;
+    }
+  }
   html += `<hr>`;
 
   html += profileGroupBlock('view', ICONS.droplet, s.profileGroupView, `
@@ -2179,6 +2300,8 @@ function renderProfileMenu(){
   if(statsBtn) statsBtn.addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderAdminStats(); });
   panel.querySelector('[data-action="logout"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); closeProfilePanel(); signOutUser(); });
   panel.querySelector('[data-action="delete-account"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderDeleteAccountForm(); });
+  const premiumBtn = panel.querySelector('[data-action="premium-upgrade"]');
+  if(premiumBtn) premiumBtn.addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderPremiumPlans(); });
 
   // Ако вече имаше отворена група (profileOpenGroup, пренесена от преди
   // re-render-а — напр. връщане от "Смени парола" или смяна на цвят),
@@ -2208,6 +2331,52 @@ function profileGroupBlock(key, icon, label, innerHtml){
     <button type="button" class="action group-toggle" data-group="${key}">${icon}${L(label)}<span class="action-chev">${ICONS.chevronDown}</span></button>
     <div class="group-content" data-group-content="${key}">${innerHtml}</div>
   </div>`;
+}
+
+// Избор на план (месечен/годишен) — заменя #profilePanel НА МЯСТО (същия
+// принцип като renderPasswordForm() и т.н.), "Назад" се връща в
+// renderProfileMenu(). При клик на план: вика createCheckoutSession
+// (Cloud Function, functions/index.js) и редиректва към Stripe-хостнатата
+// Checkout страница (session.url) — самото плащане/картата НИКОГА не минава
+// през нашия код, изцяло на Stripe. При успех Stripe праща потребителя
+// обратно на iforget.eu — entitlements/{uid} се пише от stripeWebhook-а
+// СЛЕД реалното плащане, не при самия редирект (виж CLAUDE.md).
+function renderPremiumPlans(){
+  const s = t();
+  const panel = document.getElementById('profilePanel');
+  panel.innerHTML = `
+    <button type="button" class="group-back" data-action="premium-back">${ICONS.arrowLeft}${s.premiumBack}</button>
+    <div class="reminder-head">${ICONS.droplet}${s.premiumChoosePlan}</div>
+    <div class="premium-plans" id="premiumPlansWrap">
+      <button type="button" class="action" data-plan="monthly">${ICONS.calendar}${L(s.premiumMonthly)}</button>
+      <button type="button" class="action" data-plan="yearly">${ICONS.calendar}${L(s.premiumYearly)}</button>
+    </div>
+    <div class="reminder-hint">${s.premiumTrialNote}</div>
+    <div class="form-msg error" id="premiumErrMsg"></div>`;
+  panel.querySelector('[data-action="premium-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
+  panel.querySelectorAll('[data-plan]').forEach(btn=>{
+    btn.addEventListener('mousedown', e=>{
+      e.preventDefault(); e.stopPropagation();
+      const plan = btn.dataset.plan;
+      const wrap = document.getElementById('premiumPlansWrap');
+      const errEl = document.getElementById('premiumErrMsg');
+      errEl.style.display = 'none';
+      wrap.querySelectorAll('button').forEach(b=>{ b.disabled = true; });
+      const createCheckout = functionsInstance.httpsCallable('createCheckoutSession');
+      createCheckout({plan}).then(res=>{
+        if(res.data && res.data.url){
+          window.location.href = res.data.url; // редирект към Stripe Checkout
+        }else{
+          throw new Error('missing checkout url');
+        }
+      }).catch(err=>{
+        console.error('createCheckoutSession failed', err);
+        wrap.querySelectorAll('button').forEach(b=>{ b.disabled = false; });
+        errEl.textContent = s.premiumErrGeneric;
+        errEl.style.display = 'block';
+      });
+    });
+  });
 }
 
 function renderDeleteAccountForm(){
@@ -2964,8 +3133,11 @@ auth.onAuthStateChanged(user=>{
   updateUserChip(user);
   updateVerifyBanner();
   if(user){
+    userIsPremium = false; // reset до реалния резултат от loadEntitlement() — избягва "мигане" на стар статус от предишен акаунт
+    loadEntitlement(user.uid);
     loadFromCloud(user.uid);
   }else{
+    userIsPremium = false;
     notes = [];
     render();
     showAuthScreen(false);
@@ -3520,11 +3692,11 @@ function renderCtxMenuMain(noteId, subId){
   if(!subId){
     html += `<button data-ctx="addsub">${ICONS.plus}${s.ctxAddSub}</button>`;
   }
-  // Цвят на бележка + напомняне — временно скрити от обикновените
-  // потребители (по изрична молба), видими само в админ профила
-  // (isSatoriUser()) — за момента, докато не решим кога/как да се пуснат
-  // за всички (виж плана за free/premium разделение в CLAUDE.md).
-  if(isSatoriUser()){
+  // Цвят на бележка + напомняне — Premium функции (виж hasAdvancedFeatures()
+  // по-горе). Видими за админ профила ВИНАГИ, за обикновените потребители
+  // само след като станат платени (userIsPremium) — виж плана за
+  // free/premium разделение в CLAUDE.md.
+  if(hasAdvancedFeatures()){
     html += `<button data-ctx="color">${ICONS.droplet}${s.ctxColor}</button>`;
     html += `<button data-ctx="reminder">${ICONS.bell}${item && item.reminderAt ? s.ctxEditReminder : s.ctxAddReminder}</button>`;
   }
@@ -3783,11 +3955,11 @@ function hexToRgb(hex){
 // data-colored + inline --nc custom property за itemRow() по-долу — само
 // когато бележката/подбележката има зададен личен цвят (виж
 // renderCtxMenuColor()). Празен низ иначе (без атрибути, нормален вид).
-// Функцията е временно скрита от обикновените потребители (виж
-// renderCtxMenuMain()) — тук допълнително проверяваме isSatoriUser(), за
-// да не се вижда и стар/останал цвят от преди скриването.
+// Функцията е Premium (виж renderCtxMenuMain()) — тук допълнително
+// проверяваме hasAdvancedFeatures(), за да не се вижда стар/останал цвят
+// от преди изтичане на Premium статус или преди активиране на функцията.
 function noteColorAttr(item){
-  if(!item.color || !isSatoriUser()) return '';
+  if(!item.color || !hasAdvancedFeatures()) return '';
   const rgb = hexToRgb(item.color);
   return rgb ? ` data-colored style="--nc:${rgb};"` : '';
 }
@@ -3834,7 +4006,7 @@ function itemRow(item, noteId, isSub){
           <div class="txt${!isExpanded ? ' clamped' : ''}" data-key="${key}" data-action="edit" data-note="${noteId}" data-sub="${isSub?item.id:''}">${escapeHtml(item.text)}</div>
           <div class="meta">
             ${!isSub ? tagPillHtml(item, noteId) : ''}
-            ${item.reminderAt && isSatoriUser() ? `<span class="reminder-badge">${ICONS.bell}${reminderLabel(item.reminderAt)}${item.reminderRepeat ? ICONS.repeat : ''}</span>` : ''}
+            ${item.reminderAt && hasAdvancedFeatures() ? `<span class="reminder-badge">${ICONS.bell}${reminderLabel(item.reminderAt)}${item.reminderRepeat ? ICONS.repeat : ''}</span>` : ''}
             ${!isSub && addingSubFor !== noteId ? `<button class="add-sub-link" data-action="sub-open" data-note="${noteId}">${t().addSubLink}</button>` : ''}
             <button class="expand-toggle" data-action="toggle-expand" data-key="${key}" style="display:${isExpanded?'inline-flex':'none'}" aria-label="${isExpanded?t().collapseAria:t().expandAria}">${isExpanded?t().collapseAria:t().expandAria}${isExpanded?ICONS.chevronUp:ICONS.chevronDown}</button>
           </div>
@@ -4482,6 +4654,7 @@ applyLeftHanded();
 applyGlassNotes();
 applyStaticText();
 requestPersistentStorage();
+loadPremiumConfig();
 // Показваме екрана за вход веднага в "зареждане" вид, докато Firebase
 // провери дали вече има активна сесия — обикновено е бързо, но не е
 // мигновено. Локалният кеш зарежда notes веднага (instant/офлайн UI); ще

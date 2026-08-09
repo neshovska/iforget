@@ -388,6 +388,98 @@ nodemailer**, защото имейлът е Resend (`noreply@iforget.eu`, са�
 3. `firebase deploy --only functions,firestore:rules`.
 4. Реален тест — потвърдено работещо.
 
+## Premium/Stripe инфраструктура — ПОДГОТВЕНА, но НЕВИДИМА за реални потребители
+
+По изрична молба: "искам да имам всички опции подготвени, после кто
+реша да пускам плащане само активирам и готово, но за момента ще
+мъчим безплатно да видим колко ще се вържат." Целта: целият платежен
+път е написан и работи, но е напълно скрит/неактивен, докато
+потребителят изрично не "щракне ключа" — БЕЗ redeploy на код, само
+промяна на един Firestore документ.
+
+**Главният ключ** — `config/premium` документ във Firestore, поле
+`enabled: boolean`. Публично четим (`allow read: if true`), пишем
+САМО ръчно от Firebase Console (rules забраняват клиентски write).
+Ако документът изобщо не съществува (сегашното състояние — никой не
+го е създавал още), `loadPremiumConfig()` в `index.html` третира това
+като `enabled: false` — т.е. **не е нужно нищо да се създава предварително,
+Premium е скрит по подразбиране без никакво действие**. За да "активира"
+Premium занапред, потребителят просто създава/редактира тоя документ
+в Firebase Console → Firestore → `config/premium` → `enabled: true`.
+
+**Ценообразуване** (потвърдено с потребителя): Месечен €2.99/месец +
+Годишен €19.99/година (-44% спрямо 12×месечен), и двата с вграден
+14-дневен безплатен trial (конфигуриран в `subscription_data.trial_period_days`
+на самата Checkout Session, не в Stripe Product-а — картата се пази при
+подписване, но не се таксува до края на 14-те дни).
+
+**Клиентска логика (`index.html`)**:
+- `let premiumLaunched` — зареден веднъж при старта на апа (`loadPremiumConfig()`,
+  извикана от init секцията долу до `requestPersistentStorage()`), НЕЗАВИСИМО
+  от логин статус.
+- `let userIsPremium` — зареден от `entitlements/{uid}` при всеки успешен
+  логин (`loadEntitlement()`, извикана от `auth.onAuthStateChanged()` ПРЕДИ
+  `loadFromCloud()`), нулиран на `false` при логаут/смяна на акаунт.
+- `function hasAdvancedFeatures(){ return isSatoriUser() || userIsPremium; }`
+  — заменя старите директни `isSatoriUser()` проверки за Цвят/Напомняне (3
+  места: бутоните в `renderCtxMenuMain()`, `noteColorAttr()`, значката за
+  напомняне в `itemRow()`). **Админ профилът винаги минава, независимо от
+  реален Stripe статус** — общото правило от по-рано в документа. Чисто
+  административни неща (Статистика, Satori таг) си остават `isSatoriUser()`
+  директно — НЕ минават през `hasAdvancedFeatures()`, не са Premium функции.
+- `renderProfileMenu()` показва (само ако `premiumLaunched && !isSatoriUser()`):
+  ако `userIsPremium` → злат бадж "Premium активен"; иначе → злат бутон
+  "Ъпгрейд до Premium" (`data-action="premium-upgrade"`) → `renderPremiumPlans()`.
+- `renderPremiumPlans()` (нов, до `renderDeleteAccountForm()`) — 2 бутона
+  (месечен/годишен), вика `createCheckoutSession` Cloud Function, редиректва
+  към `session.url` (Stripe-хостнатата Checkout страница — картата НИКОГА
+  не минава през нашия код).
+- CSS gotcha (документиран директно в CSS коментар): `.profile-panel .premium-cta`
+  (2 класа) губи от по-специфичното `.profile-panel button.action` (тип+2 класа)
+  — трябва `.profile-panel button.action.premium-cta` (3), същия капан като
+  `.action.danger` по-горе. Ценовите бутони (`.premium-plans .action-label`)
+  изрично РАЗРЕШАВАТ чупене на 2 реда (override на глобалния nowrap+ellipsis)
+  — по-добре 2 реда, отколкото да изчезне "-44%" зад "...".
+
+**Сървърна логика (`functions/index.js`)**:
+- `stripeSecretKey`/`stripeWebhookSecret` — Firebase secrets (`firebase
+  functions:secrets:set STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET`).
+- `stripePriceMonthly`/`stripePriceYearly` — `defineString` params (Price
+  ID-та от Stripe Dashboard, не са тайни, но не са hardcode-нати).
+- `createCheckoutSession` (onCall) — създава Stripe Checkout Session,
+  пази `firebaseUid` И като `client_reference_id` (за `checkout.session.completed`),
+  И като `subscription_data.metadata.firebaseUid` (за по-късни
+  `customer.subscription.*` събития, които нямат checkout контекст).
+- `createBillingPortalSession` (onCall) — Stripe Customer Portal, за да
+  може платен потребител сам да управлява/отказва абонамента си (изисква
+  вече записан `stripeCustomerId` в `entitlements/{uid}`).
+- `stripeWebhook` (onRequest, HTTP ендпойнт — Stripe вика директно, не
+  през httpsCallable) — слуша `checkout.session.completed` (първо
+  плащане → `entitlements/{uid}.premium = true`) и `customer.subscription.
+  updated`/`.deleted` (подновяване/отказ → update спрямо `sub.status`).
+  Използва `req.rawBody` (гарантирано от Firebase Functions framework-а)
+  за проверка на `stripe-signature` хедъра — НЕ пипай body-parsing-а тук.
+  URL за Stripe Dashboard → Webhooks: `https://europe-west1-iforgetbg.
+  cloudfunctions.net/stripeWebhook`.
+
+**Firestore rules** — `config/premium` (публично четим, `allow write:
+if false`), `entitlements/{uid}` (четим само от собственика, `allow
+write: if false` — САМО `stripeWebhook` през Admin SDK пише тук; иначе
+всеки логнат клиент би могъл директно да си самозапише `premium:true`).
+
+**Остава (действие от потребителя, когато реши да активира, не сега)**:
+1. Създай Stripe акаунт (ако няма) + Products/Prices (Monthly €2.99,
+   Yearly €19.99) в Stripe Dashboard.
+2. `firebase functions:secrets:set STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET`.
+3. При `firebase deploy` ще попита за `STRIPE_PRICE_MONTHLY`/`STRIPE_PRICE_YEARLY`
+   (Price ID-тата от стъпка 1) — или зададени предварително през `.env.iforgetbg`.
+4. Stripe Dashboard → Webhooks → добави ендпойнта отгоре, копирай
+   webhook signing secret-а → `STRIPE_WEBHOOK_SECRET`.
+5. `firebase deploy --only functions,firestore:rules`.
+6. Тест с истинска (или Stripe test mode) карта.
+7. Firestore Console → създай `config/premium` документ, `enabled: true` —
+   това е реалното "активиране", без нищо друго.
+
 ## Планирани задачи (за после, не сега)
 - **Споделени бележки/тагове между няколко акаунта** (напр. споделен
   списък за пазаруване или общи задачи, редактируем от повече от един

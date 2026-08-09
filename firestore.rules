@@ -18,5 +18,27 @@ service cloud.firestore {
     match /password_reset_throttle/{docId} {
       allow read, write: if false;
     }
+
+    // Premium инфраструктура (виж CLAUDE.md за пълния план) — ПОДГОТВЕНА,
+    // но неактивна, докато config/premium.enabled не стане true.
+
+    // Главен "ключ" за Premium функционалността — ПУБЛИЧНО четим (дори без
+    // логин, index.html чете това още при зареждане на апа), но пишем се
+    // САМО ръчно от Firebase Console (Owner акаунта), никога от клиент/код —
+    // точно това е "активирането", което потребителят иска да може да прави
+    // сам, без redeploy.
+    match /config/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Платежен статус на потребителя — пише се САМО от stripeWebhook Cloud
+    // Function-а (Admin SDK, след реално потвърдено плащане от Stripe),
+    // НИКОГА от клиента — иначе всеки логнат потребител би могъл директно
+    // да си самозапише {premium:true} в собствения си документ.
+    match /entitlements/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
   }
 }

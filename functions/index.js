@@ -3,8 +3,8 @@
 // Деплой: firebase deploy --only functions
 
 const {setGlobalOptions} = require("firebase-functions/v2");
-const {onCall, HttpsError} = require("firebase-functions/v2/https");
-const {defineSecret} = require("firebase-functions/params");
+const {onCall, onRequest, HttpsError} = require("firebase-functions/v2/https");
+const {defineSecret, defineString} = require("firebase-functions/params");
 const admin = require("firebase-admin");
 admin.initializeApp();
 
@@ -24,6 +24,18 @@ const resendApiKey = defineSecret("RESEND_API_KEY");
 // (SPF/DKIM/DMARC записи, виж CLAUDE.md). Само за изпращане — тази кутия
 // не приема отговори (Enable Receiving е изключено в Resend нарочно).
 const FROM_EMAIL = "IForget <noreply@iforget.eu>";
+
+// Stripe — тайни ключове, задават се веднъж (никога в кода/repo-то):
+//   firebase functions:secrets:set STRIPE_SECRET_KEY
+//   firebase functions:secrets:set STRIPE_WEBHOOK_SECRET
+const stripeSecretKey = defineSecret("STRIPE_SECRET_KEY");
+const stripeWebhookSecret = defineSecret("STRIPE_WEBHOOK_SECRET");
+// Price ID-та от Stripe Dashboard (Products → IForget Premium → Monthly/
+// Yearly) — не са тайни сами по себе си (безполезни без secret key-я), но
+// не са hardcode-нати — задават се при deploy през defineString (Firebase
+// пита за стойност автоматично при първи deploy, ако default е празен).
+const stripePriceMonthly = defineString("STRIPE_PRICE_MONTHLY", {default: ""});
+const stripePriceYearly = defineString("STRIPE_PRICE_YEARLY", {default: ""});
 
 // ═══════════════════════════════════════════════════════════
 // БРАНДИРАН PASSWORD RESET — праща от noreply@iforget.eu вместо
@@ -154,5 +166,171 @@ exports.sendBrandedPasswordReset = onCall(
       }
 
       return {ok: true};
+    },
+);
+
+// ═══════════════════════════════════════════════════════════
+// PREMIUM/STRIPE — ПОДГОТВЕНО, но неактивно за реални потребители, докато
+// config/premium.enabled (Firestore) не стане true. Кодът тук работи
+// веднага щом Stripe е конфигуриран (STRIPE_SECRET_KEY/
+// STRIPE_WEBHOOK_SECRET secrets + STRIPE_PRICE_MONTHLY/STRIPE_PRICE_YEARLY
+// params зададени), но самият upgrade бутон в UI-то (index.html) не се
+// показва на никого, докато потребителят изрично не "активира" —
+// промяна на config/premium.enabled директно в Firestore Console, БЕЗ
+// redeploy на код (виж CLAUDE.md за пълния план).
+// ═══════════════════════════════════════════════════════════
+
+// Създава Stripe Checkout Session (hosted, самата карта/плащане минава
+// изцяло на Stripe-овия домейн, никога през нашия код) и връща URL-а за
+// редирект. Trial-ът (14 дни) е зададен ТУК (subscription_data), не в
+// самия Stripe Product/Price — картата се пази при Checkout-а, но не се
+// таксува до края на trial периода. firebaseUid се пази И като
+// client_reference_id (достъпен само в checkout.session.completed), И
+// като subscription metadata (достъпен и в customer.subscription.* —
+// нужен за подновявания/отказ по-късно, когато вече няма checkout сесия).
+exports.createCheckoutSession = onCall(
+    {secrets: [stripeSecretKey]},
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Трябва да си логнат.");
+      }
+      const plan = request.data?.plan;
+      const priceId = plan === "yearly" ? stripePriceYearly.value() :
+        plan === "monthly" ? stripePriceMonthly.value() : null;
+      if (!priceId) {
+        throw new HttpsError("invalid-argument", "Невалиден план.");
+      }
+
+      const stripe = require("stripe")(stripeSecretKey.value());
+      const uid = request.auth.uid;
+      const email = request.auth.token.email || undefined;
+
+      try {
+        const session = await stripe.checkout.sessions.create({
+          mode: "subscription",
+          line_items: [{price: priceId, quantity: 1}],
+          subscription_data: {trial_period_days: 14, metadata: {firebaseUid: uid}},
+          success_url: "https://iforget.eu/?premium=success",
+          cancel_url: "https://iforget.eu/?premium=cancel",
+          client_reference_id: uid,
+          customer_email: email,
+        });
+        return {url: session.url};
+      } catch (e) {
+        console.error("createCheckoutSession failed:", e);
+        throw new HttpsError("internal", "Грешка при създаване на плащането.");
+      }
+    },
+);
+
+// Stripe Customer Portal — оттам потребителят сам управлява/отказва
+// абонамента си (задължително за приемливо UX при абонаменти, спестява
+// support заявки "искам да спра плащането"). Изисква вече съществуващ
+// stripeCustomerId в entitlements/{uid} (записва се от stripeWebhook при
+// първо успешно плащане) — ако липсва, потребителят никога не е плащал.
+exports.createBillingPortalSession = onCall(
+    {secrets: [stripeSecretKey]},
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Трябва да си логнат.");
+      }
+      const uid = request.auth.uid;
+      const entSnap = await db.collection("entitlements").doc(uid).get();
+      const customerId = entSnap.exists ? entSnap.data().stripeCustomerId : null;
+      if (!customerId) {
+        throw new HttpsError("failed-precondition", "Няма активен Stripe акаунт за този потребител.");
+      }
+      const stripe = require("stripe")(stripeSecretKey.value());
+      try {
+        const session = await stripe.billingPortal.sessions.create({
+          customer: customerId,
+          return_url: "https://iforget.eu/",
+        });
+        return {url: session.url};
+      } catch (e) {
+        console.error("createBillingPortalSession failed:", e);
+        throw new HttpsError("internal", "Грешка при отваряне на управлението на абонамента.");
+      }
+    },
+);
+
+// Webhook — Stripe вика ТОЗИ ендпойнт директно (не през httpsCallable,
+// затова onRequest, не onCall) при всяка промяна на плащане/абонамент.
+// req.rawBody е гарантирано наличен от Firebase Functions framework-а
+// (дори при JSON-parsed request) — точно затова НЕ пипаме body-parsing,
+// нужен е суровият байт низ за проверка на подписа (stripe-signature
+// хедъра), иначе constructEvent() хвърля грешка.
+// URL-ът за webhook-а (за Stripe Dashboard → Developers → Webhooks) е:
+//   https://europe-west1-iforgetbg.cloudfunctions.net/stripeWebhook
+exports.stripeWebhook = onRequest(
+    {secrets: [stripeSecretKey, stripeWebhookSecret]},
+    async (req, res) => {
+      const stripe = require("stripe")(stripeSecretKey.value());
+      let event;
+      try {
+        event = stripe.webhooks.constructEvent(
+            req.rawBody,
+            req.headers["stripe-signature"],
+            stripeWebhookSecret.value(),
+        );
+      } catch (err) {
+        console.error("Stripe webhook signature verification failed:", err.message);
+        res.status(400).send(`Webhook Error: ${err.message}`);
+        return;
+      }
+
+      try {
+        switch (event.type) {
+          case "checkout.session.completed": {
+            const session = event.data.object;
+            const uid = session.client_reference_id;
+            if (uid) {
+              await db.collection("entitlements").doc(uid).set({
+                premium: true,
+                stripeCustomerId: session.customer,
+                stripeSubscriptionId: session.subscription,
+                updatedAt: Date.now(),
+              }, {merge: true});
+              console.log(`Premium активиран за uid=${uid} (checkout.session.completed).`);
+            } else {
+              console.error("checkout.session.completed без client_reference_id — не знаем за кой uid.");
+            }
+            break;
+          }
+          case "customer.subscription.updated":
+          case "customer.subscription.deleted": {
+            const sub = event.data.object;
+            const isActive = sub.status === "active" || sub.status === "trialing";
+            const uid = sub.metadata && sub.metadata.firebaseUid;
+            if (uid) {
+              await db.collection("entitlements").doc(uid).set({
+                premium: isActive,
+                stripeCustomerId: sub.customer,
+                stripeSubscriptionId: sub.id,
+                updatedAt: Date.now(),
+              }, {merge: true});
+              console.log(`Premium статус=${isActive} за uid=${uid} (${event.type}).`);
+            } else {
+              // Fallback — metadata липсва по някаква причина, търсим по customer id.
+              const snap = await db.collection("entitlements")
+                  .where("stripeCustomerId", "==", sub.customer).limit(1).get();
+              if (!snap.empty) {
+                await snap.docs[0].ref.set({premium: isActive, updatedAt: Date.now()}, {merge: true});
+                console.log(`Premium статус=${isActive} за customer=${sub.customer} (fallback по customerId).`);
+              } else {
+                console.error(`${event.type}: не намерихме entitlement документ за customer=${sub.customer}.`);
+              }
+            }
+            break;
+          }
+          default:
+            // други event типове (напр. invoice.paid) — игнорираме нарочно.
+            break;
+        }
+        res.json({received: true});
+      } catch (e) {
+        console.error("stripeWebhook processing failed:", e);
+        res.status(500).send("Internal error");
+      }
     },
 );
