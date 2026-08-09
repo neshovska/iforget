@@ -648,7 +648,13 @@
   /* Малко по-тъмни от чисто --card (не колкото основните бележки, за да си
      личи разликата), между двата тона. */
   :root[data-theme="light"] .subs .note{background:#F7EEDC;}
-  html.glass-notes[data-theme="light"] .subs .note{background:rgba(247,238,220,.4);}
+  /* ВАЖНО: тук НЕ ползваме rgba() на #F7EEDC (почти идентичен на --page-bg
+     в светлата тема) — на 40% прозрачност изчезваше почти напълно на фона,
+     докато основните бележки (--card2-rgb, по-тъмен тон) оставаха видимо
+     плътни → несъответствие "половин прозрачно". Затова подбележките тук
+     ползват СЪЩИЯ тон като основните (--card2-rgb), само с по-ниска
+     плътност за лека разлика, вместо различен цвят. */
+  html.glass-notes[data-theme="light"] .subs .note{background:rgba(var(--card2-rgb),.28);}
   .add-sub-row{margin-top:6px;}
   .add-sub-link{
     background:none;border:none;color:var(--accent-dim);font-size:12.5px;
