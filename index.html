@@ -482,10 +482,20 @@
      бележки — за да личи ясно къде свършва тази група и започва следваща
      самостоятелна бележка, вместо подбележките да изглеждат като отделни. */
   .note-wrap:has(.subs){margin-bottom:16px;}
-  /* .note е колона от два реда: .note-top (дата/час, прилепени горе вдясно
-     в карето) + .note-main (точка/текст/бутони — старият ред). Разделени
-     умишлено, за да не се бори датата за пространство с бутоните за
-     редакция/изтриване, които също стоят вдясно. */
+  /* .note е колона от два реда: .note-top (дата/час, прилепени горе вляво,
+     в началото на карето) + .note-main (точка/текст/бутони — старият ред,
+     сега огледален: точката вдясно, до края на текста). Разделени умишлено,
+     за да не се бори датата за пространство с бутоните за редакция/
+     изтриване.
+     Подредбата по подразбиране е "за дясна ръка" (точката/тагът/+добави са
+     по-близо до десния палец). Оригиналната подредба (дата вдясно, точка
+     вляво, мета вляво) е запазена по-долу като коментар — само за справка,
+     ако потребителят поиска връщане назад:
+       .note-top{justify-content:flex-end;}
+       .note-main{display:flex;align-items:flex-start;gap:8px;}  (без row-reverse)
+       .note .meta{display:flex;align-items:center;gap:6px;margin-top:3px;}  (без justify-content)
+     "Режим за лявата ръка" (виж по-долу) вече прави точно тази оригинална
+     подредба, плюс огледаля и топбара/долната лента. */
   /* Swipe: .swipe-shell е "прозорец" (overflow:hidden) зад .note, с два
      цветни слоя отдолу (complete/delete), които се показват докато .note се
      плъзга хоризонтално върху тях (виж attachSwipeHandlers() в скрипта).
@@ -504,8 +514,8 @@
     touch-action:pan-y;transition:transform .22s ease;
   }
   .note.swiping{transition:none;}
-  .note-top{display:flex;justify-content:flex-end;align-items:center;gap:6px;}
-  .note-main{display:flex;align-items:flex-start;gap:8px;}
+  .note-top{display:flex;justify-content:flex-start;align-items:center;gap:6px;}
+  .note-main{display:flex;align-items:flex-start;gap:8px;flex-direction:row-reverse;}
   .note .dot{
     width:17px;height:17px;border-radius:50%;flex-shrink:0;margin-top:2px;
     border:1.5px solid var(--text-dim);display:flex;align-items:center;justify-content:center;
@@ -526,7 +536,7 @@
     color:var(--accent-dim);padding:2px;display:inline-flex;align-items:center;justify-content:center;
     gap:3px;font-size:10.5px;font-weight:600;font-family:inherit;line-height:1;
   }
-  .note .meta{display:flex;align-items:center;gap:6px;margin-top:3px;}
+  .note .meta{display:flex;align-items:center;gap:6px;margin-top:3px;justify-content:flex-end;}
   .note .tag{
     display:inline-block;font-size:10px;font-weight:600;
     padding:0 6px;border-radius:7px;letter-spacing:.3px;
@@ -622,18 +632,20 @@
   /* Режим за лявата ръка (виж applyLeftHanded() в скрипта) — огледално
      обръща подредбата на топбара, долната лента, копчето "най-нови" и
      всяка бележка, за да са важните бутони по-близо до левия палец.
-     Текстът НЕ се огледалва — само позициите на елементите/бутоните. */
+     Текстът НЕ се огледалва — само позициите на елементите/бутоните.
+     Забележка: подредбата по подразбиране (виж .note-top/.note-main/
+     .note .meta по-горе) вече е "за дясна ръка" (точка вдясно). Тук просто
+     връщаме оригиналната подредба (дата вдясно, точка вляво, мета вляво,
+     индент на подбележките вляво — както е дефолтно за .subs) — за
+     потребители, които държат телефона с лявата ръка. */
   html.left-handed .topbar-row{flex-direction:row-reverse;}
   html.left-handed .auth-lang-btn{right:auto;left:16px;}
   html.left-handed .input-row{flex-direction:row-reverse;}
   html.left-handed .jump-btn{right:auto;left:16px;}
-  html.left-handed .note-top{justify-content:flex-start;}
-  html.left-handed .note-main{flex-direction:row-reverse;}
-  html.left-handed .note .meta{justify-content:flex-end;}
-  html.left-handed .subs{
-    margin:6px 15px 0 0;padding-left:0;padding-right:9px;
-    border-left:none;border-right:2px solid var(--border);
-  }
+  html.left-handed .note-top{justify-content:flex-end;}
+  html.left-handed .note-main{flex-direction:row;}
+  html.left-handed .note .meta{justify-content:flex-start;}
+
 </style>
 </head>
 <body>
