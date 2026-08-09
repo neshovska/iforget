@@ -695,7 +695,7 @@
   /* Един-два нюанса по-светли от основните бележки (--card-2) — виж
      заявката на потребителя, подбележките трябва ясно да изпъкват като
      по-леки/по-светли спрямо родителската си бележка. */
-  :root[data-theme="light"] .subs .note{background:var(--card);}
+  :root[data-theme="light"] .subs .note{background:#FDFBF3;}
   /* ВАЖНО: тук НЕ ползваме rgba() на #F7EEDC (почти идентичен на --page-bg
      в светлата тема) — на 40% прозрачност изчезваше почти напълно на фона,
      докато основните бележки (--card2-rgb, по-тъмен тон) оставаха видимо
@@ -3218,8 +3218,10 @@ function attachHandlers(){
       openTagPicker(el.dataset.note, el);
     });
   });
+  // Двоен тап/клик върху текста отваря редакция (не единичен) — по-трудно
+  // е да се влезе случайно в редакция, докато четеш или скролваш.
   document.querySelectorAll('[data-action="edit"]').forEach(el=>{
-    el.addEventListener('click', ()=>{
+    el.addEventListener('dblclick', ()=>{
       const noteId = el.dataset.note, subId = el.dataset.sub || null;
       editingKey = subId ? noteId+'::'+subId : noteId;
       addingSubFor = null;
