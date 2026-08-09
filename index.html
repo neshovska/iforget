@@ -763,6 +763,11 @@
      полупрозрачни, както поиска потребителят. --nc се задава inline
      (style="--nc:R,G,B") в itemRow(). */
   .note[data-colored]{background-image:linear-gradient(rgba(var(--nc),.4), rgba(var(--nc),.4));}
+  /* В прозрачен (glass) режим личният цвят е с по-ниска плътност от
+     плътния режим (.4 → .25) — по изрична заявка да е "малко по прозрачен".
+     Важи автоматично и за подбележките (.note[data-colored] съвпада с
+     всеки .note, без значение дали е в .subs), без отделно правило. */
+  html.glass-notes .note[data-colored]{background-image:linear-gradient(rgba(var(--nc),.25), rgba(var(--nc),.25));}
   .note.swiping{transition:none;}
   .note-top{display:flex;justify-content:flex-start;align-items:center;gap:6px;}
   .note-main{display:flex;align-items:flex-start;gap:8px;flex-direction:row-reverse;}
@@ -1060,7 +1065,11 @@ let notes = [];
 let editingKey = null;
 let addingSubFor = null;
 let searchQuery = '';
-let categoryFilter = null; // null = "Всички"; 'personal' | 'work' | DELETED_TAG | произволен таг
+let categoryFilter = null; // null = "Всички"; PROGRESS_FILTER | 'personal' | 'work' | DELETED_TAG | произволен таг
+// Спец. стойност за categoryFilter — филтрира по СТАТУС (progress), не по
+// таг (виж render()/renderCatRow()). Няма как да съвпадне с истински
+// потребителски таг (долна черта в началото не е обичаен вход).
+const PROGRESS_FILTER = '__progress__';
 // Ред на потребителските тагове в реда с категории — по подразбиране празен
 // (тогава orderedCustomTags() пада на азбучен ред), пълни се при първото
 // разместване (виж attachCatRowDrag()) и се пази локално + в облака (виж
@@ -1197,7 +1206,7 @@ const STRINGS = {
     today: 'Днес', yesterday: 'Вчера', noNotes: 'Няма бележки',
     results: 'Резултати', noResultsFor: q => `Няма намерени бележки за "${q}"`,
     tagProgress: 'в прогрес', tagDone: 'завършено',
-    sectionDone: 'Приключени', sectionActive: 'Активни',
+    sectionDone: 'Приключени', sectionProgress: 'В прогрес', sectionActive: 'Активни',
     confirmDelete: 'Да изтрия ли тази бележка?',
     dayNames: ['Неделя','Понеделник','Вторник','Сряда','Четвъртък','Петък','Събота'],
     monthNames: ['Януари','Февруари','Март','Април','Май','Юни','Юли','Август','Септември','Октомври','Ноември','Декември'],
@@ -1284,7 +1293,7 @@ const STRINGS = {
     today: 'Today', yesterday: 'Yesterday', noNotes: 'No notes',
     results: 'Results', noResultsFor: q => `No notes found for "${q}"`,
     tagProgress: 'in progress', tagDone: 'done',
-    sectionDone: 'Completed', sectionActive: 'Active',
+    sectionDone: 'Completed', sectionProgress: 'In progress', sectionActive: 'Active',
     confirmDelete: 'Delete this note?',
     dayNames: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
     monthNames: ['January','February','March','April','May','June','July','August','September','October','November','December'],
@@ -1371,7 +1380,7 @@ const STRINGS = {
     today: 'Сегодня', yesterday: 'Вчера', noNotes: 'Нет заметок',
     results: 'Результаты', noResultsFor: q => `Заметки для "${q}" не найдены`,
     tagProgress: 'в процессе', tagDone: 'выполнено',
-    sectionDone: 'Выполненные', sectionActive: 'Активные',
+    sectionDone: 'Выполненные', sectionProgress: 'В процессе', sectionActive: 'Активные',
     confirmDelete: 'Удалить эту заметку?',
     dayNames: ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'],
     monthNames: ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'],
@@ -1458,7 +1467,7 @@ const STRINGS = {
     today: 'Heute', yesterday: 'Gestern', noNotes: 'Keine Notizen',
     results: 'Ergebnisse', noResultsFor: q => `Keine Notizen gefunden für "${q}"`,
     tagProgress: 'in Bearbeitung', tagDone: 'erledigt',
-    sectionDone: 'Erledigt', sectionActive: 'Aktiv',
+    sectionDone: 'Erledigt', sectionProgress: 'In Bearbeitung', sectionActive: 'Aktiv',
     confirmDelete: 'Diese Notiz löschen?',
     dayNames: ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'],
     monthNames: ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'],
@@ -1545,7 +1554,7 @@ const STRINGS = {
     today: 'Hoy', yesterday: 'Ayer', noNotes: 'Sin notas',
     results: 'Resultados', noResultsFor: q => `No se encontraron notas para "${q}"`,
     tagProgress: 'en curso', tagDone: 'hecho',
-    sectionDone: 'Completadas', sectionActive: 'Activas',
+    sectionDone: 'Completadas', sectionProgress: 'En curso', sectionActive: 'Activas',
     confirmDelete: '¿Eliminar esta nota?',
     dayNames: ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'],
     monthNames: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
@@ -2846,18 +2855,20 @@ function cancelSub(){
   render();
 }
 
+// Кръгчето вече САМО превключва open ⇄ progress (тап пак маха "в прогрес"
+// обратно на активна) — вече НЕ слага "завършено". "Завършено" се задава
+// (и вече е достижимо) единствено чрез плъзгане настрани (виж
+// markDoneBySwipe(), който сам управлява completedAt) — по изрична заявка
+// на потребителя. Тап върху кръгче на вече завършена бележка е no-op —
+// completed статусът е изцяло "територия" на swipe-а.
 function cycleStatus(noteId, subId){
   const target = subId ? findSub(noteId, subId) : findNote(noteId);
-  if(!target) return;
-  target.status = target.status === 'open' ? 'progress' : target.status === 'progress' ? 'done' : 'open';
-  // completedAt пази КОГА реално е маркирана завършена (различно от createdAt,
-  // датата на създаване) — по него броим "серията" от поредни дни, виж
-  // computeStreak(). Изчистваме го, ако статусът се върне назад към open.
-  target.completedAt = target.status === 'done' ? Date.now() : null;
+  if(!target || target.status === 'done') return;
+  target.status = target.status === 'open' ? 'progress' : 'open';
   save(); render();
-  // Смяната на статус премества бележката в друга секция (Приключени/В
-  // прогрес/Активни) — без това щеше просто да "изчезне" от погледа.
-  // Проследяваме я до новата ѝ позиция с плавен скрол.
+  // Смяната на статус премества бележката в друга секция (Приключени/
+  // Активни) — без това щеше просто да "изчезне" от погледа. Проследяваме
+  // я до новата ѝ позиция с плавен скрол.
   scrollToNote(subId ? noteId+'::'+subId : noteId);
 }
 
@@ -3654,20 +3665,27 @@ function sectionHeader(label, count, cls){
 }
 
 // Пресъздава чиповете в реда с категории. Фиксиран старт (винаги в тази
-// последователност, не се разместват): Всички → Работни → Лични → Satori
-// (само за съответния акаунт) → Изтрити (винаги видим, дори празно кошче —
-// закачен като останалите фиксирани, не се крие). След това потребителските
-// тагове, по реда от orderedCustomTags() — те МОГАТ да се разместват с
-// дълго натискане + провлачване (виж attachCatRowDrag(), data-reorder="1"
-// по-долу). Вика се при всеки render() (и по време на разместване), за да
-// са бройките и активното състояние винаги верни.
+// последователност, не се разместват): Всички → В прогрес (най-отпред сред
+// истинските филтри, по изрична заявка — филтър по СТАТУС, не по таг, виж
+// PROGRESS_FILTER) → Работни → Лични → Satori (само за съответния акаунт) →
+// Изтрити (винаги видим, дори празно кошче — закачен като останалите
+// фиксирани, не се крие). След това потребителските тагове, по реда от
+// orderedCustomTags() — те МОГАТ да се разместват с дълго натискане +
+// провлачване (виж attachCatRowDrag(), data-reorder="1" по-долу). Вика се
+// при всеки render() (и по време на разместване), за да са бройките и
+// активното състояние винаги верни.
 function renderCatRow(){
   const counts = {};
-  notes.forEach(n=>{ if(n.tag) counts[n.tag] = (counts[n.tag]||0) + 1; });
+  let progressCount = 0;
+  notes.forEach(n=>{
+    if(n.tag) counts[n.tag] = (counts[n.tag]||0) + 1;
+    if((n.status||'open') === 'progress' && n.tag !== DELETED_TAG) progressCount++;
+  });
   const chip = (cat, label, count, extraAttrs) =>
     `<button class="cat-chip${categoryFilter===cat?' active':''}" data-action="cat-filter" data-cat="${escapeHtml(cat)}"${extraAttrs||''}>${label}${count?`<span class="n">${count}</span>`:''}</button>`;
 
   let html = chip('', t().catAll, 0);
+  html += chip(PROGRESS_FILTER, t().sectionProgress, progressCount);
   html += chip('work', t().tagWork, counts['work']||0);
   html += chip('personal', t().tagPersonal, counts['personal']||0);
   if(isSatoriUser()) html += chip(SATORI_TAG, 'Satori', counts[SATORI_TAG]||0);
@@ -3811,12 +3829,17 @@ function render(){
   }
 
   // Филтър по категория: плосък списък (както при търсене), без разделяне
-  // по статус — просто всички бележки с избрания таг, най-новите горе.
+  // по статус — просто всички бележки с избрания таг (или, за PROGRESS_FILTER,
+  // всички "в прогрес" независимо от тага), най-новите горе.
   if(categoryFilter){
-    const filtered = notes.filter(n => n.tag === categoryFilter).sort((a,b)=>b.createdAt-a.createdAt);
+    const isProgressFilter = categoryFilter === PROGRESS_FILTER;
+    const filtered = notes
+      .filter(n => isProgressFilter ? ((n.status||'open') === 'progress' && n.tag !== DELETED_TAG) : n.tag === categoryFilter)
+      .sort((a,b)=>b.createdAt-a.createdAt);
+    const label = isProgressFilter ? t().sectionProgress : tagLabel(categoryFilter);
     const html = filtered.length
       ? `<div class="day-block">
-          <div class="day-label">${escapeHtml(tagLabel(categoryFilter))}<span class="count">${filtered.length}</span></div>
+          <div class="day-label">${escapeHtml(label)}<span class="count">${filtered.length}</span></div>
           ${filtered.map(n=>itemRow(n, n.id, false)).join('')}
         </div>`
       : `<div class="empty">${t().noNotesForTag}</div>`;
