@@ -38,6 +38,7 @@
     --gold-dim:#A6841F;
     --gold-rgb:223,174,58;
     --accent:#5B96FF;
+    --accent-rgb:91,150,255;
     --accent-dim:#3D71C4;
     --green:#5AB77C;
     --danger:#E36358;
@@ -72,6 +73,7 @@
     --gold-dim:#9C6208;
     --gold-rgb:199,125,10;
     --accent:#8C5A2B;
+    --accent-rgb:140,90,43;
     --accent-dim:#6E4620;
     --green:#5E8F52;
     --danger:#C0503C;
@@ -284,6 +286,28 @@
     padding:11px 26px;font-size:15.5px;font-weight:700;font-family:inherit;
   }
   .onboard-tip-skip{background:none;border:none;color:var(--text-dim);font-size:12px;font-family:inherit;padding:2px;text-shadow:0 2px 10px var(--bg);}
+
+  /* Кратко "проблясване" на конкретния елемент, който сочи стрелката на
+     обучението (виж pulseHighlight() в скрипта) — привлича погледа веднага,
+     без да чака окото да проследи цялата стрелка (демо бележката често е
+     далеч долу, защото main е с justify-content:flex-end).
+     Два варианта:
+     - .onboard-pulse — за малки/точни цели (дот, таг, текст на подбележка):
+       леко уголемяване + блясък. Безопасно е — тези елементи имат достатъчно
+       "въздух" от ръба на .swipe-shell{overflow:hidden}, за да не се отрежат.
+     - .onboard-pulse-card — за цели цели карти/полета (стъпките за swipe и
+       long-press менюто, самата бележка): БЕЗ уголемяване (би се отрязало от
+       overflow:hidden на .swipe-shell), само по-силна INSET сянка. */
+  @keyframes onboardPulse{
+    0%,100%{ transform:scale(1); box-shadow:inset 0 0 0 0 rgba(var(--accent-rgb),0); filter:brightness(1); }
+    35%{ transform:scale(1.22); box-shadow:inset 0 0 0 2px rgba(var(--accent-rgb),.9); filter:brightness(1.35) saturate(1.3); }
+  }
+  .onboard-pulse{ animation:onboardPulse .9s ease-in-out 2; transform-origin:center; }
+  @keyframes onboardPulseCard{
+    0%,100%{ box-shadow:inset 0 0 0 0 rgba(var(--accent-rgb),0); filter:brightness(1); }
+    35%{ box-shadow:inset 0 0 0 3px rgba(var(--accent-rgb),.85), inset 0 0 22px 2px rgba(var(--accent-rgb),.3); filter:brightness(1.15); }
+  }
+  .onboard-pulse-card{ animation:onboardPulseCard 1s ease-in-out 2; }
 
   /* Екран за вход — покрива цялото приложение (position:fixed inset:0, най-
      високият z-index в страницата), докато Firebase Auth не потвърди активна
@@ -1897,13 +1921,28 @@ function hideOnboardArrow(){
   document.getElementById('onboardArrowSvg').style.display = 'none';
 }
 
+// Кратко "проблясване" на targetEl (виж .onboard-pulse/.onboard-pulse-card
+// в CSS) — помага окото да намери елемента веднага, вместо да разчита само
+// на стрелката (която понякога е доста дълга, защото main е с
+// justify-content:flex-end и демо бележката излиза близо до долната лента).
+// big=true за цели карти/полета (без уголемяване, само сянка — виж CSS
+// коментара защо). Маха/добавя класа, за да може анимацията да се
+// "рестартира" дори върху същия елемент между стъпки.
+function pulseHighlight(el, big){
+  if(!el) return;
+  const cls = big ? 'onboard-pulse-card' : 'onboard-pulse';
+  el.classList.remove('onboard-pulse', 'onboard-pulse-card');
+  void el.offsetWidth; // force reflow, иначе браузърът не рестартира @keyframes
+  el.classList.add(cls);
+}
+
 // Показва текст + стрелка, сочещи targetEl (или центрирано, ако няма) —
 // resolve-ва с 'next' / 'back' / 'skip' щом потребителят тапне съответния
 // бутон ИЛИ съответната половина на екрана (виж screenTapAdvance по-долу).
 // Бутоните са ВИНАГИ в стандартна дясна подредба (Назад ляво / Напред
 // дясно), независимо от режима за лявата ръка — обучението е еднократно, на
 // съвсем прясна сметка, преди потребителят изобщо да е пипал настройки.
-function showOnboardTip(targetEl, textKey, stepIndex, totalSteps){
+function showOnboardTip(targetEl, textKey, stepIndex, totalSteps, bigTarget){
   return new Promise(resolve=>{
     const s = t();
     const tip = document.getElementById('onboardTip');
@@ -1920,7 +1959,7 @@ function showOnboardTip(targetEl, textKey, stepIndex, totalSteps){
       </div>
       <button type="button" class="onboard-tip-skip" id="onboardSkipBtn">${s.onboardSkip}</button>`;
     tip.classList.add('show');
-    if(targetEl) drawOnboardArrow(targetEl);
+    if(targetEl){ drawOnboardArrow(targetEl); pulseHighlight(targetEl, bigTarget); }
     else hideOnboardArrow();
     let done = false;
     function finish(outcome){
@@ -1928,6 +1967,7 @@ function showOnboardTip(targetEl, textKey, stepIndex, totalSteps){
       done = true;
       tip.classList.remove('show');
       hideOnboardArrow();
+      if(targetEl) targetEl.classList.remove('onboard-pulse', 'onboard-pulse-card');
       // capture:true на document.addEventListener по-долу — трябва да махнем
       // със СЪЩИЯ трети аргумент, иначе removeEventListener тихо не хваща нищо.
       document.removeEventListener('click', screenTapAdvance, true);
@@ -2065,7 +2105,11 @@ async function runOnboardingTour(docRef){
       targetEl = document.getElementById('noteInput');
     }
 
-    const result = await showOnboardTip(targetEl, textKey, stepIndex, ONBOARD_TOTAL_STEPS);
+    // "Голяма" цел (без уголемяване при проблясване, само сянка) за стъпките,
+    // където targetEl е цяла карта/поле, а не малък детайл (дот/таг/текст) —
+    // виж коментара над pulseHighlight() защо уголемяването е рисковано там.
+    const bigTarget = stepIndex >= 3;
+    const result = await showOnboardTip(targetEl, textKey, stepIndex, ONBOARD_TOTAL_STEPS, bigTarget);
     if(stepIndex === 4) hideOnboardCtxDemo();
     if(result === 'skip') return finishOnboarding(docRef, demoId);
     if(result === 'back'){ stepIndex = Math.max(0, stepIndex - 1); continue; }
