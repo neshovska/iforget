@@ -579,10 +579,6 @@
     padding:4px 0;
     display:flex;align-items:center;gap:8px;
   }
-  .day-label .count{
-    background:var(--card-2);color:var(--accent);border-radius:8px;
-    padding:1px 7px;font-size:11px;font-weight:600;
-  }
 
   .note-wrap{margin-bottom:6px;}
   /* Когато бележката има подбележки, разстоянието след цялото "гнездо"
@@ -1540,7 +1536,9 @@ function dayLabel(ts){
   const dd = new Date(d); dd.setHours(0,0,0,0);
   if(dd.getTime() === now.getTime()) return t().today;
   if(dd.getTime() === y.getTime()) return t().yesterday;
-  return t().dayNames[d.getDay()] + ', ' + d.getDate() + ' ' + t().monthNames[d.getMonth()];
+  // За по-старите дни — само датата (ден + месец), без името на деня от
+  // седмицата — по-кратко и чисто заглавие на групата.
+  return d.getDate() + ' ' + t().monthNames[d.getMonth()];
 }
 
 function timeLabel(ts){
@@ -3069,7 +3067,7 @@ function statusGroupHtml(items, forceTodayIfEmpty){
   dayKeys.forEach(k=>{
     const dayItems = byDay[k] || [];
     html += `<div class="day-block">
-      <div class="day-label">${dayLabel(k+'T00:00:00')}${dayItems.length?`<span class="count">${dayItems.length}</span>`:''}</div>
+      <div class="day-label">${dayLabel(k+'T00:00:00')}</div>
       ${dayItems.length ? dayItems.map(n=>itemRow(n, n.id, false)).join('') : `<div class="empty">${t().noNotes}</div>`}
     </div>`;
   });
