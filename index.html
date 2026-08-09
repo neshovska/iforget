@@ -89,24 +89,33 @@
     --tag-deleted-bg:rgba(117,105,90,.15);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+  /* background:var(--bg) е само на html (не и на body) — виж коментара при
+     html{background-image:...} по-долу защо: body с плътен цвят би скрил
+     образа на html точно в първия екран. */
+  html,body{margin:0;padding:0;color:var(--text);
     font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
     -webkit-font-smoothing:antialiased;height:100%;}
+  html{background:var(--bg);transition:background-color .15s ease;}
   body{display:flex;flex-direction:column;min-height:100vh;transition:background-color .15s ease,color .15s ease;}
 
   /* Фонов десен от гинко листенца — реални изображения (доставени от
      потребителя), едно на цвят/тема: bg-dark-v3.jpg (синьо-навигационно+
      златни контури) за тъмната тема, bg-light.jpg (кремаво+
-     бежови контури) за светлата. Сложени директно като background-image на
-     body — гарантирано най-долният слой, скролва с цялото съдържание,
-     тайлва се безшевно и хоризонтално, и вертикално за произволно дълъг
-     списък с бележки. */
-  body{
+     бежови контури) за светлата. Тайлва се безшевно и хоризонтално, и
+     вертикално за произволно дълъг списък с бележки.
+     ВАЖНО: тук е на html, НЕ на body. html/body по-горе имат height:100%
+     (фиксирана, не auto стойност) — при по-дълъг списък бележки съдържанието
+     прелива извън собствената кутия на body (нормално преливане, видимо е),
+     но собственият ѝ background спира точно на 100vh, защото html вече има
+     плътен (непрозрачен) background-color и не "предава" фона на body към
+     цялото платно. html като корен елемент винаги покрива цялото платно на
+     страницата, без значение колко е дълго съдържанието — затова е тук. */
+  html{
     background-image:url("bg-dark-v3.jpg");
     background-repeat:repeat;
     background-size:380px 821px;
   }
-  :root[data-theme="light"] body{
+  html[data-theme="light"]{
     background-image:url("bg-light.jpg");
   }
 
