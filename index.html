@@ -2004,6 +2004,13 @@ function handleEmailAuthSubmit(e){
 // "изпратихме" съобщението при успешен HTTPS повикването, без разлика
 // за несъществуващ имейл (по-добра поверителност от старото поведение,
 // което разкриваше auth/user-not-found грешка).
+// FALLBACK: докато функцията не е деплойната (firebase deploy --only
+// functions), httpsCallable хвърля 'functions/not-found' — вместо да
+// оставим потребителя блокиран, при точно тая грешка се връщаме към
+// стария auth.sendPasswordResetEmail() (Firebase-овия НЕ-брандиран
+// линк, но поне работещ). Премахни fallback-а спокойно след деплой,
+// ако искаш по-чист код — не е задължително, безобиден е и след това
+// (просто никога няма да се задейства).
 function handleForgotPassword(){
   const email = document.getElementById('authEmail').value.trim();
   if(!email){ window.alert(t().enterEmailFirst); return; }
@@ -2012,6 +2019,12 @@ function handleForgotPassword(){
     .then(()=> window.alert(t().resetEmailSent))
     .catch(err=>{
       console.error('sendBrandedPasswordReset failed', err);
+      if(err.code === 'functions/not-found'){
+        auth.sendPasswordResetEmail(email)
+          .then(()=> window.alert(t().resetEmailSent))
+          .catch(err2=> window.alert(translateAuthError(err2.code)));
+        return;
+      }
       window.alert(translateAuthError(err.code));
     });
 }
