@@ -543,16 +543,20 @@
   }
   .swipe-bg.complete{background:var(--green);justify-content:flex-start;}
   .swipe-bg.delete{background:var(--danger);justify-content:flex-end;}
-  /* "Стъклени" бележки — полупрозрачен фон (rgba на --card), БЕЗ
-     backdrop-filter blur (умишлено "мини вариант" — по-леко за
+  .note{
+    background:var(--card);border:1px solid var(--border);border-radius:11px;
+    padding:8px 10px;display:flex;flex-direction:column;gap:2px;position:relative;
+    touch-action:pan-y;transition:transform .22s ease,background-color .15s ease,box-shadow .15s ease;
+  }
+  /* "Прозрачни бележки" — ЕКСТРА опция (изключена по подразбиране, виж
+     GLASS_NOTES_KEY/applyGlassNotes() в скрипта и бутона в профила),
+     НЕ подменя плътните карти по подразбиране. Полупрозрачен фон (rgba на
+     --card) БЕЗ backdrop-filter blur (умишлено "мини вариант" — по-леко за
      рендиране/батерия, фоновата ginkgo снимка се вижда рязко, не размазано).
      Тънка светла вътрешна граница отгоре продава усещане за стъклена
-     повърхност. Ако потребителят реши да върне плътните карти, старата
-     стойност беше просто background:var(--card). */
-  .note{
-    background:rgba(var(--card-rgb),.4);border:1px solid var(--border);border-radius:11px;
-    padding:8px 10px;display:flex;flex-direction:column;gap:2px;position:relative;
-    touch-action:pan-y;transition:transform .22s ease;
+     повърхност. */
+  html.glass-notes .note{
+    background:rgba(var(--card-rgb),.4);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 6px 18px rgba(0,0,0,.16);
   }
   .note.swiping{transition:none;}
@@ -608,16 +612,19 @@
      бележки (без десен margin тук) — тесният им вид идва само от ляв отстъп
      (margin+padding+border), не от асиметрично стесняване от двете страни. */
   .subs{margin:6px 0 0 15px;padding-left:9px;border-left:2px solid var(--border);}
-  .subs .note{padding:6px 8px;background:rgba(var(--card2-rgb),.4);}
+  .subs .note{padding:6px 8px;background:var(--card-2);}
+  html.glass-notes .subs .note{background:rgba(var(--card2-rgb),.4);}
   .subs .note-wrap{margin-bottom:4px;}
   /* В светлата тема разменяме местата — основните бележки по-тъмни
      (--card-2), подбележките по-светли (--card), обратно на тъмната тема.
      Пипаме само тук, не самите --card/--card-2 стойности (те се ползват и
      другаде — бутони, полета и т.н. — и не бива да се променят). */
-  :root[data-theme="light"] .note{background:rgba(var(--card2-rgb),.4);}
+  :root[data-theme="light"] .note{background:var(--card-2);}
+  html.glass-notes[data-theme="light"] .note{background:rgba(var(--card2-rgb),.4);}
   /* Малко по-тъмни от чисто --card (не колкото основните бележки, за да си
      личи разликата), между двата тона. */
-  :root[data-theme="light"] .subs .note{background:rgba(247,238,220,.4);}
+  :root[data-theme="light"] .subs .note{background:#F7EEDC;}
+  html.glass-notes[data-theme="light"] .subs .note{background:rgba(247,238,220,.4);}
   .add-sub-row{margin-top:6px;}
   .add-sub-link{
     background:none;border:none;color:var(--accent-dim);font-size:12.5px;
@@ -829,6 +836,14 @@ let leftHanded = localStorage.getItem(LEFT_HANDED_KEY) === '1';
 function applyLeftHanded(){
   document.documentElement.classList.toggle('left-handed', leftHanded);
 }
+// "Прозрачни бележки" — ЕКСТРА опция, изключена по подразбиране (плътните
+// карти си остават основни/дефолт). Виж html.glass-notes CSS правилата
+// до .note по-горе. Чисто локална настройка (не се синхронизира).
+const GLASS_NOTES_KEY = 'glassNotes';
+let glassNotes = localStorage.getItem(GLASS_NOTES_KEY) === '1';
+function applyGlassNotes(){
+  document.documentElement.classList.toggle('glass-notes', glassNotes);
+}
 let notes = [];
 let editingKey = null;
 let addingSubFor = null;
@@ -930,7 +945,8 @@ const ICONS = {
   flip: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 8 3 12 7 16"></polyline><polyline points="17 8 21 12 17 16"></polyline><line x1="3" y1="12" x2="21" y2="12"></line></svg>',
   mail: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z" stroke="none" fill="none"></path><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M2 7l10 6 10-6"></path></svg>',
   shield: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6l-8-4z"></path></svg>',
-  doc: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>'
+  doc: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>',
+  droplet: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5s7 7.6 7 12.5a7 7 0 0 1-14 0c0-4.9 7-12.5 7-12.5z"></path></svg>'
 };
 
 // Текстове за двата езика — БГ (по подразбиране) и EN. t() връща обекта за
@@ -966,6 +982,7 @@ const STRINGS = {
     authLoadingText: 'Зареждане...', authError: 'Неуспешен вход. Опитай отново.',
     confirmLogout: 'Да излезеш ли от акаунта?', profileAria: 'Профил',
     profileColorDefault: 'По подразбиране', leftHandedMode: 'Режим за лявата ръка',
+    glassNotesToggle: 'Прозрачни бележки',
     emailPlaceholder: 'Имейл', passwordPlaceholder: 'Парола', confirmPasswordPlaceholder: 'Потвърди парола',
     signInBtn: 'Вход', signUpBtn: 'Регистрация',
     noAccountYet: 'Нямаш акаунт?', haveAccountAlready: 'Вече имаш акаунт?',
@@ -1040,6 +1057,7 @@ const STRINGS = {
     authLoadingText: 'Loading...', authError: 'Sign-in failed. Please try again.',
     confirmLogout: 'Sign out of your account?', profileAria: 'Profile',
     profileColorDefault: 'Default', leftHandedMode: 'Left-handed mode',
+    glassNotesToggle: 'Transparent notes',
     emailPlaceholder: 'Email', passwordPlaceholder: 'Password', confirmPasswordPlaceholder: 'Confirm password',
     signInBtn: 'Sign in', signUpBtn: 'Sign up',
     noAccountYet: "Don't have an account?", haveAccountAlready: 'Already have an account?',
@@ -1114,6 +1132,7 @@ const STRINGS = {
     authLoadingText: 'Загрузка...', authError: 'Не удалось войти. Попробуй снова.',
     confirmLogout: 'Выйти из аккаунта?', profileAria: 'Профиль',
     profileColorDefault: 'По умолчанию', leftHandedMode: 'Режим для левшей',
+    glassNotesToggle: 'Прозрачные заметки',
     emailPlaceholder: 'Email', passwordPlaceholder: 'Пароль', confirmPasswordPlaceholder: 'Подтверди пароль',
     signInBtn: 'Войти', signUpBtn: 'Регистрация',
     noAccountYet: 'Нет аккаунта?', haveAccountAlready: 'Уже есть аккаунт?',
@@ -1188,6 +1207,7 @@ const STRINGS = {
     authLoadingText: 'Wird geladen...', authError: 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
     confirmLogout: 'Vom Konto abmelden?', profileAria: 'Profil',
     profileColorDefault: 'Standard', leftHandedMode: 'Linkshänder-Modus',
+    glassNotesToggle: 'Transparente Notizen',
     emailPlaceholder: 'E-Mail', passwordPlaceholder: 'Passwort', confirmPasswordPlaceholder: 'Passwort bestätigen',
     signInBtn: 'Anmelden', signUpBtn: 'Registrieren',
     noAccountYet: 'Noch kein Konto?', haveAccountAlready: 'Schon ein Konto?',
@@ -1262,6 +1282,7 @@ const STRINGS = {
     authLoadingText: 'Cargando...', authError: 'No se pudo iniciar sesión. Inténtalo de nuevo.',
     confirmLogout: '¿Cerrar sesión de la cuenta?', profileAria: 'Perfil',
     profileColorDefault: 'Predeterminado', leftHandedMode: 'Modo para zurdos',
+    glassNotesToggle: 'Notas transparentes',
     emailPlaceholder: 'Correo electrónico', passwordPlaceholder: 'Contraseña', confirmPasswordPlaceholder: 'Confirma la contraseña',
     signInBtn: 'Iniciar sesión', signUpBtn: 'Registrarse',
     noAccountYet: '¿No tienes cuenta?', haveAccountAlready: '¿Ya tienes cuenta?',
@@ -1623,6 +1644,7 @@ function renderProfileMenu(){
     `<button type="button" class="color-sw${c===profileColor?' active':''}${c===''?' default-sw':''}" data-color="${c}" style="${c?`background:${c}`:''}" aria-label="${c || s.profileColorDefault}"></button>`
   ).join('') + `</div>`;
   html += `<hr>`;
+  html += `<button type="button" class="action" data-action="toggle-glass-notes">${ICONS.droplet}${s.glassNotesToggle}${glassNotes ? ICONS.check : ''}</button>`;
   html += `<button type="button" class="action" data-action="toggle-left-handed">${ICONS.flip}${s.leftHandedMode}${leftHanded ? ICONS.check : ''}</button>`;
   html += `<hr>`;
   html += `<button type="button" class="action" data-action="change-password">${ICONS.pencil}${s.changePassword}</button>`;
@@ -1654,6 +1676,13 @@ function renderProfileMenu(){
       applyAccentColor();
       renderProfileMenu();
     });
+  });
+  panel.querySelector('[data-action="toggle-glass-notes"]').addEventListener('mousedown', e=>{
+    e.preventDefault(); e.stopPropagation();
+    glassNotes = !glassNotes;
+    localStorage.setItem(GLASS_NOTES_KEY, glassNotes ? '1' : '0');
+    applyGlassNotes();
+    renderProfileMenu();
   });
   panel.querySelector('[data-action="toggle-left-handed"]').addEventListener('mousedown', e=>{
     e.preventDefault(); e.stopPropagation();
@@ -3209,6 +3238,7 @@ document.getElementById('verifyResendBtn').addEventListener('mousedown', e=>{ e.
 applyTheme();
 applyAccentColor();
 applyLeftHanded();
+applyGlassNotes();
 applyStaticText();
 requestPersistentStorage();
 // Показваме екрана за вход веднага в "зареждане" вид, докато Firebase
