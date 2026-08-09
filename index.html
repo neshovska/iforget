@@ -535,11 +535,14 @@
   .profile-panel .week-strip{display:flex;gap:5px;}
   .profile-panel .week-day{
     flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;
-    padding:8px 1px;border-radius:10px;background:var(--card-2);border:1px solid transparent;
+    padding:8px 1px;border-radius:10px;background:var(--card);border:2px solid transparent;
   }
-  /* Уикенд (събота/неделя) — лек нюанс разлика от делничните дни, за да се
-     отличават на пръв поглед в лентата/решетката. */
-  .profile-panel .week-day.weekend{background:var(--card);}
+  /* Уикенд (събота/неделя) — вместо различен фон, само по-удебелени
+     текст/рамка, за да се отличава на пръв поглед без да сменя нюанса. */
+  .profile-panel .week-day.weekend{border-color:var(--border);}
+  .profile-panel .week-day.weekend .dow, .profile-panel .week-day.weekend .dnum{font-weight:800;}
+  /* border-width е 2px и по подразбиране (прозрачна), за да няма скок в
+     размера на клетката, когато днешният ден се очертае с по-плътна рамка. */
   .profile-panel .week-day.today{border-color:var(--accent);background:rgba(var(--accent-rgb),.12);}
   .profile-panel .week-day .dow{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--text-dim);}
   .profile-panel .week-day.today .dow{color:var(--accent);}
@@ -548,7 +551,7 @@
     width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;
     font-size:9.5px;font-weight:700;
   }
-  .profile-panel .week-day .marker.past{background:var(--card);color:var(--text-dim);}
+  .profile-panel .week-day .marker.past{background:var(--card-2);color:var(--text-dim);}
   .profile-panel .week-day .marker.future{background:rgba(var(--gold-rgb),.18);color:var(--gold);}
   .profile-panel .week-day .marker.empty{background:none;color:var(--border);}
   .profile-panel .month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
@@ -558,11 +561,14 @@
   }
   .profile-panel .month-cell{
     aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-    border-radius:8px;background:var(--card-2);
+    border-radius:8px;background:var(--card);border:2px solid transparent;
   }
-  .profile-panel .month-cell.weekend{background:var(--card);}
-  .profile-panel .month-cell.empty-cell{background:none;}
-  .profile-panel .month-cell.today{border:1px solid var(--accent);background:rgba(var(--accent-rgb),.12);}
+  /* Уикенд — само по-удебелено число/рамка, без различен фон (виж
+     .week-day.weekend по-горе за същия принцип). */
+  .profile-panel .month-cell.weekend{border-color:var(--border);}
+  .profile-panel .month-cell.weekend .month-daynum{font-weight:800;}
+  .profile-panel .month-cell.empty-cell{background:none;border-color:transparent;}
+  .profile-panel .month-cell.today{border-color:var(--accent);background:rgba(var(--accent-rgb),.12);}
   .profile-panel .month-daynum{font-size:11px;font-weight:600;color:var(--text);}
   .profile-panel .month-cell.today .month-daynum{color:var(--accent);}
   .profile-panel .month-dot{width:5px;height:5px;border-radius:50%;}
@@ -582,10 +588,12 @@
   }
   .profile-panel .year-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
   .profile-panel .year-cell{
-    position:relative;aspect-ratio:1;border-radius:3px;background:var(--card-2);
+    position:relative;aspect-ratio:1;border-radius:3px;background:var(--card);
     display:flex;align-items:center;justify-content:center;
   }
-  .profile-panel .year-cell.weekend{background:var(--card);}
+  /* Уикенд — само по-удебелено число, без различен фон (виж .week-day.weekend
+     по-горе за същия принцип). */
+  .profile-panel .year-cell.weekend .year-daynum{font-weight:800;}
   .profile-panel .year-cell.empty-cell{background:none;}
   .profile-panel .year-daynum{font-size:8px;font-weight:600;color:var(--text-dim);opacity:.8;line-height:1;}
   /* rgba() вместо opacity на цялата клетка — иначе числото (.year-daynum)
@@ -599,7 +607,7 @@
   .profile-panel .year-cell.b1 .year-daynum,
   .profile-panel .year-cell.b2 .year-daynum,
   .profile-panel .year-cell.b3 .year-daynum{color:var(--bg);opacity:.9;}
-  .profile-panel .year-cell.today{outline:1.5px solid var(--accent);outline-offset:-1.5px;}
+  .profile-panel .year-cell.today{outline:2.5px solid var(--accent);outline-offset:-2.5px;}
   .profile-panel .calendar-legend{
     display:flex;gap:14px;margin-top:12px;padding-top:12px;
     border-top:1px solid var(--border);font-size:11px;color:var(--text-dim);
