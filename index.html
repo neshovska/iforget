@@ -523,16 +523,24 @@
   }
   .profile-panel button.action:active, .profile-panel a.action:active{background:var(--card-2);}
   .profile-panel button.action.danger{color:var(--danger);}
-  /* Стрелка вдясно на груповите бутони в горното меню (renderProfileMenu()) —
-     показва, че бутонът "разгъва" подменю на място, не изпълнява действие. */
-  .profile-panel .action-chev{margin-left:auto;display:flex;color:var(--text-dim);}
-  /* "Назад" в горната част на всяка група (renderProfileGroup*()) — същият
-     принцип като .ctx-menu .reminder-back, но скопиран за .profile-panel. */
-  .profile-panel .group-back{
-    -webkit-appearance:none;appearance:none;width:100%;text-align:left;background:none;border:none;
-    color:var(--text-dim);font-size:12px;font-weight:600;font-family:inherit;
-    display:flex;align-items:center;gap:5px;padding:6px;margin-bottom:4px;cursor:pointer;
-  }
+  /* Разгъващи се групи (акордеон) в горното меню на профила —
+     renderProfileMenu(). Стрелката сочи надолу по подразбиране, завърта се
+     на 180° при отворена група (.action-chev.open). Съдържанието
+     (.group-content) е max-height:0/overflow:hidden при затворено, JS-ът
+     задава конкретен px за max-height при отваряне (за да работи CSS
+     transition — не може да се анимира към "auto"), нулира го обратно на
+     null при затваряне. Само ЕДНА група е отворена наведнъж (виж
+     renderProfileMenu()) — затварянето на текущо отворената и отварянето
+     на новата стават БЕЗ пълен re-render (директна DOM манипулация), за да
+     остане плавната анимация; renderProfileMenu() re-render-ва отново
+     всичко само при смяна на данни (цвят/тема/връщане от под-форма) и в
+     тоя случай моментално (без анимация) разгъва profileOpenGroup обратно. */
+  .profile-panel .action-chev{margin-left:auto;display:flex;color:var(--text-dim);transition:transform .2s ease;}
+  .profile-panel .action-chev.open{transform:rotate(180deg);}
+  .profile-panel .group-content{max-height:0;overflow:hidden;transition:max-height .25s ease, opacity .2s ease;opacity:0;}
+  .profile-panel .group-content.open{opacity:1;}
+  .profile-panel .group-content .action{padding-left:30px;font-size:12.5px;}
+  .profile-panel .group-content hr{margin:4px 0 4px 30px;width:calc(100% - 30px);}
   /* По ситен шрифт за "Поверителност"/"Общи условия" в групата Помощ —
      по-малко визуално тегло от истинските действия (обратна връзка и т.н.). */
   .profile-panel a.action.small-link{font-size:11px;color:var(--text-dim);}
@@ -1178,6 +1186,12 @@ const ACCENT_DIM_MAP = {
 };
 const PROFILE_COLOR_KEY = 'profileColor';
 let profileColor = localStorage.getItem(PROFILE_COLOR_KEY) || '';
+// Коя група от акордеона в менюто на профила е в момента отворена ('view'/
+// 'data'/'account'/'help'/null) — виж renderProfileMenu(). Пази се между
+// re-render-ите (напр. смяна на цвят, връщане от под-форма като смяна на
+// парола), за да си остане отворена СЪЩАТА група, вместо да се затваря.
+// Нулира се на null само при затваряне на целия панел (closeProfilePanel()).
+let profileOpenGroup = null;
 
 // Прилага избрания акцентен цвят върху цялото приложение (--accent/
 // --accent-dim), еднакво и в двете теми. При '' (По подразбиране) просто
@@ -2009,16 +2023,20 @@ function openProfilePanel(anchorEl){
 }
 function closeProfilePanel(){
   document.getElementById('profilePanel').classList.remove('show');
+  profileOpenGroup = null;
 }
 
-// Основно меню на профила — само 4 групови бутона (+ имейл, цветове),
-// вместо ~13 отделни реда. Всяка група (renderProfileGroup*() по-долу)
-// замества съдържанието НА МЯСТОТО (същия #profilePanel), със "Назад"
-// бутон отгоре, връщащ се тук — същият установен принцип като
-// renderCtxMenuReminder()/renderCtxMenuColor(). Разпределение:
+// Основно меню на профила — акордеон с 4 групи (+ имейл, цветове), вместо
+// плосък списък от ~13 реда. Всяка група е бутон-заглавие (стрелка надолу,
+// ICONS.chevronDown) + скрито съдържание (.group-content), което се
+// разгъва НА МЯСТОТО под заглавието — останалите групи се избутват надолу
+// (виж CSS .group-content/.action-chev.open по-горе). Само ЕДНА група е
+// отворена наведнъж — клик на друга затваря текущо отворената. Разпределение:
 // Изглед = прозрачни бележки + лява ръка; Данни = преглед/календар/
 // експорт/импорт/статистика(админ); Акаунт = смяна на парола/имейл +
 // изход/изтриване; Помощ = обратна връзка + поверителност/условия.
+// profileOpenGroup пази коя група е отворена между re-render-и (напр. след
+// смяна на цвят или връщане от под-форма) — виж декларацията ѝ по-горе.
 function renderProfileMenu(){
   const s = t();
   const panel = document.getElementById('profilePanel');
@@ -2028,10 +2046,41 @@ function renderProfileMenu(){
     `<button type="button" class="color-sw${c===profileColor?' active':''}${c===''?' default-sw':''}" data-color="${c}" style="${c?`background:${c}`:''}" aria-label="${c || s.profileColorDefault}"></button>`
   ).join('') + `</div>`;
   html += `<hr>`;
-  html += `<button type="button" class="action" data-action="group-view">${ICONS.droplet}${s.profileGroupView}<span class="action-chev">${ICONS.chevronRight}</span></button>`;
-  html += `<button type="button" class="action" data-action="group-data">${ICONS.calendar}${s.profileGroupData}<span class="action-chev">${ICONS.chevronRight}</span></button>`;
-  html += `<button type="button" class="action" data-action="group-account">${ICONS.pencil}${s.profileGroupAccount}<span class="action-chev">${ICONS.chevronRight}</span></button>`;
-  html += `<button type="button" class="action" data-action="group-help">${ICONS.mail}${s.profileGroupHelp}<span class="action-chev">${ICONS.chevronRight}</span></button>`;
+
+  html += profileGroupBlock('view', ICONS.droplet, s.profileGroupView, `
+    <button type="button" class="action" data-action="toggle-glass-notes">${ICONS.droplet}${s.glassNotesToggle}${glassNotes ? ICONS.check : ''}</button>
+    <button type="button" class="action" data-action="toggle-left-handed">${ICONS.flip}${s.leftHandedMode}${leftHanded ? ICONS.check : ''}</button>
+  `);
+
+  let dataContent = `
+    <button type="button" class="action" data-action="my-review">${ICONS.trend}${s.reviewBtn}</button>
+    <button type="button" class="action" data-action="calendar">${ICONS.calendar}${s.calendarBtn}</button>
+    <button type="button" class="action" data-action="export">${ICONS.download}${s.exportBackup}</button>
+    <button type="button" class="action" data-action="import">${ICONS.upload}${s.importBackup}</button>
+  `;
+  // "Статистика" — само за административния акаунт (isSatoriUser(), виж по-горе),
+  // не се вижда от никой друг потребител на приложението.
+  if(isSatoriUser()){
+    dataContent += `<hr><button type="button" class="action" data-action="admin-stats">${ICONS.chart}${s.statsTitle}</button>`;
+  }
+  html += profileGroupBlock('data', ICONS.calendar, s.profileGroupData, dataContent);
+
+  html += profileGroupBlock('account', ICONS.pencil, s.profileGroupAccount, `
+    <button type="button" class="action" data-action="change-password">${ICONS.pencil}${s.changePassword}</button>
+    <button type="button" class="action" data-action="change-email">${ICONS.pencil}${s.changeEmail}</button>
+    <hr>
+    <button type="button" class="action danger" data-action="logout">${ICONS.close}${s.logoutBtn}</button>
+    <button type="button" class="action danger" data-action="delete-account">${ICONS.trash}${s.deleteAccount}</button>
+  `);
+
+  // Помощ — Поверителност/Общи условия по ситен шрифт (.small-link) по
+  // изрична молба — по-малко визуално тегло от истинските действия.
+  html += profileGroupBlock('help', ICONS.mail, s.profileGroupHelp, `
+    <a class="action" href="mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('IForget — обратна връзка')}">${ICONS.mail}${s.feedbackBtn}</a>
+    <a class="action small-link" href="privacy.html" target="_blank" rel="noopener">${ICONS.shield}${s.privacyLink}</a>
+    <a class="action small-link" href="terms.html" target="_blank" rel="noopener">${ICONS.doc}${s.termsLink}</a>
+  `);
+
   panel.innerHTML = html;
 
   panel.querySelectorAll('.color-sw').forEach(b=>{
@@ -2044,89 +2093,74 @@ function renderProfileMenu(){
       renderProfileMenu();
     });
   });
-  panel.querySelector('[data-action="group-view"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupView(); });
-  panel.querySelector('[data-action="group-data"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupData(); });
-  panel.querySelector('[data-action="group-account"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupAccount(); });
-  panel.querySelector('[data-action="group-help"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupHelp(); });
-}
 
-function renderProfileGroupView(){
-  const s = t();
-  const panel = document.getElementById('profilePanel');
-  panel.innerHTML = `
-    <button type="button" class="group-back" data-action="group-back">${ICONS.arrowLeft}${s.onboardBack}</button>
-    <button type="button" class="action" data-action="toggle-glass-notes">${ICONS.droplet}${s.glassNotesToggle}${glassNotes ? ICONS.check : ''}</button>
-    <button type="button" class="action" data-action="toggle-left-handed">${ICONS.flip}${s.leftHandedMode}${leftHanded ? ICONS.check : ''}</button>`;
-  panel.querySelector('[data-action="group-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
+  // Акордеон: клик на заглавие затваря текущо отворената група (ако има) и
+  // отваря новата (или просто затваря, ако е кликнато СЪЩОТО заглавие) —
+  // директна DOM манипулация (не re-render), за да остане плавната анимация.
+  panel.querySelectorAll('.group-toggle').forEach(toggle=>{
+    toggle.addEventListener('mousedown', e=>{
+      e.preventDefault(); e.stopPropagation();
+      const key = toggle.dataset.group;
+      const content = panel.querySelector(`[data-group-content="${key}"]`);
+      const wasOpen = content.classList.contains('open');
+      panel.querySelectorAll('.group-content.open').forEach(c=>{ c.classList.remove('open'); c.style.maxHeight = null; });
+      panel.querySelectorAll('.action-chev.open').forEach(c=>c.classList.remove('open'));
+      profileOpenGroup = null;
+      if(!wasOpen){
+        content.classList.add('open');
+        content.style.maxHeight = content.scrollHeight + 'px';
+        toggle.querySelector('.action-chev').classList.add('open');
+        profileOpenGroup = key;
+      }
+    });
+  });
+
   panel.querySelector('[data-action="toggle-glass-notes"]').addEventListener('mousedown', e=>{
     e.preventDefault(); e.stopPropagation();
     glassNotes = !glassNotes;
     localStorage.setItem(GLASS_NOTES_KEY, glassNotes ? '1' : '0');
     applyGlassNotes();
-    renderProfileGroupView();
+    renderProfileMenu();
   });
   panel.querySelector('[data-action="toggle-left-handed"]').addEventListener('mousedown', e=>{
     e.preventDefault(); e.stopPropagation();
     leftHanded = !leftHanded;
     localStorage.setItem(LEFT_HANDED_KEY, leftHanded ? '1' : '0');
     applyLeftHanded();
-    renderProfileGroupView();
+    renderProfileMenu();
   });
-}
-
-function renderProfileGroupData(){
-  const s = t();
-  const panel = document.getElementById('profilePanel');
-  let html = `<button type="button" class="group-back" data-action="group-back">${ICONS.arrowLeft}${s.onboardBack}</button>`;
-  html += `<button type="button" class="action" data-action="my-review">${ICONS.trend}${s.reviewBtn}</button>`;
-  html += `<button type="button" class="action" data-action="calendar">${ICONS.calendar}${s.calendarBtn}</button>`;
-  html += `<button type="button" class="action" data-action="export">${ICONS.download}${s.exportBackup}</button>`;
-  html += `<button type="button" class="action" data-action="import">${ICONS.upload}${s.importBackup}</button>`;
-  // "Статистика" — само за административния акаунт (isSatoriUser(), виж по-горе),
-  // не се вижда от никой друг потребител на приложението.
-  if(isSatoriUser()){
-    html += `<hr>`;
-    html += `<button type="button" class="action" data-action="admin-stats">${ICONS.chart}${s.statsTitle}</button>`;
-  }
-  panel.innerHTML = html;
-  panel.querySelector('[data-action="group-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
+  panel.querySelector('[data-action="change-password"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderPasswordForm(); });
+  panel.querySelector('[data-action="change-email"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderEmailForm(); });
   panel.querySelector('[data-action="my-review"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderMyReview(); });
   panel.querySelector('[data-action="calendar"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); calendarRefDate = new Date(); renderCalendarView(); });
   panel.querySelector('[data-action="export"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); exportNotes(); closeProfilePanel(); });
   panel.querySelector('[data-action="import"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); document.getElementById('importFileInput').click(); });
   const statsBtn = panel.querySelector('[data-action="admin-stats"]');
   if(statsBtn) statsBtn.addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderAdminStats(); });
-}
-
-function renderProfileGroupAccount(){
-  const s = t();
-  const panel = document.getElementById('profilePanel');
-  panel.innerHTML = `
-    <button type="button" class="group-back" data-action="group-back">${ICONS.arrowLeft}${s.onboardBack}</button>
-    <button type="button" class="action" data-action="change-password">${ICONS.pencil}${s.changePassword}</button>
-    <button type="button" class="action" data-action="change-email">${ICONS.pencil}${s.changeEmail}</button>
-    <hr>
-    <button type="button" class="action danger" data-action="logout">${ICONS.close}${s.logoutBtn}</button>
-    <button type="button" class="action danger" data-action="delete-account">${ICONS.trash}${s.deleteAccount}</button>`;
-  panel.querySelector('[data-action="group-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
-  panel.querySelector('[data-action="change-password"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderPasswordForm(); });
-  panel.querySelector('[data-action="change-email"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderEmailForm(); });
   panel.querySelector('[data-action="logout"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); closeProfilePanel(); signOutUser(); });
   panel.querySelector('[data-action="delete-account"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderDeleteAccountForm(); });
+
+  // Ако вече имаше отворена група (profileOpenGroup, пренесена от преди
+  // re-render-а — напр. връщане от "Смени парола" или смяна на цвят),
+  // разгъваме я обратно МОМЕНТАЛНО (без анимация — само user клик анимира).
+  if(profileOpenGroup){
+    const content = panel.querySelector(`[data-group-content="${profileOpenGroup}"]`);
+    const toggle = panel.querySelector(`.group-toggle[data-group="${profileOpenGroup}"]`);
+    if(content && toggle){
+      content.classList.add('open');
+      content.style.maxHeight = content.scrollHeight + 'px';
+      toggle.querySelector('.action-chev').classList.add('open');
+    }
+  }
 }
 
-// Помощ — обратна връзка + поверителност/условия. Имената на последните две
-// (privacyLink/termsLink) са по ситен шрифт (.small-link) по изрична молба —
-// по-малко визуално тегло от истинските действия в менюто.
-function renderProfileGroupHelp(){
-  const s = t();
-  const panel = document.getElementById('profilePanel');
-  panel.innerHTML = `
-    <button type="button" class="group-back" data-action="group-back">${ICONS.arrowLeft}${s.onboardBack}</button>
-    <a class="action" href="mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('IForget — обратна връзка')}">${ICONS.mail}${s.feedbackBtn}</a>
-    <a class="action small-link" href="privacy.html" target="_blank" rel="noopener">${ICONS.shield}${s.privacyLink}</a>
-    <a class="action small-link" href="terms.html" target="_blank" rel="noopener">${ICONS.doc}${s.termsLink}</a>`;
-  panel.querySelector('[data-action="group-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
+// Помощна функция за една група в акордеона на профила — виж
+// renderProfileMenu(). innerHtml е готовият markup на бутоните вътре.
+function profileGroupBlock(key, icon, label, innerHtml){
+  return `<div class="group-block">
+    <button type="button" class="action group-toggle" data-group="${key}">${icon}${label}<span class="action-chev">${ICONS.chevronDown}</span></button>
+    <div class="group-content" data-group-content="${key}">${innerHtml}</div>
+  </div>`;
 }
 
 function renderDeleteAccountForm(){
@@ -2142,7 +2176,7 @@ function renderDeleteAccountForm(){
         <button type="button" class="primary danger" id="deleteAccountConfirmBtn">${s.deleteAccountConfirmBtn}</button>
       </div>
     </div>`;
-  document.getElementById('deleteAccountCancelBtn').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupAccount(); });
+  document.getElementById('deleteAccountCancelBtn').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
   document.getElementById('deleteAccountConfirmBtn').addEventListener('mousedown', e=>{
     e.preventDefault(); e.stopPropagation();
     const pw = document.getElementById('deleteAccountPw').value;
@@ -2221,7 +2255,7 @@ function renderMyReview(){
     </div>
     <hr>
     <button type="button" class="action" data-action="review-back">${ICONS.close}${s.cancelAria}</button>`;
-  panel.querySelector('[data-action="review-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupData(); });
+  panel.querySelector('[data-action="review-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
 }
 
 // Календарен изглед — седмица (седем дни, понеделник-неделя) или цял месец,
@@ -2408,7 +2442,7 @@ function renderCalendarView(mode){
       renderCalendarView();
     });
   });
-  panel.querySelector('[data-action="calendar-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupData(); });
+  panel.querySelector('[data-action="calendar-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
 }
 
 // Статистика за админ акаунта — общ брой регистрирани (документи в users/,
@@ -2444,14 +2478,14 @@ function renderAdminStats(){
       </div>
       <hr>
       <button type="button" class="action" data-action="stats-back">${ICONS.close}${s.cancelAria}</button>`;
-    panel.querySelector('[data-action="stats-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupData(); });
+    panel.querySelector('[data-action="stats-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
   }).catch(err=>{
     console.error('admin stats failed', err);
     panel.innerHTML = `
       <div class="form-msg error" style="display:block;">${s.statsError}</div>
       <hr>
       <button type="button" class="action" data-action="stats-back">${ICONS.close}${s.cancelAria}</button>`;
-    panel.querySelector('[data-action="stats-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupData(); });
+    panel.querySelector('[data-action="stats-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
   });
 }
 
@@ -2468,7 +2502,7 @@ function renderPasswordForm(){
         <button type="button" class="primary" id="pwSaveBtn">${s.saveAria}</button>
       </div>
     </div>`;
-  document.getElementById('pwCancelBtn').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupAccount(); });
+  document.getElementById('pwCancelBtn').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
   document.getElementById('pwSaveBtn').addEventListener('mousedown', e=>{
     e.preventDefault(); e.stopPropagation();
     const pw1 = document.getElementById('newPw1').value;
@@ -2501,7 +2535,7 @@ function renderEmailForm(){
         <button type="button" class="primary" id="emailSaveBtn">${s.saveAria}</button>
       </div>
     </div>`;
-  document.getElementById('emailCancelBtn').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupAccount(); });
+  document.getElementById('emailCancelBtn').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
   document.getElementById('emailSaveBtn').addEventListener('mousedown', e=>{
     e.preventDefault(); e.stopPropagation();
     const newEmail = document.getElementById('newEmailInput').value.trim();
