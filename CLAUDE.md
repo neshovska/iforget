@@ -480,6 +480,78 @@ write: if false` — САМО `stripeWebhook` през Admin SDK пише тук
 7. Firestore Console → създай `config/premium` документ, `enabled: true` —
    това е реалното "активиране", без нищо друго.
 
+## Capacitor обвивка (App Store/Google Play) — СКЕЛЕТЪТ Е ГОТОВ
+
+Избран **Вариант А** (вградено съдържание, не WebView към живия сайт —
+виж дискусията в чата) — по-прост, по-безопасен спрямо Apple ревю риска
+"просто уебсайт в рамка", но означава промени в кода изискват нов build +
+ново App Store/Play качване, за разлика от сайта/PWA (виж съответния
+раздел по-долу за пълния rationale).
+
+**Структура** (ново в repo root-а, ОТДЕЛНО npm проектче от `functions/`):
+- `package.json`/`package-lock.json` — Capacitor CLI + platform пакети
+  (`@capacitor/core`/`android`/`ios`/`cli`, всички `^8.0.0`, последна
+  major версия към момента на setup-а).
+- `capacitor.config.json` — `appId: "eu.iforget.app"` (reverse-domain на
+  iforget.eu — bundle ID, **трудно сменяем след първо публикуване в
+  магазините**, тъй като слага акцент), `appName: "IForget"`,
+  `webDir: "www"`, `backgroundColor` съвпада с `manifest.json`-а,
+  `server.androidScheme: "https"` (ВАЖНО — не default `file://`; Firebase
+  Auth и други web API-та се държат различно/понякога чупят под `file://`
+  origin, `https` scheme избягва това).
+- `scripts/sync-www.js` — копира runtime файловете (index.html,
+  manifest.json, privacy/terms.html, икони, фонови снимки — НЕ
+  reset-password.html, firebase.json, CLAUDE.md и т.н.) от repo root-а в
+  `www/` (git-игнориран, генериран, виж `.gitignore`). IForget няма build
+  стъпка (чист статичен сайт) — това е просто копиране, не транспилация.
+- `android/` и `ios/` — нативните проекти (Capacitor scaffold), **СЕ
+  комитват** (стандартна Capacitor практика — нативния код/конфигурация
+  живее тук, не се пресъздава от нулата всеки път). Build артефактите
+  (Gradle `build/`, iOS `Pods/`/`DerivedData/`) СА игнорирани.
+  - **iOS ползва Swift Package Manager** (Capacitor 8 default,
+    `ios/App/CapApp-SPM/`), НЕ CocoaPods — няма `Podfile`, значи няма
+    нужда от `pod install` стъпка преди Xcode (по-просто от по-стари
+    Capacitor туториали, които всички споменават CocoaPods).
+  - Изтрит нарочно: Android `androidTest`/`test` boilerplate папките
+    (Capacitor template default) — съдържаха счупен placeholder тест
+    (`assertEquals("com.getcapacitor.app", ...)`, грешен package name,
+    никога нямаше да мине) — безобиден (не участва в нормален build),
+    но подвеждащ, махнат за чистота.
+
+**Работен процес за бъдещи промени** (след като нещо се смени в
+`index.html` и трябва да стигне до нативния апп):
+```
+npm run sync          # копира www/ наново + npx cap sync (двете платформи)
+npm run open:android  # отваря Android Studio
+npm run open:ios      # отваря Xcode
+```
+После обичайният native build/archive/upload flow във всеки IDE.
+
+**Остава (изисква Mac/Android Studio, не мога аз да го направя тук —
+Linux sandbox, няма Xcode):**
+1. `git pull` на repo-то на компютъра ѝ, `npm install` в root-а (не в
+   `functions/` — различен проект).
+2. **Android**: отвори `android/` в Android Studio (`npm run open:android`
+   след `npm install`) — трябва да работи "as is" за debug build.
+   Истинска иконка/splash screen (сега е Capacitor default placeholder,
+   не IForget брандинг) — през Android Studio Asset Studio, или
+   `@capacitor/assets` CLI пакет (не инсталиран още, по избор).
+3. **iOS**: отвори `ios/App/App.xcodeproj` в Xcode (`npm run open:ios`)
+   — Swift Package Manager ще resolve-не автоматично при отваряне (не е
+   нужен ръчен `pod install` при тоя setup). Иконка/splash — аналогично,
+   през Xcode Asset Catalog.
+4. Developer акаунти (все още не са регистрирани, доколкото знам):
+   Apple Developer Program ($99/година), Google Play Console ($25
+   еднократно) — нужни за реално подписване/качване в магазините.
+5. Тъй като първото пускане е изцяло безплатно (виж Premium раздела
+   по-горе — Stripe инфраструктурата е готова, но невидима), **не е нужна
+   никаква IAP/StoreKit/Play Billing интеграция за това първо качване** —
+   значително по-малко работа за старт. IAP интеграция ще стане отделна,
+   по-късна задача САМО ако в бъдеще решиш да продаваш Premium И вътре в
+   нативния апп (алтернатива: продавай Premium само през сайта — виж
+   дискусията в чата за компромиса "IAP такса на Apple/Google" срещу
+   "по-малко seamless за app потребителите").
+
 ## Планирани задачи (за после, не сега)
 - **Споделени бележки/тагове между няколко акаунта** (напр. споделен
   списък за пазаруване или общи задачи, редактируем от повече от един

@@ -1,0 +1,34 @@
+# --- Capacitor / нативна обвивка (App Store/Google Play) ---
+node_modules/
+# www/ е ГЕНЕРИРАНО копие (виж scripts/sync-www.js) — не се комитва, за да
+# няма 2 източника на истина за index.html и т.н.; пресъздава се с `npm run sync`.
+www/
+
+# Android build артефакти (Gradle wrapper/проект СЕ комитва, само build
+# резултатите не — стандартна практика за Capacitor/Android проекти).
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/captures/
+android/*.iml
+android/.idea/
+
+# iOS build артефакти (Xcode проект/Podfile СЕ комитват, само генерираните
+# Pods/ и build резултати не — стандартна практика).
+ios/App/Pods/
+ios/App/build/
+ios/App/DerivedData/
+ios/.idea/
+ios/App/App.xcworkspace/xcuserdata/
+ios/App/App.xcodeproj/xcuserdata/
+ios/App/App.xcodeproj/project.xcworkspace/xcuserdata/
+
+# --- Firebase CLI локални файлове ---
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+*.local
+
+# --- macOS ---
+.DS_Store

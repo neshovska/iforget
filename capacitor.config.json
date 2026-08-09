@@ -1,0 +1,9 @@
+{
+  "appId": "eu.iforget.app",
+  "appName": "IForget",
+  "webDir": "www",
+  "backgroundColor": "#0A0A0C",
+  "server": {
+    "androidScheme": "https"
+  }
+}
