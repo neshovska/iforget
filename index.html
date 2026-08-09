@@ -512,6 +512,64 @@
     display:flex;align-items:center;gap:7px;margin-top:12px;padding-top:12px;
     border-top:1px solid var(--border);font-size:12px;color:var(--text-dim);
   }
+  /* Календарен изглед — седмица/месец (виж renderCalendarView()). Табовете
+     горе превключват режима, стрелките навигират напред/назад в текущия
+     режим. Сивите точки/маркери = добавени бележки (минали дни), златните =
+     зададени напомняния (днес и напред) — виж calendarLegendPast/Future. */
+  .profile-panel .calendar-panel{display:flex;flex-direction:column;gap:2px;padding:2px;}
+  .profile-panel .calendar-tabs{display:flex;gap:6px;margin-bottom:12px;}
+  .profile-panel .calendar-tab{
+    -webkit-appearance:none;appearance:none;flex:1;background:var(--card-2);border:1px solid var(--border);
+    color:var(--text-dim);border-radius:9px;padding:7px;font-size:12px;font-weight:700;font-family:inherit;
+  }
+  .profile-panel .calendar-tab.active{background:rgba(var(--accent-rgb),.14);border-color:var(--accent-dim);color:var(--accent);}
+  .profile-panel .calendar-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .profile-panel .calendar-nav button{
+    -webkit-appearance:none;appearance:none;background:var(--card-2);border:1px solid var(--border);
+    color:var(--text-dim);border-radius:8px;width:26px;height:26px;padding:0;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .profile-panel .calendar-range{font-size:12px;font-weight:600;color:var(--text);}
+  .profile-panel .week-strip{display:flex;gap:5px;}
+  .profile-panel .week-day{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;
+    padding:8px 1px;border-radius:10px;background:var(--card-2);border:1px solid transparent;
+  }
+  .profile-panel .week-day.today{border-color:var(--accent);background:rgba(var(--accent-rgb),.12);}
+  .profile-panel .week-day .dow{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--text-dim);}
+  .profile-panel .week-day.today .dow{color:var(--accent);}
+  .profile-panel .week-day .dnum{font-size:13px;font-weight:700;color:var(--text);}
+  .profile-panel .week-day .marker{
+    width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:9.5px;font-weight:700;
+  }
+  .profile-panel .week-day .marker.past{background:var(--card);color:var(--text-dim);}
+  .profile-panel .week-day .marker.future{background:rgba(var(--gold-rgb),.18);color:var(--gold);}
+  .profile-panel .week-day .marker.empty{background:none;color:var(--border);}
+  .profile-panel .month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+  .profile-panel .month-dow{
+    font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--text-dim);
+    text-align:center;padding-bottom:4px;
+  }
+  .profile-panel .month-cell{
+    aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    border-radius:8px;background:var(--card-2);
+  }
+  .profile-panel .month-cell.empty-cell{background:none;}
+  .profile-panel .month-cell.today{border:1px solid var(--accent);background:rgba(var(--accent-rgb),.12);}
+  .profile-panel .month-daynum{font-size:11px;font-weight:600;color:var(--text);}
+  .profile-panel .month-cell.today .month-daynum{color:var(--accent);}
+  .profile-panel .month-dot{width:5px;height:5px;border-radius:50%;}
+  .profile-panel .month-dot.past{background:var(--text-dim);}
+  .profile-panel .month-dot.future{background:var(--gold);}
+  .profile-panel .calendar-legend{
+    display:flex;gap:14px;margin-top:12px;padding-top:12px;
+    border-top:1px solid var(--border);font-size:11px;color:var(--text-dim);
+  }
+  .profile-panel .calendar-legend span{display:flex;align-items:center;gap:5px;}
+  .profile-panel .calendar-legend .dot{width:8px;height:8px;border-radius:50%;}
+  .profile-panel .calendar-legend .dot.past{background:var(--text-dim);}
+  .profile-panel .calendar-legend .dot.future{background:var(--gold);}
   .profile-panel .sub-form-actions{display:flex;gap:8px;}
   .profile-panel .sub-form-actions button{
     -webkit-appearance:none;appearance:none;flex:1;border-radius:8px;padding:8px;
@@ -1053,7 +1111,10 @@ const ICONS = {
   share: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"></line><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line></svg>',
   bell: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>',
   arrowLeft: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>',
-  trend: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 6"></polyline><polyline points="15 6 21 6 21 12"></polyline></svg>'
+  trend: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 6"></polyline><polyline points="15 6 21 6 21 12"></polyline></svg>',
+  calendar: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>',
+  chevronLeft: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>',
+  chevronRight: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>'
 };
 
 // Текстове за двата езика — БГ (по подразбиране) и EN. t() връща обекта за
@@ -1130,6 +1191,9 @@ const STRINGS = {
     reviewBtn: 'Твоят преглед', reviewSub: 'Базирано на бележките, които добавяш всяка седмица/месец.',
     reviewWeek: 'Тази седмица', reviewMonth: 'Този месец', reviewCompleted: 'Завършени', reviewOf: 'от',
     reviewStreak: n => `${n} дни подред поне с 1 завършена бележка`,
+    calendarBtn: 'Календар', calendarWeekTab: 'Седмица', calendarMonthTab: 'Месец',
+    calendarLegendPast: 'бележки', calendarLegendFuture: 'напомняния',
+    dowShort: ['Пон','Вт','Ср','Чет','Пет','Съб','Нед'],
     onboardDemoText: 'Това е бележка — тапни текста два пъти, за да я редактираш.',
     onboardDemoSub: 'Това е подбележка — за под-задачи и детайли.',
     onboardStep1: 'Тапни кръгчето, за да смениш статуса: активна → в прогрес → завършено.',
@@ -1213,6 +1277,9 @@ const STRINGS = {
     reviewBtn: 'Your review', reviewSub: 'Based on the notes you add each week/month.',
     reviewWeek: 'This week', reviewMonth: 'This month', reviewCompleted: 'Completed', reviewOf: 'of',
     reviewStreak: n => `${n} days in a row with at least 1 completed note`,
+    calendarBtn: 'Calendar', calendarWeekTab: 'Week', calendarMonthTab: 'Month',
+    calendarLegendPast: 'notes', calendarLegendFuture: 'reminders',
+    dowShort: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
     onboardDemoText: 'This is a note — tap the text twice to edit it.',
     onboardDemoSub: 'This is a sub-note — for sub-tasks and details.',
     onboardStep1: 'Tap the circle to cycle status: active → in progress → done.',
@@ -1296,6 +1363,9 @@ const STRINGS = {
     reviewBtn: 'Твой обзор', reviewSub: 'На основе заметок, которые ты добавляешь каждую неделю/месяц.',
     reviewWeek: 'На этой неделе', reviewMonth: 'В этом месяце', reviewCompleted: 'Завершено', reviewOf: 'из',
     reviewStreak: n => `${n} дней подряд минимум с 1 завершённой заметкой`,
+    calendarBtn: 'Календарь', calendarWeekTab: 'Неделя', calendarMonthTab: 'Месяц',
+    calendarLegendPast: 'заметки', calendarLegendFuture: 'напоминания',
+    dowShort: ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
     onboardDemoText: 'Это заметка — нажми на текст дважды, чтобы её отредактировать.',
     onboardDemoSub: 'Это подзаметка — для подзадач и деталей.',
     onboardStep1: 'Нажми на кружок, чтобы сменить статус: активная → в процессе → выполнено.',
@@ -1379,6 +1449,9 @@ const STRINGS = {
     reviewBtn: 'Deine Übersicht', reviewSub: 'Basierend auf den Notizen, die du jede Woche/jeden Monat hinzufügst.',
     reviewWeek: 'Diese Woche', reviewMonth: 'Diesen Monat', reviewCompleted: 'Erledigt', reviewOf: 'von',
     reviewStreak: n => `${n} Tage in Folge mit mindestens 1 erledigten Notiz`,
+    calendarBtn: 'Kalender', calendarWeekTab: 'Woche', calendarMonthTab: 'Monat',
+    calendarLegendPast: 'Notizen', calendarLegendFuture: 'Erinnerungen',
+    dowShort: ['Mo','Di','Mi','Do','Fr','Sa','So'],
     onboardDemoText: 'Das ist eine Notiz — tippe zweimal auf den Text, um sie zu bearbeiten.',
     onboardDemoSub: 'Das ist eine Unternotiz — für Teilaufgaben und Details.',
     onboardStep1: 'Tippe auf den Kreis, um den Status zu wechseln: aktiv → in Bearbeitung → erledigt.',
@@ -1462,6 +1535,9 @@ const STRINGS = {
     reviewBtn: 'Tu resumen', reviewSub: 'Basado en las notas que añades cada semana/mes.',
     reviewWeek: 'Esta semana', reviewMonth: 'Este mes', reviewCompleted: 'Completadas', reviewOf: 'de',
     reviewStreak: n => `${n} días seguidos con al menos 1 nota completada`,
+    calendarBtn: 'Calendario', calendarWeekTab: 'Semana', calendarMonthTab: 'Mes',
+    calendarLegendPast: 'notas', calendarLegendFuture: 'recordatorios',
+    dowShort: ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'],
     onboardDemoText: 'Esto es una nota — toca el texto dos veces para editarla.',
     onboardDemoSub: 'Esto es una subnota — para subtareas y detalles.',
     onboardStep1: 'Toca el círculo para cambiar el estado: activa → en curso → hecho.',
@@ -1816,6 +1892,7 @@ function renderProfileMenu(){
   html += `<button type="button" class="action" data-action="change-email">${ICONS.pencil}${s.changeEmail}</button>`;
   html += `<hr>`;
   html += `<button type="button" class="action" data-action="my-review">${ICONS.trend}${s.reviewBtn}</button>`;
+  html += `<button type="button" class="action" data-action="calendar">${ICONS.calendar}${s.calendarBtn}</button>`;
   html += `<button type="button" class="action" data-action="export">${ICONS.download}${s.exportBackup}</button>`;
   html += `<button type="button" class="action" data-action="import">${ICONS.upload}${s.importBackup}</button>`;
   // "Статистика" — само за административния акаунт (isSatoriUser(), виж по-горе),
@@ -1860,6 +1937,7 @@ function renderProfileMenu(){
   panel.querySelector('[data-action="change-password"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderPasswordForm(); });
   panel.querySelector('[data-action="change-email"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderEmailForm(); });
   panel.querySelector('[data-action="my-review"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderMyReview(); });
+  panel.querySelector('[data-action="calendar"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); calendarRefDate = new Date(); renderCalendarView(); });
   panel.querySelector('[data-action="export"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); exportNotes(); closeProfilePanel(); });
   panel.querySelector('[data-action="import"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); document.getElementById('importFileInput').click(); });
   const statsBtn = panel.querySelector('[data-action="admin-stats"]');
@@ -1961,6 +2039,120 @@ function renderMyReview(){
     <hr>
     <button type="button" class="action" data-action="review-back">${ICONS.close}${s.cancelAria}</button>`;
   panel.querySelector('[data-action="review-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
+}
+
+// Календарен изглед — седмица (седем дни, понеделник-неделя) или цял месец,
+// превключваеми с табовете горе. calendarMode пази последно избрания таб,
+// calendarRefDate е "текущата" позиция за навигация напред/назад със
+// стрелките (?, всяко превключване на таб я връща на днешна дата).
+// Дните ПРЕДИ днес показват броя ОСНОВНИ бележки (без подбележки — както и
+// в renderMyReview()), добавени в деня; днес и напред показват броя
+// напомняния (reminderAt), зададени за деня — на основни бележки И
+// подбележки, защото напомняне може да се сложи на всяко от двете.
+let calendarMode = 'week';
+let calendarRefDate = new Date();
+
+function calendarNotesCountForKey(key){
+  let cnt = 0;
+  notes.forEach(n=>{ if(dateStr(n.createdAt) === key) cnt++; });
+  return cnt;
+}
+function calendarRemindersCountForKey(key){
+  let cnt = 0;
+  notes.forEach(n=>{
+    if(n.reminderAt && dateStr(n.reminderAt) === key) cnt++;
+    (n.subs || []).forEach(sub=>{ if(sub.reminderAt && dateStr(sub.reminderAt) === key) cnt++; });
+  });
+  return cnt;
+}
+
+function renderCalendarView(mode){
+  if(mode) calendarMode = mode;
+  const s = t();
+  const panel = document.getElementById('profilePanel');
+  const todayKey = dateStr(Date.now());
+  const fmt = d => `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+
+  let bodyHtml, rangeLabel;
+
+  if(calendarMode === 'week'){
+    const monday = startOfWeek(calendarRefDate);
+    const days = [];
+    for(let i = 0; i < 7; i++){ const d = new Date(monday); d.setDate(monday.getDate() + i); days.push(d); }
+    rangeLabel = `${fmt(days[0])} – ${fmt(days[6])}`;
+    bodyHtml = `<div class="week-strip">` + days.map((d, i) => {
+      const key = dateStr(d.getTime());
+      const isToday = key === todayKey;
+      const isFuture = key >= todayKey;
+      const count = isFuture ? calendarRemindersCountForKey(key) : calendarNotesCountForKey(key);
+      const markerCls = count > 0 ? (isFuture ? 'future' : 'past') : 'empty';
+      return `<div class="week-day${isToday ? ' today' : ''}">
+        <span class="dow">${s.dowShort[i]}</span>
+        <span class="dnum">${d.getDate()}</span>
+        <span class="marker ${markerCls}">${count > 0 ? count : '–'}</span>
+      </div>`;
+    }).join('') + `</div>`;
+  } else {
+    const year = calendarRefDate.getFullYear();
+    const month = calendarRefDate.getMonth();
+    rangeLabel = `${s.monthNames[month]} ${year}`;
+    const firstOfMonth = new Date(year, month, 1);
+    const leading = (firstOfMonth.getDay() + 6) % 7; // понеделник-първо подравняване
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    let cells = '';
+    for(let i = 0; i < leading; i++) cells += `<div class="month-cell empty-cell"></div>`;
+    for(let day = 1; day <= daysInMonth; day++){
+      const d = new Date(year, month, day);
+      const key = dateStr(d.getTime());
+      const isToday = key === todayKey;
+      const isFuture = key >= todayKey;
+      const count = isFuture ? calendarRemindersCountForKey(key) : calendarNotesCountForKey(key);
+      const dotCls = count > 0 ? (isFuture ? 'future' : 'past') : '';
+      cells += `<div class="month-cell${isToday ? ' today' : ''}">
+        <span class="month-daynum">${day}</span>
+        ${dotCls ? `<span class="month-dot ${dotCls}"></span>` : ''}
+      </div>`;
+    }
+    bodyHtml = `<div class="month-grid">` + s.dowShort.map(dw => `<div class="month-dow">${dw}</div>`).join('') + cells + `</div>`;
+  }
+
+  panel.innerHTML = `
+    <div class="calendar-panel">
+      <div class="calendar-tabs">
+        <button type="button" class="calendar-tab${calendarMode === 'week' ? ' active' : ''}" data-cal-tab="week">${s.calendarWeekTab}</button>
+        <button type="button" class="calendar-tab${calendarMode === 'month' ? ' active' : ''}" data-cal-tab="month">${s.calendarMonthTab}</button>
+      </div>
+      <div class="calendar-nav">
+        <button type="button" data-cal-nav="prev">${ICONS.chevronLeft}</button>
+        <span class="calendar-range">${rangeLabel}</span>
+        <button type="button" data-cal-nav="next">${ICONS.chevronRight}</button>
+      </div>
+      ${bodyHtml}
+      <div class="calendar-legend">
+        <span><span class="dot past"></span>${s.calendarLegendPast}</span>
+        <span><span class="dot future"></span>${s.calendarLegendFuture}</span>
+      </div>
+    </div>
+    <hr>
+    <button type="button" class="action" data-action="calendar-back">${ICONS.close}${s.cancelAria}</button>`;
+
+  panel.querySelectorAll('[data-cal-tab]').forEach(b=>{
+    b.addEventListener('mousedown', e=>{
+      e.preventDefault(); e.stopPropagation();
+      calendarRefDate = new Date();
+      renderCalendarView(b.dataset.calTab);
+    });
+  });
+  panel.querySelectorAll('[data-cal-nav]').forEach(b=>{
+    b.addEventListener('mousedown', e=>{
+      e.preventDefault(); e.stopPropagation();
+      const dir = b.dataset.calNav === 'next' ? 1 : -1;
+      if(calendarMode === 'week') calendarRefDate.setDate(calendarRefDate.getDate() + 7 * dir);
+      else calendarRefDate.setMonth(calendarRefDate.getMonth() + dir);
+      renderCalendarView();
+    });
+  });
+  panel.querySelector('[data-action="calendar-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
 }
 
 // Статистика за админ акаунта — общ брой регистрирани (документи в users/,
