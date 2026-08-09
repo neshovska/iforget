@@ -495,6 +495,23 @@
     padding:6px 4px;font-size:12.5px;color:var(--text-dim);
   }
   .profile-panel .stat-row b{font-size:14px;font-weight:700;color:var(--accent);}
+  /* Личен седмичен/месечен преглед (виж renderMyReview()) — "завършени X от Y"
+     с прогрес лента за всеки период, плюс streak накрая. */
+  .profile-panel .review-panel{display:flex;flex-direction:column;gap:2px;padding:2px;}
+  .profile-panel .review-sub{font-size:11.5px;color:var(--text-dim);line-height:1.5;margin-bottom:10px;}
+  .profile-panel .review-block{margin-bottom:14px;}
+  .profile-panel .review-block-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px;gap:8px;}
+  .profile-panel .review-block-label{
+    font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text-dim);
+  }
+  .profile-panel .review-block-fraction{font-size:12.5px;font-weight:600;color:var(--text);white-space:nowrap;}
+  .profile-panel .review-block-fraction b{color:var(--accent);}
+  .profile-panel .review-bar-track{height:6px;border-radius:4px;background:var(--card-2);overflow:hidden;}
+  .profile-panel .review-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent-dim),var(--accent));}
+  .profile-panel .review-streak{
+    display:flex;align-items:center;gap:7px;margin-top:12px;padding-top:12px;
+    border-top:1px solid var(--border);font-size:12px;color:var(--text-dim);
+  }
   .profile-panel .sub-form-actions{display:flex;gap:8px;}
   .profile-panel .sub-form-actions button{
     -webkit-appearance:none;appearance:none;flex:1;border-radius:8px;padding:8px;
@@ -1035,7 +1052,8 @@ const ICONS = {
   droplet: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5s7 7.6 7 12.5a7 7 0 0 1-14 0c0-4.9 7-12.5 7-12.5z"></path></svg>',
   share: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"></line><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line></svg>',
   bell: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>',
-  arrowLeft: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>'
+  arrowLeft: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>',
+  trend: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 6"></polyline><polyline points="15 6 21 6 21 12"></polyline></svg>'
 };
 
 // Текстове за двата езика — БГ (по подразбиране) и EN. t() връща обекта за
@@ -1109,6 +1127,9 @@ const STRINGS = {
     statsError: 'Неуспешно зареждане на статистиката.',
     statsTotal: 'Общо регистрирани', statsDay: 'Днес',
     statsWeek: 'Тази седмица', statsMonth: 'Този месец', statsYear: 'Тази година',
+    reviewBtn: 'Твоят преглед', reviewSub: 'Базирано на бележките, които добавяш всяка седмица/месец.',
+    reviewWeek: 'Тази седмица', reviewMonth: 'Този месец', reviewCompleted: 'Завършени', reviewOf: 'от',
+    reviewStreak: n => `${n} дни подред поне с 1 завършена бележка`,
     onboardDemoText: 'Това е бележка — тапни текста два пъти, за да я редактираш.',
     onboardDemoSub: 'Това е подбележка — за под-задачи и детайли.',
     onboardStep1: 'Тапни кръгчето, за да смениш статуса: активна → в прогрес → завършено.',
@@ -1189,6 +1210,9 @@ const STRINGS = {
     statsError: 'Failed to load statistics.',
     statsTotal: 'Total registered', statsDay: 'Today',
     statsWeek: 'This week', statsMonth: 'This month', statsYear: 'This year',
+    reviewBtn: 'Your review', reviewSub: 'Based on the notes you add each week/month.',
+    reviewWeek: 'This week', reviewMonth: 'This month', reviewCompleted: 'Completed', reviewOf: 'of',
+    reviewStreak: n => `${n} days in a row with at least 1 completed note`,
     onboardDemoText: 'This is a note — tap the text twice to edit it.',
     onboardDemoSub: 'This is a sub-note — for sub-tasks and details.',
     onboardStep1: 'Tap the circle to cycle status: active → in progress → done.',
@@ -1269,6 +1293,9 @@ const STRINGS = {
     statsError: 'Не удалось загрузить статистику.',
     statsTotal: 'Всего зарегистрировано', statsDay: 'Сегодня',
     statsWeek: 'На этой неделе', statsMonth: 'В этом месяце', statsYear: 'В этом году',
+    reviewBtn: 'Твой обзор', reviewSub: 'На основе заметок, которые ты добавляешь каждую неделю/месяц.',
+    reviewWeek: 'На этой неделе', reviewMonth: 'В этом месяце', reviewCompleted: 'Завершено', reviewOf: 'из',
+    reviewStreak: n => `${n} дней подряд минимум с 1 завершённой заметкой`,
     onboardDemoText: 'Это заметка — нажми на текст дважды, чтобы её отредактировать.',
     onboardDemoSub: 'Это подзаметка — для подзадач и деталей.',
     onboardStep1: 'Нажми на кружок, чтобы сменить статус: активная → в процессе → выполнено.',
@@ -1349,6 +1376,9 @@ const STRINGS = {
     statsError: 'Statistik konnte nicht geladen werden.',
     statsTotal: 'Insgesamt registriert', statsDay: 'Heute',
     statsWeek: 'Diese Woche', statsMonth: 'Diesen Monat', statsYear: 'Dieses Jahr',
+    reviewBtn: 'Deine Übersicht', reviewSub: 'Basierend auf den Notizen, die du jede Woche/jeden Monat hinzufügst.',
+    reviewWeek: 'Diese Woche', reviewMonth: 'Diesen Monat', reviewCompleted: 'Erledigt', reviewOf: 'von',
+    reviewStreak: n => `${n} Tage in Folge mit mindestens 1 erledigten Notiz`,
     onboardDemoText: 'Das ist eine Notiz — tippe zweimal auf den Text, um sie zu bearbeiten.',
     onboardDemoSub: 'Das ist eine Unternotiz — für Teilaufgaben und Details.',
     onboardStep1: 'Tippe auf den Kreis, um den Status zu wechseln: aktiv → in Bearbeitung → erledigt.',
@@ -1429,6 +1459,9 @@ const STRINGS = {
     statsError: 'No se pudieron cargar las estadísticas.',
     statsTotal: 'Total registrados', statsDay: 'Hoy',
     statsWeek: 'Esta semana', statsMonth: 'Este mes', statsYear: 'Este año',
+    reviewBtn: 'Tu resumen', reviewSub: 'Basado en las notas que añades cada semana/mes.',
+    reviewWeek: 'Esta semana', reviewMonth: 'Este mes', reviewCompleted: 'Completadas', reviewOf: 'de',
+    reviewStreak: n => `${n} días seguidos con al menos 1 nota completada`,
     onboardDemoText: 'Esto es una nota — toca el texto dos veces para editarla.',
     onboardDemoSub: 'Esto es una subnota — para subtareas y detalles.',
     onboardStep1: 'Toca el círculo para cambiar el estado: activa → en curso → hecho.',
@@ -1782,6 +1815,7 @@ function renderProfileMenu(){
   html += `<button type="button" class="action" data-action="change-password">${ICONS.pencil}${s.changePassword}</button>`;
   html += `<button type="button" class="action" data-action="change-email">${ICONS.pencil}${s.changeEmail}</button>`;
   html += `<hr>`;
+  html += `<button type="button" class="action" data-action="my-review">${ICONS.trend}${s.reviewBtn}</button>`;
   html += `<button type="button" class="action" data-action="export">${ICONS.download}${s.exportBackup}</button>`;
   html += `<button type="button" class="action" data-action="import">${ICONS.upload}${s.importBackup}</button>`;
   // "Статистика" — само за административния акаунт (isSatoriUser(), виж по-горе),
@@ -1825,6 +1859,7 @@ function renderProfileMenu(){
   });
   panel.querySelector('[data-action="change-password"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderPasswordForm(); });
   panel.querySelector('[data-action="change-email"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderEmailForm(); });
+  panel.querySelector('[data-action="my-review"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderMyReview(); });
   panel.querySelector('[data-action="export"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); exportNotes(); closeProfilePanel(); });
   panel.querySelector('[data-action="import"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); document.getElementById('importFileInput').click(); });
   const statsBtn = panel.querySelector('[data-action="admin-stats"]');
@@ -1872,6 +1907,60 @@ function renderDeleteAccountForm(){
       msg.textContent = err.code === 'auth/wrong-password' ? t().errWrongPassword : translateAuthError(err.code);
     });
   });
+}
+
+// Начало на седмицата (понеделник, 00:00) за дадена дата — ползва се от
+// renderMyReview() по-долу.
+function startOfWeek(d){
+  const day = d.getDay(); // 0=нед,1=пон,...
+  const diff = (day === 0 ? -6 : 1) - day; // колко дни назад до понеделник
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + diff);
+  monday.setHours(0,0,0,0);
+  return monday;
+}
+
+// Личен преглед — за ВСЕКИ потребител (за разлика от renderAdminStats(),
+// която е само за административния акаунт). "Завършени X от Y" — Y е броят
+// ОСНОВНИ бележки (без подбележки), добавени в периода, X колко от ТЕЗИ
+// СЪЩИ вече са със статус 'done' (независимо кога точно са завършени).
+// Плюс streak-а (computeStreak()) за кратък допълнителен контекст.
+function renderMyReview(){
+  const s = t();
+  const panel = document.getElementById('profilePanel');
+  const now = new Date();
+  const weekStartMs = startOfWeek(now).getTime();
+  const monthStartMs = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  let weekTotal = 0, weekDone = 0, monthTotal = 0, monthDone = 0;
+  notes.forEach(n=>{
+    if(n.createdAt >= weekStartMs){ weekTotal++; if(n.status === 'done') weekDone++; }
+    if(n.createdAt >= monthStartMs){ monthTotal++; if(n.status === 'done') monthDone++; }
+  });
+  const weekPct = weekTotal ? Math.round(weekDone / weekTotal * 100) : 0;
+  const monthPct = monthTotal ? Math.round(monthDone / monthTotal * 100) : 0;
+  const streak = computeStreak();
+  panel.innerHTML = `
+    <div class="review-panel">
+      <div class="review-sub">${s.reviewSub}</div>
+      <div class="review-block">
+        <div class="review-block-head">
+          <span class="review-block-label">${s.reviewWeek}</span>
+          <span class="review-block-fraction">${s.reviewCompleted} <b>${weekDone}</b> ${s.reviewOf} ${weekTotal}</span>
+        </div>
+        <div class="review-bar-track"><div class="review-bar-fill" style="width:${weekPct}%;"></div></div>
+      </div>
+      <div class="review-block">
+        <div class="review-block-head">
+          <span class="review-block-label">${s.reviewMonth}</span>
+          <span class="review-block-fraction">${s.reviewCompleted} <b>${monthDone}</b> ${s.reviewOf} ${monthTotal}</span>
+        </div>
+        <div class="review-bar-track"><div class="review-bar-fill" style="width:${monthPct}%;"></div></div>
+      </div>
+      ${streak > 0 ? `<div class="review-streak">${ICONS.flame}<span>${s.reviewStreak(streak)}</span></div>` : ''}
+    </div>
+    <hr>
+    <button type="button" class="action" data-action="review-back">${ICONS.close}${s.cancelAria}</button>`;
+  panel.querySelector('[data-action="review-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
 }
 
 // Статистика за админ акаунта — общ брой регистрирани (документи в users/,
