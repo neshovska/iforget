@@ -34,6 +34,7 @@
     --border:#38496B;
     --text:#F0F3F9;
     --text-dim:#98A3B9;
+    --text-dim-rgb:152,163,185;
     --gold:#DFAE3A;
     --gold-dim:#A6841F;
     --gold-rgb:223,174,58;
@@ -69,6 +70,7 @@
     --border:#D6BE97;
     --text:#3B2A1C;
     --text-dim:#8C7357;
+    --text-dim-rgb:140,115,87;
     --gold:#C77D0A;
     --gold-dim:#9C6208;
     --gold-rgb:199,125,10;
@@ -535,6 +537,9 @@
     flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;
     padding:8px 1px;border-radius:10px;background:var(--card-2);border:1px solid transparent;
   }
+  /* Уикенд (събота/неделя) — лек нюанс разлика от делничните дни, за да се
+     отличават на пръв поглед в лентата/решетката. */
+  .profile-panel .week-day.weekend{background:var(--card);}
   .profile-panel .week-day.today{border-color:var(--accent);background:rgba(var(--accent-rgb),.12);}
   .profile-panel .week-day .dow{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--text-dim);}
   .profile-panel .week-day.today .dow{color:var(--accent);}
@@ -555,6 +560,7 @@
     aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
     border-radius:8px;background:var(--card-2);
   }
+  .profile-panel .month-cell.weekend{background:var(--card);}
   .profile-panel .month-cell.empty-cell{background:none;}
   .profile-panel .month-cell.today{border:1px solid var(--accent);background:rgba(var(--accent-rgb),.12);}
   .profile-panel .month-daynum{font-size:11px;font-weight:600;color:var(--text);}
@@ -562,9 +568,11 @@
   .profile-panel .month-dot{width:5px;height:5px;border-radius:50%;}
   .profile-panel .month-dot.past{background:var(--text-dim);}
   .profile-panel .month-dot.future{background:var(--gold);}
-  /* Годишен heatmap изглед — 12 мини-месеца в скролваем контейнер, БЕЗ
-     числа на дните (нарочно — истински heatmap стил), само квадратчета с
-     нарастваща наситеност според calendarHeatBucket() (.b1/.b2/.b3). */
+  /* Годишен heatmap изглед — 12 мини-месеца в скролваем контейнер. Всяко
+     квадратче показва номера на деня (.year-daynum) върху heatmap цвета —
+     нарастваща наситеност според calendarHeatBucket() (.b1/.b2/.b3). Текстът
+     ползва var(--bg) на цветните клетки (по-тъмен/по-светъл екстремум според
+     темата) за сигурен контраст върху всякаква наситеност на сивото/златното. */
   .profile-panel .year-scroll{max-height:300px;overflow-y:auto;padding-right:2px;}
   .profile-panel .year-month{margin-bottom:12px;}
   .profile-panel .year-month:last-child{margin-bottom:0;}
@@ -573,14 +581,24 @@
     color:var(--text-dim);margin-bottom:5px;
   }
   .profile-panel .year-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
-  .profile-panel .year-cell{aspect-ratio:1;border-radius:3px;background:var(--card-2);}
+  .profile-panel .year-cell{
+    position:relative;aspect-ratio:1;border-radius:3px;background:var(--card-2);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .profile-panel .year-cell.weekend{background:var(--card);}
   .profile-panel .year-cell.empty-cell{background:none;}
-  .profile-panel .year-cell.past.b1{background:var(--text-dim);opacity:.35;}
-  .profile-panel .year-cell.past.b2{background:var(--text-dim);opacity:.65;}
-  .profile-panel .year-cell.past.b3{background:var(--text-dim);opacity:1;}
-  .profile-panel .year-cell.future.b1{background:var(--gold);opacity:.4;}
-  .profile-panel .year-cell.future.b2{background:var(--gold);opacity:.7;}
-  .profile-panel .year-cell.future.b3{background:var(--gold);opacity:1;}
+  .profile-panel .year-daynum{font-size:8px;font-weight:600;color:var(--text-dim);opacity:.8;line-height:1;}
+  /* rgba() вместо opacity на цялата клетка — иначе числото (.year-daynum)
+     вътре щеше да избледнява заедно с фона. */
+  .profile-panel .year-cell.past.b1{background:rgba(var(--text-dim-rgb),.35);}
+  .profile-panel .year-cell.past.b2{background:rgba(var(--text-dim-rgb),.65);}
+  .profile-panel .year-cell.past.b3{background:rgba(var(--text-dim-rgb),1);}
+  .profile-panel .year-cell.future.b1{background:rgba(var(--gold-rgb),.4);}
+  .profile-panel .year-cell.future.b2{background:rgba(var(--gold-rgb),.7);}
+  .profile-panel .year-cell.future.b3{background:rgba(var(--gold-rgb),1);}
+  .profile-panel .year-cell.b1 .year-daynum,
+  .profile-panel .year-cell.b2 .year-daynum,
+  .profile-panel .year-cell.b3 .year-daynum{color:var(--bg);opacity:.9;}
   .profile-panel .year-cell.today{outline:1.5px solid var(--accent);outline-offset:-1.5px;}
   .profile-panel .calendar-legend{
     display:flex;gap:14px;margin-top:12px;padding-top:12px;
@@ -2068,7 +2086,7 @@ function renderMyReview(){
 // в renderMyReview()), добавени в деня; днес и напред показват броя
 // напомняния (reminderAt), зададени за деня — на основни бележки И
 // подбележки, защото напомняне може да се сложи на всяко от двете.
-let calendarMode = 'week';
+let calendarMode = 'month';
 let calendarRefDate = new Date();
 
 function calendarNotesCountForKey(key){
@@ -2111,9 +2129,10 @@ function renderCalendarView(mode){
       const key = dateStr(d.getTime());
       const isToday = key === todayKey;
       const isFuture = key >= todayKey;
+      const isWeekend = i === 5 || i === 6; // понеделник-първо: индекс 5=събота, 6=неделя
       const count = isFuture ? calendarRemindersCountForKey(key) : calendarNotesCountForKey(key);
       const markerCls = count > 0 ? (isFuture ? 'future' : 'past') : 'empty';
-      return `<div class="week-day${isToday ? ' today' : ''}">
+      return `<div class="week-day${isToday ? ' today' : ''}${isWeekend ? ' weekend' : ''}">
         <span class="dow">${s.dowShort[i]}</span>
         <span class="dnum">${d.getDate()}</span>
         <span class="marker ${markerCls}">${count > 0 ? count : '–'}</span>
@@ -2133,17 +2152,19 @@ function renderCalendarView(mode){
       const key = dateStr(d.getTime());
       const isToday = key === todayKey;
       const isFuture = key >= todayKey;
+      const dow = d.getDay(); // 0=нед,6=съб
+      const isWeekend = dow === 0 || dow === 6;
       const count = isFuture ? calendarRemindersCountForKey(key) : calendarNotesCountForKey(key);
       const dotCls = count > 0 ? (isFuture ? 'future' : 'past') : '';
-      cells += `<div class="month-cell${isToday ? ' today' : ''}">
+      cells += `<div class="month-cell${isToday ? ' today' : ''}${isWeekend ? ' weekend' : ''}">
         <span class="month-daynum">${day}</span>
         ${dotCls ? `<span class="month-dot ${dotCls}"></span>` : ''}
       </div>`;
     }
     bodyHtml = `<div class="month-grid">` + s.dowShort.map(dw => `<div class="month-dow">${dw}</div>`).join('') + cells + `</div>`;
   } else {
-    // Годишен изглед — 12 мини-месеца, всеки като heatmap (без числа на
-    // дните, само квадратчета с нарастваща наситеност — виж
+    // Годишен изглед — 12 мини-месеца, всеки като heatmap с номер на деня
+    // върху квадратчето (.year-daynum), нарастваща наситеност според
     // calendarHeatBucket()), в скролваем контейнер (виж .year-scroll).
     const year = calendarRefDate.getFullYear();
     rangeLabel = `${year}`;
@@ -2159,10 +2180,12 @@ function renderCalendarView(mode){
         const key = dateStr(d.getTime());
         const isToday = key === todayKey;
         const isFuture = key >= todayKey;
+        const dow = d.getDay();
+        const isWeekend = dow === 0 || dow === 6;
         const count = isFuture ? calendarRemindersCountForKey(key) : calendarNotesCountForKey(key);
         const bucket = calendarHeatBucket(count);
         const heatCls = bucket > 0 ? `${isFuture ? 'future' : 'past'} b${bucket}` : '';
-        cells += `<div class="year-cell ${heatCls}${isToday ? ' today' : ''}"></div>`;
+        cells += `<div class="year-cell ${heatCls}${isToday ? ' today' : ''}${isWeekend ? ' weekend' : ''}"><span class="year-daynum">${day}</span></div>`;
       }
       monthsHtml += `<div class="year-month">
         <div class="year-month-label">${s.monthNames[m]}</div>
