@@ -547,9 +547,8 @@
     flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;
     padding:8px 1px;border-radius:10px;background:var(--card);border:2px solid transparent;
   }
-  /* Уикенд (събота/неделя) — вместо различен фон, само по-удебелени
-     текст/рамка, за да се отличава на пръв поглед без да сменя нюанса. */
-  .profile-panel .week-day.weekend{border-color:var(--border);}
+  /* Уикенд (събота/неделя) — БЕЗ различен фон/рамка, само по-удебелен текст
+     (font-weight), за да се отличава на пръв поглед без да сменя нюанса. */
   .profile-panel .week-day.weekend .dow, .profile-panel .week-day.weekend .dnum{font-weight:800;}
   /* border-width е 2px и по подразбиране (прозрачна), за да няма скок в
      размера на клетката, когато днешният ден се очертае с по-плътна рамка. */
@@ -573,9 +572,8 @@
     aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
     border-radius:8px;background:var(--card);border:2px solid transparent;
   }
-  /* Уикенд — само по-удебелено число/рамка, без различен фон (виж
-     .week-day.weekend по-горе за същия принцип). */
-  .profile-panel .month-cell.weekend{border-color:var(--border);}
+  /* Уикенд — само по-удебелено число, БЕЗ рамка/фон (виж .week-day.weekend
+     по-горе за същия принцип). */
   .profile-panel .month-cell.weekend .month-daynum{font-weight:800;}
   .profile-panel .month-cell.empty-cell{background:none;border-color:transparent;}
   .profile-panel .month-cell.today{border-color:var(--accent);background:rgba(var(--accent-rgb),.12);}
@@ -589,7 +587,12 @@
      нарастваща наситеност според calendarHeatBucket() (.b1/.b2/.b3). Текстът
      ползва var(--bg) на цветните клетки (по-тъмен/по-светъл екстремум според
      темата) за сигурен контраст върху всякаква наситеност на сивото/златното. */
-  .profile-panel .year-scroll{max-height:300px;overflow-y:auto;padding-right:2px;}
+  /* position:relative тук е нужно — иначе .year-month.offsetTop (виж
+     renderCalendarView(), скролва до текущия месец) би се измерил спрямо
+     СЛЕДВАЩИЯ позициониран предшественик нагоре по дървото (.profile-panel,
+     който е position:fixed), вместо спрямо самия скрол контейнер — и
+     скролът щеше да пропусне целта с височината на таба/навигацията над него. */
+  .profile-panel .year-scroll{max-height:300px;overflow-y:auto;padding-right:2px;position:relative;}
   .profile-panel .year-month{margin-bottom:12px;}
   .profile-panel .year-month:last-child{margin-bottom:0;}
   .profile-panel .year-month-label{
@@ -2125,16 +2128,29 @@ function renderMyReview(){
 let calendarMode = 'month';
 let calendarRefDate = new Date();
 
+// ЛОКАЛЕН (не UTC) дата-ключ ГГГГ-ММ-ДД — само за календарния изглед.
+// ВАЖНО: тук НЕ ползваме dateStr() (UTC-базиран, ползван другаде в
+// приложението за групиране по дни) — комбиниран с ЛОКАЛНО конструирани
+// дати за клетките на календара (new Date(year, month, day)), той води до
+// разминаване от цял ден в часови зони пред UTC (напр. България, лятно
+// UTC+3): локална полунощ на даден ден се превръща в UTC часовете на
+// ПРЕДИШНИЯ ден, затова "днешният ден" се очертаваше на СЛЕДВАЩАТА клетка
+// (напр. реално 9-ти, очертан 10-ти). localDateStr() чете годината/месеца/
+// деня директно от локалните компоненти на датата, без UTC превръщане.
+function localDateStr(ts){
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 function calendarNotesCountForKey(key){
   let cnt = 0;
-  notes.forEach(n=>{ if(dateStr(n.createdAt) === key) cnt++; });
+  notes.forEach(n=>{ if(localDateStr(n.createdAt) === key) cnt++; });
   return cnt;
 }
 function calendarRemindersCountForKey(key){
   let cnt = 0;
   notes.forEach(n=>{
-    if(n.reminderAt && dateStr(n.reminderAt) === key) cnt++;
-    (n.subs || []).forEach(sub=>{ if(sub.reminderAt && dateStr(sub.reminderAt) === key) cnt++; });
+    if(n.reminderAt && localDateStr(n.reminderAt) === key) cnt++;
+    (n.subs || []).forEach(sub=>{ if(sub.reminderAt && localDateStr(sub.reminderAt) === key) cnt++; });
   });
   return cnt;
 }
@@ -2151,7 +2167,7 @@ function renderCalendarView(mode){
   if(mode) calendarMode = mode;
   const s = t();
   const panel = document.getElementById('profilePanel');
-  const todayKey = dateStr(Date.now());
+  const todayKey = localDateStr(Date.now());
   const fmt = d => `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
 
   let bodyHtml, rangeLabel;
@@ -2162,7 +2178,7 @@ function renderCalendarView(mode){
     for(let i = 0; i < 7; i++){ const d = new Date(monday); d.setDate(monday.getDate() + i); days.push(d); }
     rangeLabel = `${fmt(days[0])} – ${fmt(days[6])}`;
     bodyHtml = `<div class="week-strip">` + days.map((d, i) => {
-      const key = dateStr(d.getTime());
+      const key = localDateStr(d.getTime());
       const isToday = key === todayKey;
       const isFuture = key >= todayKey;
       const isWeekend = i === 5 || i === 6; // понеделник-първо: индекс 5=събота, 6=неделя
@@ -2185,7 +2201,7 @@ function renderCalendarView(mode){
     for(let i = 0; i < leading; i++) cells += `<div class="month-cell empty-cell"></div>`;
     for(let day = 1; day <= daysInMonth; day++){
       const d = new Date(year, month, day);
-      const key = dateStr(d.getTime());
+      const key = localDateStr(d.getTime());
       const isToday = key === todayKey;
       const isFuture = key >= todayKey;
       const dow = d.getDay(); // 0=нед,6=съб
@@ -2213,7 +2229,7 @@ function renderCalendarView(mode){
       for(let i = 0; i < leading; i++) cells += `<div class="year-cell empty-cell"></div>`;
       for(let day = 1; day <= daysInMonth; day++){
         const d = new Date(year, m, day);
-        const key = dateStr(d.getTime());
+        const key = localDateStr(d.getTime());
         const isToday = key === todayKey;
         const isFuture = key >= todayKey;
         const dow = d.getDay();
@@ -2251,6 +2267,19 @@ function renderCalendarView(mode){
     </div>
     <hr>
     <button type="button" class="action" data-action="calendar-back">${ICONS.close}${s.cancelAria}</button>`;
+
+  // Годишният изглед се отваря скролнат директно на актуалния месец (не
+  // винаги от януари) — само когато действително се показва текущата
+  // година; ако потребителят е навигирал към друга година, няма "днешна"
+  // клетка и просто остава в началото.
+  if(calendarMode === 'year'){
+    const todayCell = panel.querySelector('.year-cell.today');
+    const scrollEl = panel.querySelector('.year-scroll');
+    if(todayCell && scrollEl){
+      const monthBlock = todayCell.closest('.year-month');
+      if(monthBlock) scrollEl.scrollTop = monthBlock.offsetTop;
+    }
+  }
 
   panel.querySelectorAll('[data-cal-tab]').forEach(b=>{
     b.addEventListener('mousedown', e=>{
