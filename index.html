@@ -523,6 +523,19 @@
   }
   .profile-panel button.action:active, .profile-panel a.action:active{background:var(--card-2);}
   .profile-panel button.action.danger{color:var(--danger);}
+  /* Стрелка вдясно на груповите бутони в горното меню (renderProfileMenu()) —
+     показва, че бутонът "разгъва" подменю на място, не изпълнява действие. */
+  .profile-panel .action-chev{margin-left:auto;display:flex;color:var(--text-dim);}
+  /* "Назад" в горната част на всяка група (renderProfileGroup*()) — същият
+     принцип като .ctx-menu .reminder-back, но скопиран за .profile-panel. */
+  .profile-panel .group-back{
+    -webkit-appearance:none;appearance:none;width:100%;text-align:left;background:none;border:none;
+    color:var(--text-dim);font-size:12px;font-weight:600;font-family:inherit;
+    display:flex;align-items:center;gap:5px;padding:6px;margin-bottom:4px;cursor:pointer;
+  }
+  /* По ситен шрифт за "Поверителност"/"Общи условия" в групата Помощ —
+     по-малко визуално тегло от истинските действия (обратна връзка и т.н.). */
+  .profile-panel a.action.small-link{font-size:11px;color:var(--text-dim);}
   .profile-panel .sub-form{display:flex;flex-direction:column;gap:8px;padding:2px;}
   .profile-panel .sub-form input{
     -webkit-appearance:none;appearance:none;width:100%;background:var(--card-2);border:1px solid var(--border);
@@ -1247,6 +1260,7 @@ const STRINGS = {
     confirmLogout: 'Да излезеш ли от акаунта?', profileAria: 'Профил',
     profileColorDefault: 'По подразбиране', leftHandedMode: 'Режим за лявата ръка',
     glassNotesToggle: 'Прозрачни бележки',
+    profileGroupView: 'Изглед', profileGroupData: 'Данни', profileGroupAccount: 'Акаунт', profileGroupHelp: 'Помощ',
     emailPlaceholder: 'Имейл', passwordPlaceholder: 'Парола', confirmPasswordPlaceholder: 'Потвърди парола',
     signInBtn: 'Вход', signUpBtn: 'Регистрация',
     noAccountYet: 'Нямаш акаунт?', haveAccountAlready: 'Вече имаш акаунт?',
@@ -1336,6 +1350,7 @@ const STRINGS = {
     confirmLogout: 'Sign out of your account?', profileAria: 'Profile',
     profileColorDefault: 'Default', leftHandedMode: 'Left-handed mode',
     glassNotesToggle: 'Transparent notes',
+    profileGroupView: 'View', profileGroupData: 'Data', profileGroupAccount: 'Account', profileGroupHelp: 'Help',
     emailPlaceholder: 'Email', passwordPlaceholder: 'Password', confirmPasswordPlaceholder: 'Confirm password',
     signInBtn: 'Sign in', signUpBtn: 'Sign up',
     noAccountYet: "Don't have an account?", haveAccountAlready: 'Already have an account?',
@@ -1425,6 +1440,7 @@ const STRINGS = {
     confirmLogout: 'Выйти из аккаунта?', profileAria: 'Профиль',
     profileColorDefault: 'По умолчанию', leftHandedMode: 'Режим для левшей',
     glassNotesToggle: 'Прозрачные заметки',
+    profileGroupView: 'Вид', profileGroupData: 'Данные', profileGroupAccount: 'Аккаунт', profileGroupHelp: 'Помощь',
     emailPlaceholder: 'Email', passwordPlaceholder: 'Пароль', confirmPasswordPlaceholder: 'Подтверди пароль',
     signInBtn: 'Войти', signUpBtn: 'Регистрация',
     noAccountYet: 'Нет аккаунта?', haveAccountAlready: 'Уже есть аккаунт?',
@@ -1514,6 +1530,7 @@ const STRINGS = {
     confirmLogout: 'Vom Konto abmelden?', profileAria: 'Profil',
     profileColorDefault: 'Standard', leftHandedMode: 'Linkshänder-Modus',
     glassNotesToggle: 'Transparente Notizen',
+    profileGroupView: 'Ansicht', profileGroupData: 'Daten', profileGroupAccount: 'Konto', profileGroupHelp: 'Hilfe',
     emailPlaceholder: 'E-Mail', passwordPlaceholder: 'Passwort', confirmPasswordPlaceholder: 'Passwort bestätigen',
     signInBtn: 'Anmelden', signUpBtn: 'Registrieren',
     noAccountYet: 'Noch kein Konto?', haveAccountAlready: 'Schon ein Konto?',
@@ -1603,6 +1620,7 @@ const STRINGS = {
     confirmLogout: '¿Cerrar sesión de la cuenta?', profileAria: 'Perfil',
     profileColorDefault: 'Predeterminado', leftHandedMode: 'Modo para zurdos',
     glassNotesToggle: 'Notas transparentes',
+    profileGroupView: 'Vista', profileGroupData: 'Datos', profileGroupAccount: 'Cuenta', profileGroupHelp: 'Ayuda',
     emailPlaceholder: 'Correo electrónico', passwordPlaceholder: 'Contraseña', confirmPasswordPlaceholder: 'Confirma la contraseña',
     signInBtn: 'Iniciar sesión', signUpBtn: 'Registrarse',
     noAccountYet: '¿No tienes cuenta?', haveAccountAlready: '¿Ya tienes cuenta?',
@@ -1993,6 +2011,14 @@ function closeProfilePanel(){
   document.getElementById('profilePanel').classList.remove('show');
 }
 
+// Основно меню на профила — само 4 групови бутона (+ имейл, цветове),
+// вместо ~13 отделни реда. Всяка група (renderProfileGroup*() по-долу)
+// замества съдържанието НА МЯСТОТО (същия #profilePanel), със "Назад"
+// бутон отгоре, връщащ се тук — същият установен принцип като
+// renderCtxMenuReminder()/renderCtxMenuColor(). Разпределение:
+// Изглед = прозрачни бележки + лява ръка; Данни = преглед/календар/
+// експорт/импорт/статистика(админ); Акаунт = смяна на парола/имейл +
+// изход/изтриване; Помощ = обратна връзка + поверителност/условия.
 function renderProfileMenu(){
   const s = t();
   const panel = document.getElementById('profilePanel');
@@ -2002,29 +2028,10 @@ function renderProfileMenu(){
     `<button type="button" class="color-sw${c===profileColor?' active':''}${c===''?' default-sw':''}" data-color="${c}" style="${c?`background:${c}`:''}" aria-label="${c || s.profileColorDefault}"></button>`
   ).join('') + `</div>`;
   html += `<hr>`;
-  html += `<button type="button" class="action" data-action="toggle-glass-notes">${ICONS.droplet}${s.glassNotesToggle}${glassNotes ? ICONS.check : ''}</button>`;
-  html += `<button type="button" class="action" data-action="toggle-left-handed">${ICONS.flip}${s.leftHandedMode}${leftHanded ? ICONS.check : ''}</button>`;
-  html += `<hr>`;
-  html += `<button type="button" class="action" data-action="change-password">${ICONS.pencil}${s.changePassword}</button>`;
-  html += `<button type="button" class="action" data-action="change-email">${ICONS.pencil}${s.changeEmail}</button>`;
-  html += `<hr>`;
-  html += `<button type="button" class="action" data-action="my-review">${ICONS.trend}${s.reviewBtn}</button>`;
-  html += `<button type="button" class="action" data-action="calendar">${ICONS.calendar}${s.calendarBtn}</button>`;
-  html += `<button type="button" class="action" data-action="export">${ICONS.download}${s.exportBackup}</button>`;
-  html += `<button type="button" class="action" data-action="import">${ICONS.upload}${s.importBackup}</button>`;
-  // "Статистика" — само за административния акаунт (isSatoriUser(), виж по-горе),
-  // не се вижда от никой друг потребител на приложението.
-  if(isSatoriUser()){
-    html += `<hr>`;
-    html += `<button type="button" class="action" data-action="admin-stats">${ICONS.chart}${s.statsTitle}</button>`;
-  }
-  html += `<hr>`;
-  html += `<a class="action" href="mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('IForget — обратна връзка')}">${ICONS.mail}${s.feedbackBtn}</a>`;
-  html += `<a class="action" href="privacy.html" target="_blank" rel="noopener">${ICONS.shield}${s.privacyLink}</a>`;
-  html += `<a class="action" href="terms.html" target="_blank" rel="noopener">${ICONS.doc}${s.termsLink}</a>`;
-  html += `<hr>`;
-  html += `<button type="button" class="action danger" data-action="logout">${ICONS.close}${s.logoutBtn}</button>`;
-  html += `<button type="button" class="action danger" data-action="delete-account">${ICONS.trash}${s.deleteAccount}</button>`;
+  html += `<button type="button" class="action" data-action="group-view">${ICONS.droplet}${s.profileGroupView}<span class="action-chev">${ICONS.chevronRight}</span></button>`;
+  html += `<button type="button" class="action" data-action="group-data">${ICONS.calendar}${s.profileGroupData}<span class="action-chev">${ICONS.chevronRight}</span></button>`;
+  html += `<button type="button" class="action" data-action="group-account">${ICONS.pencil}${s.profileGroupAccount}<span class="action-chev">${ICONS.chevronRight}</span></button>`;
+  html += `<button type="button" class="action" data-action="group-help">${ICONS.mail}${s.profileGroupHelp}<span class="action-chev">${ICONS.chevronRight}</span></button>`;
   panel.innerHTML = html;
 
   panel.querySelectorAll('.color-sw').forEach(b=>{
@@ -2037,30 +2044,89 @@ function renderProfileMenu(){
       renderProfileMenu();
     });
   });
+  panel.querySelector('[data-action="group-view"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupView(); });
+  panel.querySelector('[data-action="group-data"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupData(); });
+  panel.querySelector('[data-action="group-account"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupAccount(); });
+  panel.querySelector('[data-action="group-help"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupHelp(); });
+}
+
+function renderProfileGroupView(){
+  const s = t();
+  const panel = document.getElementById('profilePanel');
+  panel.innerHTML = `
+    <button type="button" class="group-back" data-action="group-back">${ICONS.arrowLeft}${s.onboardBack}</button>
+    <button type="button" class="action" data-action="toggle-glass-notes">${ICONS.droplet}${s.glassNotesToggle}${glassNotes ? ICONS.check : ''}</button>
+    <button type="button" class="action" data-action="toggle-left-handed">${ICONS.flip}${s.leftHandedMode}${leftHanded ? ICONS.check : ''}</button>`;
+  panel.querySelector('[data-action="group-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
   panel.querySelector('[data-action="toggle-glass-notes"]').addEventListener('mousedown', e=>{
     e.preventDefault(); e.stopPropagation();
     glassNotes = !glassNotes;
     localStorage.setItem(GLASS_NOTES_KEY, glassNotes ? '1' : '0');
     applyGlassNotes();
-    renderProfileMenu();
+    renderProfileGroupView();
   });
   panel.querySelector('[data-action="toggle-left-handed"]').addEventListener('mousedown', e=>{
     e.preventDefault(); e.stopPropagation();
     leftHanded = !leftHanded;
     localStorage.setItem(LEFT_HANDED_KEY, leftHanded ? '1' : '0');
     applyLeftHanded();
-    renderProfileMenu();
+    renderProfileGroupView();
   });
-  panel.querySelector('[data-action="change-password"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderPasswordForm(); });
-  panel.querySelector('[data-action="change-email"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderEmailForm(); });
+}
+
+function renderProfileGroupData(){
+  const s = t();
+  const panel = document.getElementById('profilePanel');
+  let html = `<button type="button" class="group-back" data-action="group-back">${ICONS.arrowLeft}${s.onboardBack}</button>`;
+  html += `<button type="button" class="action" data-action="my-review">${ICONS.trend}${s.reviewBtn}</button>`;
+  html += `<button type="button" class="action" data-action="calendar">${ICONS.calendar}${s.calendarBtn}</button>`;
+  html += `<button type="button" class="action" data-action="export">${ICONS.download}${s.exportBackup}</button>`;
+  html += `<button type="button" class="action" data-action="import">${ICONS.upload}${s.importBackup}</button>`;
+  // "Статистика" — само за административния акаунт (isSatoriUser(), виж по-горе),
+  // не се вижда от никой друг потребител на приложението.
+  if(isSatoriUser()){
+    html += `<hr>`;
+    html += `<button type="button" class="action" data-action="admin-stats">${ICONS.chart}${s.statsTitle}</button>`;
+  }
+  panel.innerHTML = html;
+  panel.querySelector('[data-action="group-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
   panel.querySelector('[data-action="my-review"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderMyReview(); });
   panel.querySelector('[data-action="calendar"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); calendarRefDate = new Date(); renderCalendarView(); });
   panel.querySelector('[data-action="export"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); exportNotes(); closeProfilePanel(); });
   panel.querySelector('[data-action="import"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); document.getElementById('importFileInput').click(); });
   const statsBtn = panel.querySelector('[data-action="admin-stats"]');
   if(statsBtn) statsBtn.addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderAdminStats(); });
+}
+
+function renderProfileGroupAccount(){
+  const s = t();
+  const panel = document.getElementById('profilePanel');
+  panel.innerHTML = `
+    <button type="button" class="group-back" data-action="group-back">${ICONS.arrowLeft}${s.onboardBack}</button>
+    <button type="button" class="action" data-action="change-password">${ICONS.pencil}${s.changePassword}</button>
+    <button type="button" class="action" data-action="change-email">${ICONS.pencil}${s.changeEmail}</button>
+    <hr>
+    <button type="button" class="action danger" data-action="logout">${ICONS.close}${s.logoutBtn}</button>
+    <button type="button" class="action danger" data-action="delete-account">${ICONS.trash}${s.deleteAccount}</button>`;
+  panel.querySelector('[data-action="group-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
+  panel.querySelector('[data-action="change-password"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderPasswordForm(); });
+  panel.querySelector('[data-action="change-email"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderEmailForm(); });
   panel.querySelector('[data-action="logout"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); closeProfilePanel(); signOutUser(); });
   panel.querySelector('[data-action="delete-account"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderDeleteAccountForm(); });
+}
+
+// Помощ — обратна връзка + поверителност/условия. Имената на последните две
+// (privacyLink/termsLink) са по ситен шрифт (.small-link) по изрична молба —
+// по-малко визуално тегло от истинските действия в менюто.
+function renderProfileGroupHelp(){
+  const s = t();
+  const panel = document.getElementById('profilePanel');
+  panel.innerHTML = `
+    <button type="button" class="group-back" data-action="group-back">${ICONS.arrowLeft}${s.onboardBack}</button>
+    <a class="action" href="mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('IForget — обратна връзка')}">${ICONS.mail}${s.feedbackBtn}</a>
+    <a class="action small-link" href="privacy.html" target="_blank" rel="noopener">${ICONS.shield}${s.privacyLink}</a>
+    <a class="action small-link" href="terms.html" target="_blank" rel="noopener">${ICONS.doc}${s.termsLink}</a>`;
+  panel.querySelector('[data-action="group-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
 }
 
 function renderDeleteAccountForm(){
@@ -2076,7 +2142,7 @@ function renderDeleteAccountForm(){
         <button type="button" class="primary danger" id="deleteAccountConfirmBtn">${s.deleteAccountConfirmBtn}</button>
       </div>
     </div>`;
-  document.getElementById('deleteAccountCancelBtn').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
+  document.getElementById('deleteAccountCancelBtn').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupAccount(); });
   document.getElementById('deleteAccountConfirmBtn').addEventListener('mousedown', e=>{
     e.preventDefault(); e.stopPropagation();
     const pw = document.getElementById('deleteAccountPw').value;
@@ -2155,7 +2221,7 @@ function renderMyReview(){
     </div>
     <hr>
     <button type="button" class="action" data-action="review-back">${ICONS.close}${s.cancelAria}</button>`;
-  panel.querySelector('[data-action="review-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
+  panel.querySelector('[data-action="review-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupData(); });
 }
 
 // Календарен изглед — седмица (седем дни, понеделник-неделя) или цял месец,
@@ -2342,7 +2408,7 @@ function renderCalendarView(mode){
       renderCalendarView();
     });
   });
-  panel.querySelector('[data-action="calendar-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
+  panel.querySelector('[data-action="calendar-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupData(); });
 }
 
 // Статистика за админ акаунта — общ брой регистрирани (документи в users/,
@@ -2378,14 +2444,14 @@ function renderAdminStats(){
       </div>
       <hr>
       <button type="button" class="action" data-action="stats-back">${ICONS.close}${s.cancelAria}</button>`;
-    panel.querySelector('[data-action="stats-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
+    panel.querySelector('[data-action="stats-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupData(); });
   }).catch(err=>{
     console.error('admin stats failed', err);
     panel.innerHTML = `
       <div class="form-msg error" style="display:block;">${s.statsError}</div>
       <hr>
       <button type="button" class="action" data-action="stats-back">${ICONS.close}${s.cancelAria}</button>`;
-    panel.querySelector('[data-action="stats-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
+    panel.querySelector('[data-action="stats-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupData(); });
   });
 }
 
@@ -2402,7 +2468,7 @@ function renderPasswordForm(){
         <button type="button" class="primary" id="pwSaveBtn">${s.saveAria}</button>
       </div>
     </div>`;
-  document.getElementById('pwCancelBtn').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
+  document.getElementById('pwCancelBtn').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupAccount(); });
   document.getElementById('pwSaveBtn').addEventListener('mousedown', e=>{
     e.preventDefault(); e.stopPropagation();
     const pw1 = document.getElementById('newPw1').value;
@@ -2435,7 +2501,7 @@ function renderEmailForm(){
         <button type="button" class="primary" id="emailSaveBtn">${s.saveAria}</button>
       </div>
     </div>`;
-  document.getElementById('emailCancelBtn').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
+  document.getElementById('emailCancelBtn').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileGroupAccount(); });
   document.getElementById('emailSaveBtn').addEventListener('mousedown', e=>{
     e.preventDefault(); e.stopPropagation();
     const newEmail = document.getElementById('newEmailInput').value.trim();
