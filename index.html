@@ -1086,6 +1086,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
 <script>
 const STORAGE_KEY = 'notes';
 const THEME_KEY = 'theme';
@@ -1176,6 +1177,10 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+// europe-west1 — трябва да съвпада ТОЧНО с региона на Cloud Functions
+// (виж setGlobalOptions() в functions/index.js), иначе compat SDK по
+// подразбиране търси функцията в us-central1 и хвърля "not-found" грешка.
+const functionsInstance = firebase.app().functions('europe-west1');
 let currentUser = null;
 let authMode = 'signin'; // 'signin' | 'signup' — за формата с имейл/парола
 
@@ -1991,12 +1996,24 @@ function handleEmailAuthSubmit(e){
   });
 }
 
+// Праща БРАНДИРАН reset линк (от noreply@iforget.eu, през Resend) вместо
+// Firebase-овия default (noreply@iforgetbg.firebaseapp.com) — виж
+// functions/index.js:sendBrandedPasswordReset(). Тази Cloud Function
+// ВИНАГИ връща {ok:true}, независимо дали имейлът реално съществува
+// (anti-enumeration, нарочно) — затова тук ВИНАГИ показваме
+// "изпратихме" съобщението при успешен HTTPS повикването, без разлика
+// за несъществуващ имейл (по-добра поверителност от старото поведение,
+// което разкриваше auth/user-not-found грешка).
 function handleForgotPassword(){
   const email = document.getElementById('authEmail').value.trim();
   if(!email){ window.alert(t().enterEmailFirst); return; }
-  auth.sendPasswordResetEmail(email)
+  const sendReset = functionsInstance.httpsCallable('sendBrandedPasswordReset');
+  sendReset({email})
     .then(()=> window.alert(t().resetEmailSent))
-    .catch(err=> window.alert(translateAuthError(err.code)));
+    .catch(err=>{
+      console.error('sendBrandedPasswordReset failed', err);
+      window.alert(translateAuthError(err.code));
+    });
 }
 
 function translateAuthError(code){

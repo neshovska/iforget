@@ -336,26 +336,53 @@ Firestore документ `users/{uid}` също съдържа `tagOrder: stri
 пише с чести правописни грешки/фонетична транслитерация, но намеренията
 обикновено стават ясни от контекста; при истинска неяснота — питай.
 
-## Планирани задачи (за после, не сега)
-- **Брандиран линк за забравена парола** (`iforget.eu/reset-password.html`
-  вместо Firebase-овия `iforgetbg.firebaseapp.com`) — Firebase Console
-  "Action URL" полето постоянно дава "An error occurred updating action
-  URL" (потвърдено: `iforget.eu` е в Authorized domains, акаунтът е Owner,
-  проблемът остава). Дори да се оправи през конзолата, реално няма да
-  проработи — Firebase-генерираните линкове винаги сочат към
-  `*.firebaseapp.com`, освен ако сайтът е на Firebase Hosting (iforget.eu е
-  на GitHub Pages, не Firebase Hosting). Истинското решение (виж как е
-  направено в `neshovska/glowtrack` — Cloud Function `sendBrandedPasswordReset`
-  в `functions/index.js`: генерира линк през Admin SDK, взима oobCode-а,
-  строи собствен `https://glowtrack.eu/?mode=resetPassword&oobCode=...`,
-  праща имейла през собствен SMTP вместо Firebase-овата система) изисква:
-  платен Firebase план Blaze (Cloud Functions не работят на безплатния
-  Spark), SMTP акаунт, писане+deploy на функция през Firebase CLI.
-  `reset-password.html` вече съществува в repo-то и приема точно тези
-  параметри — липсва само сървърната част. Съзнателно отложено — козметично
-  подобрение, не блокира нищо (забравената парола вече работи с
-  Firebase-овия линк).
+## Брандиран линк за забравена парола — КОДЪТ Е ГОТОВ, чака deploy
 
+Firebase-генерираните reset линкове винаги сочат към `*.firebaseapp.com`
+(iforget.eu е на GitHub Pages, не Firebase Hosting, затова Console
+"Action URL" настройката не помага). Решението — Cloud Function, точно
+както е в `neshovska/glowtrack` (`functions/index.js:sendBrandedPasswordReset`,
+виж го там за пълния rationale/коментари) — е написано и в тоя repo, но
+разликата с glowtrack: **изпраща през Resend (HTTP API), не през SMTP/
+nodemailer**, защото имейлът е Resend (`noreply@iforget.eu`, само за
+изпращане, "Enable Receiving" изключено нарочно), не пълна Zoho кутия.
+
+**Файлове в repo-то** (нови): `functions/index.js` (самата функция),
+`functions/package.json`, `functions/.eslintrc.js`, `firebase.json`,
+`.firebaserc` (project ID `iforgetbg`), `firestore.rules` (добавен нов
+блок за `password_reset_throttle` — `allow read, write: if false;`,
+достъпна само от Admin SDK, никога от клиента).
+
+**Логика на `sendBrandedPasswordReset`** (`onCall`, region `europe-west1`
+— трябва да съвпада с клиентския `firebase.app().functions('europe-west1')`
+в `index.html`, иначе compat SDK търси в `us-central1` и хвърля not-found):
+1. Anti-abuse throttle (Firestore транзакция, `password_reset_throttle`
+   колекция) — 3/час per имейл + 20/минута общо, проверено ПРЕДИ
+   `generatePasswordResetLink`, за да важи и за несъществуващи имейли.
+2. `admin.auth().generatePasswordResetLink(email, {url:'https://iforget.eu/'})`
+   → извлича `oobCode`-а от резултата → строи
+   `https://iforget.eu/reset-password.html?mode=resetPassword&oobCode=...`
+   (`reset-password.html` вече съществуваше в repo-то отпреди, приема
+   точно тия параметри — не е пипана).
+3. Изпраща през `fetch('https://api.resend.com/emails', ...)` с `Authorization:
+   Bearer <RESEND_API_KEY secret>`, `from: 'IForget <noreply@iforget.eu>'`.
+4. **Винаги връща `{ok:true}`**, дори за несъществуващ имейл/throttled
+   заявка (anti-enumeration — клиентът не може да различи "имейлът не
+   съществува" от "успешно изпратено"). `index.html:handleForgotPassword()`
+   вече е обновена да вика тази функция (`functionsInstance.httpsCallable(
+   'sendBrandedPasswordReset')`) вместо стария `auth.sendPasswordResetEmail()`.
+
+**Остава (действие от потребителя, извън repo-то, не мога аз да го
+направя тук):**
+1. `firebase login` + `firebase use iforgetbg` (локално, на нейния компютър).
+2. `firebase functions:secrets:set RESEND_API_KEY` — праща я, когато я
+   поиска (НИКОГА не се пише в repo-то/код — secret е в Google Cloud
+   Secret Manager).
+3. `firebase deploy --only functions,firestore:rules` — деплойва
+   функцията И новия `password_reset_throttle` rules блок наведнъж.
+4. Реален тест — "Забравена парола" от тестов акаунт, провери имейла.
+
+## Планирани задачи (за после, не сега)
 - **Споделени бележки/тагове между няколко акаунта** (напр. споделен
   списък за пазаруване или общи задачи, редактируем от повече от един
   човек). В момента архитектурата е строго лична — `users/{uid}` документ

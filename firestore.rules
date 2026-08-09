@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      // Собственикът чете/пише само своя документ.
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Admin акаунтът (за статистиката в профила) чете цялата колекция
+      // само за преглед — НЕ може да пише в чужди документи.
+      allow read: if request.auth != null
+                   && request.auth.token.email == 'neshovska@yahoo.com';
+    }
+
+    // Anti-abuse throttle за sendBrandedPasswordReset (виж functions/index.js)
+    // — четен/писан САМО от Cloud Function-а през Admin SDK (Admin SDK
+    // напълно заобикаля тия правила по дизайн). За клиента (уеб/апп)
+    // изрично забранено — иначе всеки логнат/анонимен клиент би могъл
+    // директно да чете/трие throttle бройката и да заобиколи лимита.
+    match /password_reset_throttle/{docId} {
+      allow read, write: if false;
+    }
+  }
+}
