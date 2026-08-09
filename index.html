@@ -611,7 +611,21 @@
     color:var(--accent);font-weight:700;font-size:13.5px;padding:6px 10px;font-family:inherit;
   }
 
-
+  /* Режим за лявата ръка (виж applyLeftHanded() в скрипта) — огледално
+     обръща подредбата на топбара, долната лента, копчето "най-нови" и
+     всяка бележка, за да са важните бутони по-близо до левия палец.
+     Текстът НЕ се огледалва — само позициите на елементите/бутоните. */
+  html.left-handed .topbar-row{flex-direction:row-reverse;}
+  html.left-handed .auth-lang-btn{right:auto;left:16px;}
+  html.left-handed .input-row{flex-direction:row-reverse;}
+  html.left-handed .jump-btn{right:auto;left:16px;}
+  html.left-handed .note-top{justify-content:flex-start;}
+  html.left-handed .note-main{flex-direction:row-reverse;}
+  html.left-handed .note .meta{justify-content:flex-end;}
+  html.left-handed .subs{
+    margin:6px 15px 0 0;padding-left:0;padding-right:9px;
+    border-left:none;border-right:2px solid var(--border);
+  }
 </style>
 </head>
 <body>
@@ -716,6 +730,14 @@ const LANG_KEY = 'lang';
 // и пълните им имена на собствения им език.
 const LANG_ORDER = ['bg','en','ru','de','es'];
 const LANG_NAMES = {bg:'Български', en:'English', ru:'Русский', de:'Deutsch', es:'Español'};
+// Режим за лявата ръка — огледално обръща подредбата на топбара, долната
+// лента за писане, копчето "най-нови" и всяка бележка (виж applyLeftHanded()
+// и .left-handed CSS правилата). Чисто локална настройка (не се синхронизира).
+const LEFT_HANDED_KEY = 'leftHanded';
+let leftHanded = localStorage.getItem(LEFT_HANDED_KEY) === '1';
+function applyLeftHanded(){
+  document.documentElement.classList.toggle('left-handed', leftHanded);
+}
 let notes = [];
 let editingKey = null;
 let addingSubFor = null;
@@ -810,7 +832,8 @@ const ICONS = {
   trash: '<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
   plus: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
   flame: '<svg class="ic" viewBox="0 0 24 24" width="12" height="12" fill="currentColor" stroke="none"><path d="M12 2c1 3-3 4-3 8a3 3 0 0 0 6 0c1.2 1 2 2.6 2 4.2A5.2 5.2 0 0 1 6.8 19c-2.8-2.2-3-6.4-.6-9.4C7.6 7.8 9 6 12 2z"></path></svg>',
-  chart: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>'
+  chart: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>',
+  flip: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 8 3 12 7 16"></polyline><polyline points="17 8 21 12 17 16"></polyline><line x1="3" y1="12" x2="21" y2="12"></line></svg>'
 };
 
 // Текстове за двата езика — БГ (по подразбиране) и EN. t() връща обекта за
@@ -845,7 +868,7 @@ const STRINGS = {
     authFeat4: 'Тагове, подбележки и бързо търсене',
     authLoadingText: 'Зареждане...', authError: 'Неуспешен вход. Опитай отново.',
     confirmLogout: 'Да излезеш ли от акаунта?', profileAria: 'Профил',
-    profileColorDefault: 'По подразбиране',
+    profileColorDefault: 'По подразбиране', leftHandedMode: 'Режим за лявата ръка',
     emailPlaceholder: 'Имейл', passwordPlaceholder: 'Парола', confirmPasswordPlaceholder: 'Потвърди парола',
     signInBtn: 'Вход', signUpBtn: 'Регистрация',
     noAccountYet: 'Нямаш акаунт?', haveAccountAlready: 'Вече имаш акаунт?',
@@ -915,7 +938,7 @@ const STRINGS = {
     authFeat4: 'Tags, sub-notes and quick search',
     authLoadingText: 'Loading...', authError: 'Sign-in failed. Please try again.',
     confirmLogout: 'Sign out of your account?', profileAria: 'Profile',
-    profileColorDefault: 'Default',
+    profileColorDefault: 'Default', leftHandedMode: 'Left-handed mode',
     emailPlaceholder: 'Email', passwordPlaceholder: 'Password', confirmPasswordPlaceholder: 'Confirm password',
     signInBtn: 'Sign in', signUpBtn: 'Sign up',
     noAccountYet: "Don't have an account?", haveAccountAlready: 'Already have an account?',
@@ -985,7 +1008,7 @@ const STRINGS = {
     authFeat4: 'Теги, подзаметки и быстрый поиск',
     authLoadingText: 'Загрузка...', authError: 'Не удалось войти. Попробуй снова.',
     confirmLogout: 'Выйти из аккаунта?', profileAria: 'Профиль',
-    profileColorDefault: 'По умолчанию',
+    profileColorDefault: 'По умолчанию', leftHandedMode: 'Режим для левшей',
     emailPlaceholder: 'Email', passwordPlaceholder: 'Пароль', confirmPasswordPlaceholder: 'Подтверди пароль',
     signInBtn: 'Войти', signUpBtn: 'Регистрация',
     noAccountYet: 'Нет аккаунта?', haveAccountAlready: 'Уже есть аккаунт?',
@@ -1055,7 +1078,7 @@ const STRINGS = {
     authFeat4: 'Tags, Unternotizen und schnelle Suche',
     authLoadingText: 'Wird geladen...', authError: 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
     confirmLogout: 'Vom Konto abmelden?', profileAria: 'Profil',
-    profileColorDefault: 'Standard',
+    profileColorDefault: 'Standard', leftHandedMode: 'Linkshänder-Modus',
     emailPlaceholder: 'E-Mail', passwordPlaceholder: 'Passwort', confirmPasswordPlaceholder: 'Passwort bestätigen',
     signInBtn: 'Anmelden', signUpBtn: 'Registrieren',
     noAccountYet: 'Noch kein Konto?', haveAccountAlready: 'Schon ein Konto?',
@@ -1125,7 +1148,7 @@ const STRINGS = {
     authFeat4: 'Etiquetas, subnotas y búsqueda rápida',
     authLoadingText: 'Cargando...', authError: 'No se pudo iniciar sesión. Inténtalo de nuevo.',
     confirmLogout: '¿Cerrar sesión de la cuenta?', profileAria: 'Perfil',
-    profileColorDefault: 'Predeterminado',
+    profileColorDefault: 'Predeterminado', leftHandedMode: 'Modo para zurdos',
     emailPlaceholder: 'Correo electrónico', passwordPlaceholder: 'Contraseña', confirmPasswordPlaceholder: 'Confirma la contraseña',
     signInBtn: 'Iniciar sesión', signUpBtn: 'Registrarse',
     noAccountYet: '¿No tienes cuenta?', haveAccountAlready: '¿Ya tienes cuenta?',
@@ -1449,6 +1472,8 @@ function renderProfileMenu(){
     `<button type="button" class="color-sw${c===profileColor?' active':''}${c===''?' default-sw':''}" data-color="${c}" style="${c?`background:${c}`:''}" aria-label="${c || s.profileColorDefault}"></button>`
   ).join('') + `</div>`;
   html += `<hr>`;
+  html += `<button type="button" class="action" data-action="toggle-left-handed">${ICONS.flip}${s.leftHandedMode}${leftHanded ? ICONS.check : ''}</button>`;
+  html += `<hr>`;
   html += `<button type="button" class="action" data-action="change-password">${ICONS.pencil}${s.changePassword}</button>`;
   html += `<button type="button" class="action" data-action="change-email">${ICONS.pencil}${s.changeEmail}</button>`;
   html += `<hr>`;
@@ -1474,6 +1499,13 @@ function renderProfileMenu(){
       applyAccentColor();
       renderProfileMenu();
     });
+  });
+  panel.querySelector('[data-action="toggle-left-handed"]').addEventListener('mousedown', e=>{
+    e.preventDefault(); e.stopPropagation();
+    leftHanded = !leftHanded;
+    localStorage.setItem(LEFT_HANDED_KEY, leftHanded ? '1' : '0');
+    applyLeftHanded();
+    renderProfileMenu();
   });
   panel.querySelector('[data-action="change-password"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderPasswordForm(); });
   panel.querySelector('[data-action="change-email"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderEmailForm(); });
@@ -2937,6 +2969,7 @@ document.getElementById('toggleAuthModeBtn').addEventListener('mousedown', e=>{
 
 applyTheme();
 applyAccentColor();
+applyLeftHanded();
 applyStaticText();
 requestPersistentStorage();
 // Показваме екрана за вход веднага в "зареждане" вид, докато Firebase
