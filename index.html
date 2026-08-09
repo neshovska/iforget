@@ -2019,6 +2019,7 @@ function loadFromCloud(uid){
     hideAuthScreen();
     setTimeout(()=>scrollToBottom(false), 0);
     maybeFocusQuickAdd();
+    maybeHandleShareTarget();
     touchLastSeen(docRef);
     if(isNewUser) runOnboardingTour(docRef);
   }).catch(err=>{
@@ -2026,6 +2027,7 @@ function loadFromCloud(uid){
     render();
     hideAuthScreen();
     maybeFocusQuickAdd();
+    maybeHandleShareTarget();
   });
 }
 
@@ -2299,6 +2301,31 @@ function maybeFocusQuickAdd(){
     scrollToBottom(false);
   }, 0);
   // Чистим URL-а, за да не се задейства пак при по-нататъшна навигация в сесията.
+  history.replaceState(null, '', location.pathname);
+}
+
+// "Сподели към IForget" (Web Share Target — виж share_target в
+// manifest.json). Работи само на Android/Chrome при инсталирано
+// приложение — iOS Safari няма поддръжка за тази функция при уеб
+// приложения. Текстът от споделянето само се ПОПЪЛВА в полето за нова
+// бележка — НЕ се записва автоматично, потребителят преглежда и
+// потвърждава с "+" (същия принцип като maybeFocusQuickAdd() по-горе).
+function maybeHandleShareTarget(){
+  const params = new URLSearchParams(location.search);
+  if(params.get('share-target') !== '1') return;
+  const title = (params.get('share-title') || '').trim();
+  const text = (params.get('share-text') || '').trim();
+  const url = (params.get('share-url') || '').trim();
+  // Не всяко приложение праща и трите полета; много пращат линка вече
+  // вграден в "text" — Set-ът маха точни дубликати между полетата.
+  const combined = [...new Set([title, text, url].filter(Boolean))].join(' — ');
+  if(combined){
+    setTimeout(()=>{
+      const inp = document.getElementById('noteInput');
+      if(inp){ inp.value = combined; inp.focus(); }
+      scrollToBottom(false);
+    }, 0);
+  }
   history.replaceState(null, '', location.pathname);
 }
 
