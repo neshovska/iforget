@@ -595,45 +595,21 @@
   .profile-panel .month-dot{width:5px;height:5px;border-radius:50%;}
   .profile-panel .month-dot.past{background:var(--text-dim);}
   .profile-panel .month-dot.future{background:var(--gold);}
-  /* Годишен heatmap изглед — 12 мини-месеца в скролваем контейнер. Всяко
-     квадратче показва номера на деня (.year-daynum) върху heatmap цвета —
-     нарастваща наситеност според calendarHeatBucket() (.b1/.b2/.b3). Текстът
-     ползва var(--bg) на цветните клетки (по-тъмен/по-светъл екстремум според
-     темата) за сигурен контраст върху всякаква наситеност на сивото/златното. */
-  /* position:relative тук е нужно — иначе .year-month.offsetTop (виж
-     renderCalendarView(), скролва до текущия месец) би се измерил спрямо
+  /* Годишен изглед — СЪЩАТА решетка като месечния (monthGridHtml(), виж
+     скрипта), просто 12 пъти една под друга в скролваем контейнер, по
+     изрична заявка на потребителя ("направи го като месечния, само да
+     скролва"). position:relative тук е нужно — иначе .year-month.offsetTop
+     (renderCalendarView(), скролва до текущия месец) би се измерил спрямо
      СЛЕДВАЩИЯ позициониран предшественик нагоре по дървото (.profile-panel,
      който е position:fixed), вместо спрямо самия скрол контейнер — и
      скролът щеше да пропусне целта с височината на таба/навигацията над него. */
-  .profile-panel .year-scroll{max-height:300px;overflow-y:auto;padding-right:2px;position:relative;}
-  .profile-panel .year-month{margin-bottom:12px;}
+  .profile-panel .year-scroll{max-height:340px;overflow-y:auto;padding-right:2px;position:relative;}
+  .profile-panel .year-month{margin-bottom:16px;}
   .profile-panel .year-month:last-child{margin-bottom:0;}
   .profile-panel .year-month-label{
-    font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;
-    color:var(--text-dim);margin-bottom:5px;
+    font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;
+    color:var(--text-dim);margin-bottom:6px;
   }
-  .profile-panel .year-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
-  .profile-panel .year-cell{
-    position:relative;aspect-ratio:1;border-radius:3px;background:var(--card);
-    display:flex;align-items:center;justify-content:center;
-  }
-  /* Уикенд — само по-удебелено число, без различен фон (виж .week-day.weekend
-     по-горе за същия принцип). */
-  .profile-panel .year-cell.weekend .year-daynum{font-weight:800;}
-  .profile-panel .year-cell.empty-cell{background:none;}
-  .profile-panel .year-daynum{font-size:8px;font-weight:600;color:var(--text-dim);opacity:.8;line-height:1;}
-  /* rgba() вместо opacity на цялата клетка — иначе числото (.year-daynum)
-     вътре щеше да избледнява заедно с фона. */
-  .profile-panel .year-cell.past.b1{background:rgba(var(--text-dim-rgb),.35);}
-  .profile-panel .year-cell.past.b2{background:rgba(var(--text-dim-rgb),.65);}
-  .profile-panel .year-cell.past.b3{background:rgba(var(--text-dim-rgb),1);}
-  .profile-panel .year-cell.future.b1{background:rgba(var(--gold-rgb),.4);}
-  .profile-panel .year-cell.future.b2{background:rgba(var(--gold-rgb),.7);}
-  .profile-panel .year-cell.future.b3{background:rgba(var(--gold-rgb),1);}
-  .profile-panel .year-cell.b1 .year-daynum,
-  .profile-panel .year-cell.b2 .year-daynum,
-  .profile-panel .year-cell.b3 .year-daynum{color:var(--bg);opacity:.9;}
-  .profile-panel .year-cell.today{outline:2.5px solid var(--accent);outline-offset:-2.5px;}
   .profile-panel .calendar-legend{
     display:flex;gap:14px;margin-top:12px;padding-top:12px;
     border-top:1px solid var(--border);font-size:11px;color:var(--text-dim);
@@ -2180,13 +2156,33 @@ function calendarRemindersCountForKey(key){
   });
   return cnt;
 }
-// Ниво на интензитет за годишния heatmap изглед (виж .year-cell.b1/.b2/.b3
-// по-долу) — 0 = празно, 1/2/3 = нарастваща наситеност на цвета според броя.
-function calendarHeatBucket(count){
-  if(count <= 0) return 0;
-  if(count <= 2) return 1;
-  if(count <= 5) return 2;
-  return 3;
+// Решетката на един месец (dow ред + клетки с номер на деня + точка-маркер
+// за минали бележки/бъдещи напомняния) — споделена между месечния изглед
+// (един път) и годишния (12 пъти, един под друг, виж renderCalendarView()).
+// По изрична заявка годишният изглед вече изглежда ТОЧНО като месечния,
+// само скролва надолу/нагоре през дванайсетте месеца — не отделен
+// "компактен" heatmap стил както преди.
+function monthGridHtml(year, month, todayKey, s){
+  const firstOfMonth = new Date(year, month, 1);
+  const leading = (firstOfMonth.getDay() + 6) % 7; // понеделник-първо подравняване
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  let cells = '';
+  for(let i = 0; i < leading; i++) cells += `<div class="month-cell empty-cell"></div>`;
+  for(let day = 1; day <= daysInMonth; day++){
+    const d = new Date(year, month, day);
+    const key = localDateStr(d.getTime());
+    const isToday = key === todayKey;
+    const isFuture = key >= todayKey;
+    const dow = d.getDay(); // 0=нед,6=съб
+    const isWeekend = dow === 0 || dow === 6;
+    const count = isFuture ? calendarRemindersCountForKey(key) : calendarNotesCountForKey(key);
+    const dotCls = count > 0 ? (isFuture ? 'future' : 'past') : '';
+    cells += `<div class="month-cell${isToday ? ' today' : ''}${isWeekend ? ' weekend' : ''}">
+      <span class="month-daynum">${day}</span>
+      ${dotCls ? `<span class="month-dot ${dotCls}"></span>` : ''}
+    </div>`;
+  }
+  return `<div class="month-grid">` + s.dowShort.map(dw => `<div class="month-dow">${dw}</div>`).join('') + cells + `</div>`;
 }
 
 function renderCalendarView(mode){
@@ -2220,54 +2216,19 @@ function renderCalendarView(mode){
     const year = calendarRefDate.getFullYear();
     const month = calendarRefDate.getMonth();
     rangeLabel = `${s.monthNames[month]} ${year}`;
-    const firstOfMonth = new Date(year, month, 1);
-    const leading = (firstOfMonth.getDay() + 6) % 7; // понеделник-първо подравняване
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    let cells = '';
-    for(let i = 0; i < leading; i++) cells += `<div class="month-cell empty-cell"></div>`;
-    for(let day = 1; day <= daysInMonth; day++){
-      const d = new Date(year, month, day);
-      const key = localDateStr(d.getTime());
-      const isToday = key === todayKey;
-      const isFuture = key >= todayKey;
-      const dow = d.getDay(); // 0=нед,6=съб
-      const isWeekend = dow === 0 || dow === 6;
-      const count = isFuture ? calendarRemindersCountForKey(key) : calendarNotesCountForKey(key);
-      const dotCls = count > 0 ? (isFuture ? 'future' : 'past') : '';
-      cells += `<div class="month-cell${isToday ? ' today' : ''}${isWeekend ? ' weekend' : ''}">
-        <span class="month-daynum">${day}</span>
-        ${dotCls ? `<span class="month-dot ${dotCls}"></span>` : ''}
-      </div>`;
-    }
-    bodyHtml = `<div class="month-grid">` + s.dowShort.map(dw => `<div class="month-dow">${dw}</div>`).join('') + cells + `</div>`;
+    bodyHtml = monthGridHtml(year, month, todayKey, s);
   } else {
-    // Годишен изглед — 12 мини-месеца, всеки като heatmap с номер на деня
-    // върху квадратчето (.year-daynum), нарастваща наситеност според
-    // calendarHeatBucket()), в скролваем контейнер (виж .year-scroll).
+    // Годишен изглед — СЪЩИТЕ месечни решетки (monthGridHtml(), виж по-горе)
+    // едно под друго, в скролваем контейнер — по изрична заявка да изглежда
+    // точно като месечния изглед, само дълъг и скролваем, вместо отделен
+    // компактен heatmap стил.
     const year = calendarRefDate.getFullYear();
     rangeLabel = `${year}`;
     let monthsHtml = '';
     for(let m = 0; m < 12; m++){
-      const firstOfMonth = new Date(year, m, 1);
-      const leading = (firstOfMonth.getDay() + 6) % 7;
-      const daysInMonth = new Date(year, m + 1, 0).getDate();
-      let cells = '';
-      for(let i = 0; i < leading; i++) cells += `<div class="year-cell empty-cell"></div>`;
-      for(let day = 1; day <= daysInMonth; day++){
-        const d = new Date(year, m, day);
-        const key = localDateStr(d.getTime());
-        const isToday = key === todayKey;
-        const isFuture = key >= todayKey;
-        const dow = d.getDay();
-        const isWeekend = dow === 0 || dow === 6;
-        const count = isFuture ? calendarRemindersCountForKey(key) : calendarNotesCountForKey(key);
-        const bucket = calendarHeatBucket(count);
-        const heatCls = bucket > 0 ? `${isFuture ? 'future' : 'past'} b${bucket}` : '';
-        cells += `<div class="year-cell ${heatCls}${isToday ? ' today' : ''}${isWeekend ? ' weekend' : ''}"><span class="year-daynum">${day}</span></div>`;
-      }
       monthsHtml += `<div class="year-month">
         <div class="year-month-label">${s.monthNames[m]}</div>
-        <div class="year-grid">${cells}</div>
+        ${monthGridHtml(year, m, todayKey, s)}
       </div>`;
     }
     bodyHtml = `<div class="year-scroll">${monthsHtml}</div>`;
@@ -2299,8 +2260,8 @@ function renderCalendarView(mode){
   // година; ако потребителят е навигирал към друга година, няма "днешна"
   // клетка и просто остава в началото.
   if(calendarMode === 'year'){
-    const todayCell = panel.querySelector('.year-cell.today');
     const scrollEl = panel.querySelector('.year-scroll');
+    const todayCell = scrollEl && scrollEl.querySelector('.month-cell.today');
     if(todayCell && scrollEl){
       const monthBlock = todayCell.closest('.year-month');
       if(monthBlock) scrollEl.scrollTop = monthBlock.offsetTop;
@@ -3151,18 +3112,32 @@ function setNoteTag(noteId, tag){
 // getBoundingClientRect() в момента на отваряне връща МЕЖДИННА позиция,
 // не крайната; без проследяване picker-ът увисва там, където е бил
 // тагчето по средата на анимацията, а не където накрая застава.
+// ВАЖНО: window.innerHeight НЕ се смалява, когато изскочи екранната
+// клавиатура на телефона (напр. при тапване на полето за нов таг) — само
+// window.visualViewport.height реално отразява видимата зона НАД
+// клавиатурата. Без това picker-ът/бутонът "потвърди" можеше да увисне
+// зад клавиатурата, недостижим (виж и visualViewport.offsetTop — при
+// някои устройства видимата зона допълнително се измества надолу, не само
+// смалява). Затова навсякъде по-долу ползваме тези две стойности вместо
+// голия window.innerHeight, с резервен вариант за по-стари браузъри.
+function visibleViewportBox(){
+  const vv = window.visualViewport;
+  return vv ? {top: vv.offsetTop, height: vv.height} : {top: 0, height: window.innerHeight};
+}
 function positionTagPicker(anchorEl){
   const picker = document.getElementById('tagPicker');
   const rect = anchorEl.getBoundingClientRect();
   const pickerH = picker.offsetHeight;
   const gap = 4;
+  const vp = visibleViewportBox();
+  const vBottom = vp.top + vp.height;
   let top;
-  if(rect.bottom + gap + pickerH <= window.innerHeight - 8){
+  if(rect.bottom + gap + pickerH <= vBottom - 8){
     top = rect.bottom + gap; // под тагчето — предпочитан вариант
-  }else if(rect.top - gap - pickerH >= 8){
+  }else if(rect.top - gap - pickerH >= vp.top + 8){
     top = rect.top - gap - pickerH; // няма място долу → над тагчето
   }else{
-    top = Math.max(8, Math.min(rect.bottom + gap, window.innerHeight - pickerH - 8)); // клампва в екрана
+    top = Math.max(vp.top + 8, Math.min(rect.bottom + gap, vBottom - pickerH - 8)); // клампва във видимата зона
   }
   picker.style.top = top + 'px';
   picker.style.left = Math.min(Math.max(8, rect.left), window.innerWidth - 176) + 'px';
@@ -3191,6 +3166,11 @@ function openTagPicker(noteId, anchorEl){
   picker.classList.add('show'); // трябва да е видим ПРЕДИ да измерим offsetHeight
   positionTagPicker(anchorEl);
   window.addEventListener('scroll', repositionTagPickerOnScroll, {passive:true});
+  // Клавиатурата (при тапване на полето за нов таг) не променя
+  // window.innerHeight, но ГИ променя visualViewport.height/offsetTop —
+  // без този слушател picker-ът не се преместваше и бутонът "потвърди"
+  // оставаше скрит зад клавиатурата (виж visibleViewportBox() по-горе).
+  if(window.visualViewport) window.visualViewport.addEventListener('resize', repositionTagPickerOnScroll);
 
   picker.querySelectorAll('button[data-set]').forEach(b=>{
     b.addEventListener('mousedown', e=>{
@@ -3221,6 +3201,7 @@ function closeTagPicker(){
   activeTagNoteId = null;
   tagPickerAnchor = null;
   window.removeEventListener('scroll', repositionTagPickerOnScroll);
+  if(window.visualViewport) window.visualViewport.removeEventListener('resize', repositionTagPickerOnScroll);
 }
 
 // Падащо меню за избор на език — 5 възможности (bg/en/ru/de/es), позиционирано
