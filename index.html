@@ -198,6 +198,16 @@
   .cat-chip .n{background:var(--bg);border-radius:8px;padding:0 5px;font-size:10.5px;}
   .cat-chip.active{border-color:var(--accent);color:var(--accent);}
   .cat-chip.active .n{color:var(--accent);}
+  /* Потребителските тагове (data-reorder="1") могат да се разместват с
+     дълго натискане + провлачване (виж attachCatRowDrag()) — Всички/
+     В прогрес/Работни/Лични/Satori/Изтрити са фиксирани и нямат тоя атрибут.
+     touch-action:none само тук (не на целия ред) — иначе нормалният вертикален
+     скрол на страницата би се "закачал" при допир до произволен чип. */
+  .cat-chip[data-reorder="1"]{touch-action:none;}
+  .cat-chip.dragging{
+    opacity:.6;box-shadow:0 6px 18px rgba(0,0,0,.35);transform:scale(1.06);
+    position:relative;z-index:5;
+  }
 
   /* Тагче на бележка (Лични/Работни/произволно) — тапва се за смяна.
      Отделно от .tag (статус-етикета "в прогрес"/"завършено"). Ресетваме
@@ -1046,7 +1056,22 @@ let notes = [];
 let editingKey = null;
 let addingSubFor = null;
 let searchQuery = '';
-let categoryFilter = null; // null = "Всички"; 'personal' | 'work' | произволен таг
+let categoryFilter = null; // null = "Всички"; PROGRESS_FILTER (по статус) | 'personal' | 'work' | произволен таг
+// Спец. стойност за categoryFilter — филтрира по СТАТУС (progress), не по
+// таг (виж render()/renderCatRow()). Няма как да съвпадне с истински
+// потребителски таг, защото setNoteTag() пази само каквото е въведено в
+// текстовото поле, а долна черта в началото не е обичаен вход.
+const PROGRESS_FILTER = '__progress__';
+// Ред на потребителските тагове в реда с категории — по подразбиране празен
+// (тогава orderedCustomTags() пада на азбучен ред), пълни се при първото
+// разместване (виж attachCatRowDrag()) и се пази локално + в облака (виж
+// loadLocalCache()/loadFromCloud()/saveTagOrder()).
+let tagOrder = [];
+const TAG_ORDER_KEY = 'tagOrder';
+// Вдига се точно преди да приключи успешно разместване на таг (виж
+// attachCatRowDrag()) — "поглъща" единствения последвал click на реда с
+// категории, за да не отвори филтъра по погрешка веднага след провлачване.
+let tagDragActive = false;
 let activeTagNoteId = null; // коя бележка е отворена в момента в tag-picker-а
 let tagPickerAnchor = null; // елементът, спрямо който е позициониран tag-picker-ът (за repositionTagPickerOnScroll())
 let expandedNotes = new Set(); // ключове (item.id или noteId::subId) на ръчно разгънати дълги бележки
@@ -1808,6 +1833,10 @@ function loadLocalCache(){
         if(n.reminderAt===undefined) n.reminderAt = null;
         n.subs.forEach(s=>{ if(s.reminderAt===undefined) s.reminderAt = null; });
       });
+  try{
+    const rawOrder = localStorage.getItem(TAG_ORDER_KEY);
+    tagOrder = rawOrder ? JSON.parse(rawOrder) : [];
+  }catch(e){ tagOrder = []; }
 }
 
 function showAuthScreen(loading){
@@ -2389,6 +2418,7 @@ function loadFromCloud(uid){
     }else if(notes.length){
       docRef.set({ notes }, { merge:true }).catch(err=>console.error('initial cloud upload failed', err));
     }
+    if(snap.exists && Array.isArray(snap.data().tagOrder)) tagOrder = snap.data().tagOrder;
     purgeExpiredTrash();
     render();
     hideAuthScreen();
@@ -2748,6 +2778,19 @@ function save(){
   if(currentUser){
     db.collection('users').doc(currentUser.uid).set({ notes }, { merge:true })
       .catch(err=>console.error('cloud save failed', err));
+  }
+}
+
+// Записва реда на потребителските тагове (виж tagOrder по-горе) — отделно
+// от save(), защото се променя само при разместване в реда с категории, не
+// при всяка промяна на бележките. Синхронизира се в облака, за да е същият
+// ред навсякъде, където потребителят влезе (виж attachCatRowDrag()).
+function saveTagOrder(){
+  try{ localStorage.setItem(TAG_ORDER_KEY, JSON.stringify(tagOrder)); }
+  catch(e){ console.error('save tagOrder failed', e); }
+  if(currentUser){
+    db.collection('users').doc(currentUser.uid).set({ tagOrder }, { merge:true })
+      .catch(err=>console.error('cloud save tagOrder failed', err));
   }
 }
 
@@ -3382,18 +3425,19 @@ function tagClass(tag){
   if(tag === DELETED_TAG) return 'deleted';
   return 'custom';
 }
-// Всички тагове, които има смисъл да се показват за филтриране — вградените
-// винаги (дори с 0 бележки, за да са видими като предложени категории), плюс
-// "Satori" само за конкретния акаунт, плюс всеки произволен таг, който в
-// момента се ползва от поне една бележка, плюс "Изтрити" накрая — но само
-// докато има поне 1 меко изтрита бележка в кошчето (виж softDelete()).
-function allTagsInUse(){
-  const custom = new Set();
-  notes.forEach(n=>{ if(n.tag && !BUILTIN_TAGS.includes(n.tag) && n.tag !== SATORI_TAG && n.tag !== DELETED_TAG) custom.add(n.tag); });
-  const builtins = isSatoriUser() ? [...BUILTIN_TAGS, SATORI_TAG] : BUILTIN_TAGS;
-  const tags = [...builtins, ...[...custom].sort((a,b)=>a.localeCompare(b))];
-  if(notes.some(n=>n.tag === DELETED_TAG)) tags.push(DELETED_TAG);
-  return tags;
+// Произволните (потребителски) тагове — по реда, който потребителят сам е
+// избрал чрез разместване (дълго натискане + провлачване) в реда с
+// категории (виж tagOrder/saveTagOrder()/attachCatRowDrag() по-долу).
+// Тагове, все още незаписани в tagOrder (новосъздадени, преди първото
+// разместване), се добавят накрая по азбучен ред. Вградените тагове
+// (Всички/В прогрес/Работни/Лични/Satori/Изтрити) са ФИКСИРАНИ — виж
+// renderCatRow(), не минават през тази функция.
+function orderedCustomTags(){
+  const inUse = new Set();
+  notes.forEach(n=>{ if(n.tag && !BUILTIN_TAGS.includes(n.tag) && n.tag !== SATORI_TAG && n.tag !== DELETED_TAG) inUse.add(n.tag); });
+  const known = tagOrder.filter(tg=>inUse.has(tg));
+  const unknown = [...inUse].filter(tg=>!tagOrder.includes(tg)).sort((a,b)=>a.localeCompare(b));
+  return [...known, ...unknown];
 }
 function tagPillHtml(item, noteId){
   const val = item.tag || '';
@@ -3504,18 +3548,106 @@ function sectionHeader(label, count, cls){
   return `<div class="status-section ${cls}"><span class="status-section-dot"></span>${label}<span class="status-section-count">${count}</span></div>`;
 }
 
-// Пресъздава чиповете в реда с категории (Всички + Лични/Работни/произволни,
-// всеки с брояч). Вика се при всеки render(), за да са бройките и активното
-// състояние винаги верни, без значение откъде е дошла промяната.
+// Пресъздава чиповете в реда с категории. Фиксиран старт (винаги в тази
+// последователност, не се разместват): Всички → В прогрес (филтър по
+// СТАТУС, виж PROGRESS_FILTER) → Работни → Лични → Satori (само за
+// съответния акаунт). След това потребителските тагове, по реда от
+// orderedCustomTags() — те МОГАТ да се разместват с дълго натискане +
+// провлачване (виж attachCatRowDrag(), data-reorder="1" по-долу). Накрая
+// "Изтрити", ако има поне 1 бележка в кошчето. Вика се при всеки render()
+// (и по време на разместване), за да са бройките и активното състояние
+// винаги верни.
 function renderCatRow(){
   const counts = {};
-  notes.forEach(n=>{ if(n.tag) counts[n.tag] = (counts[n.tag]||0) + 1; });
-  let html = `<button class="cat-chip${categoryFilter===null?' active':''}" data-action="cat-filter" data-cat="">${t().catAll}</button>`;
-  allTagsInUse().forEach(tg=>{
-    const n = counts[tg] || 0;
-    html += `<button class="cat-chip${categoryFilter===tg?' active':''}" data-action="cat-filter" data-cat="${escapeHtml(tg)}">${escapeHtml(tagLabel(tg))}${n?`<span class="n">${n}</span>`:''}</button>`;
+  let progressCount = 0;
+  notes.forEach(n=>{
+    if(n.tag) counts[n.tag] = (counts[n.tag]||0) + 1;
+    if((n.status||'open') === 'progress' && n.tag !== DELETED_TAG) progressCount++;
   });
+  const chip = (cat, label, count, extraAttrs) =>
+    `<button class="cat-chip${categoryFilter===cat?' active':''}" data-action="cat-filter" data-cat="${escapeHtml(cat)}"${extraAttrs||''}>${label}${count?`<span class="n">${count}</span>`:''}</button>`;
+
+  let html = chip('', t().catAll, 0);
+  html += chip(PROGRESS_FILTER, t().sectionProgress, progressCount);
+  html += chip('work', t().tagWork, counts['work']||0);
+  html += chip('personal', t().tagPersonal, counts['personal']||0);
+  if(isSatoriUser()) html += chip(SATORI_TAG, 'Satori', counts[SATORI_TAG]||0);
+  orderedCustomTags().forEach(tg=>{
+    html += chip(tg, escapeHtml(tagLabel(tg)), counts[tg]||0, ' data-reorder="1"');
+  });
+  if(notes.some(n=>n.tag === DELETED_TAG)) html += chip(DELETED_TAG, escapeHtml(tagLabel(DELETED_TAG)), counts[DELETED_TAG]||0);
   document.getElementById('catRow').innerHTML = html;
+}
+
+// Разместване на потребителските тагове в реда с категории — дълго
+// натискане (същият праг като long-press менюто на бележките) върху чип с
+// data-reorder="1", после провлачване. Извиква се ВЕДНЪЖ (делегирано върху
+// постоянния #catRow контейнер), не се закача наново при всеки renderCatRow()
+// — движение/пускане слушат на document, защото самите чипове се
+// пресъздават по средата на влаченето (при всяка размяна на позиция).
+function attachCatRowDrag(){
+  const LONG_PRESS_MS = 480;
+  let pressTimer = null;
+  let startX = 0, startY = 0;
+  let draggingTag = null;
+  let moved = false;
+
+  function cleanup(){
+    clearTimeout(pressTimer);
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', onUp);
+    document.querySelectorAll('.cat-chip.dragging').forEach(el=>el.classList.remove('dragging'));
+  }
+
+  function onMove(e){
+    if(!draggingTag) return;
+    if(!moved && (Math.abs(e.clientX - startX) > 4 || Math.abs(e.clientY - startY) > 4)) moved = true;
+    const target = document.elementFromPoint(e.clientX, e.clientY);
+    const overChip = target && target.closest('.cat-chip[data-reorder="1"]');
+    if(!overChip || overChip.dataset.cat === draggingTag) return;
+    const from = tagOrder.indexOf(draggingTag);
+    const to = tagOrder.indexOf(overChip.dataset.cat);
+    if(from === -1 || to === -1 || from === to) return;
+    tagOrder.splice(from, 1);
+    tagOrder.splice(to, 0, draggingTag);
+    renderCatRow();
+    // renderCatRow() пресъздаде чиповете — маркираме отново влачения по data-cat.
+    const newEl = Array.from(catRow.querySelectorAll('.cat-chip[data-reorder="1"]')).find(el=>el.dataset.cat === draggingTag);
+    if(newEl) newEl.classList.add('dragging');
+  }
+
+  function onUp(){
+    if(draggingTag && moved){ tagDragActive = true; saveTagOrder(); }
+    draggingTag = null; moved = false;
+    cleanup();
+  }
+
+  catRow.addEventListener('pointerdown', e=>{
+    const chip = e.target.closest('.cat-chip[data-reorder="1"]');
+    if(!chip) return;
+    startX = e.clientX; startY = e.clientY; moved = false;
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(()=>{
+      draggingTag = chip.dataset.cat;
+      // Нормализираме tagOrder до текущия видим ред (включва и тагове, все
+      // още незаписани в него) — от тук нататък разместванията работят по
+      // пълния списък.
+      tagOrder = orderedCustomTags();
+      chip.classList.add('dragging');
+      triggerHaptic();
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+      document.addEventListener('pointercancel', onUp);
+    }, LONG_PRESS_MS);
+  });
+  // Ако пръстът/показалецът тръгне преди да мине LONG_PRESS_MS, отменяме
+  // таймера — не искаме да "открадваме" обикновен тап (филтриране по таг).
+  catRow.addEventListener('pointermove', e=>{
+    if(draggingTag || !pressTimer) return;
+    if(Math.abs(e.clientX - startX) > 8 || Math.abs(e.clientY - startY) > 8) clearTimeout(pressTimer);
+  });
+  catRow.addEventListener('pointerup', ()=>clearTimeout(pressTimer));
 }
 
 function render(){
@@ -3555,12 +3687,17 @@ function render(){
   }
 
   // Филтър по категория: плосък списък (както при търсене), без разделяне
-  // по статус — просто всички бележки с избрания таг, най-новите горе.
+  // по статус — просто всички бележки с избрания таг (или, за PROGRESS_FILTER,
+  // всички "в прогрес" независимо от тага), най-новите горе.
   if(categoryFilter){
-    const filtered = notes.filter(n => n.tag === categoryFilter).sort((a,b)=>b.createdAt-a.createdAt);
+    const isProgressFilter = categoryFilter === PROGRESS_FILTER;
+    const filtered = notes
+      .filter(n => isProgressFilter ? ((n.status||'open') === 'progress' && n.tag !== DELETED_TAG) : n.tag === categoryFilter)
+      .sort((a,b)=>b.createdAt-a.createdAt);
+    const label = isProgressFilter ? t().sectionProgress : tagLabel(categoryFilter);
     const html = filtered.length
       ? `<div class="day-block">
-          <div class="day-label">${escapeHtml(tagLabel(categoryFilter))}<span class="count">${filtered.length}</span></div>
+          <div class="day-label">${escapeHtml(label)}<span class="count">${filtered.length}</span></div>
           ${filtered.map(n=>itemRow(n, n.id, false)).join('')}
         </div>`
       : `<div class="empty">${t().noNotesForTag}</div>`;
@@ -3572,19 +3709,21 @@ function render(){
     return;
   }
 
-  // Бележките в кошчето (tag===DELETED_TAG) не се показват в нормалните
-  // секции Приключени/В прогрес/Активни — само през филтъра "Изтрити".
+  // Бележките в кошчето (tag===DELETED_TAG) не се показват в нормалния
+  // изглед — само през филтъра "Изтрити". "Приключени" остават отделна
+  // секция (излизат от потока нагоре, извън основния списък), но "в
+  // прогрес" и "активни" вече НЕ се делят на отделни секции — стоят в ЕДИН
+  // общ хронологичен поток, без разместване помежду им (само статус-точката
+  // на всяка бележка ги отличава визуално), по изрична заявка на потребителя.
   const byStatus = status => notes.filter(n => (n.status||'open') === status && n.tag !== DELETED_TAG).sort((a,b)=>a.createdAt-b.createdAt);
   const done = byStatus('done');
-  const progress = byStatus('progress');
-  const open = byStatus('open');
+  const rest = notes.filter(n => (n.status||'open') !== 'done' && n.tag !== DELETED_TAG).sort((a,b)=>a.createdAt-b.createdAt);
 
   let html = '';
   if(done.length) html += sectionHeader(t().sectionDone, done.length, 'done') + statusGroupHtml(done, false);
-  if(progress.length) html += sectionHeader(t().sectionProgress, progress.length, 'progress') + statusGroupHtml(progress, false);
   // "Активни" секцията винаги се показва (най-близо до лентата), с "Днес"
   // блок дори когато е празна — покана да напишеш нещо.
-  html += sectionHeader(t().sectionActive, open.length, 'active') + statusGroupHtml(open, true);
+  html += sectionHeader(t().sectionActive, rest.length, 'active') + statusGroupHtml(rest, true);
 
   document.getElementById('activeArea').innerHTML = html;
   updateTopbarHeight();
@@ -3771,11 +3910,16 @@ catBtn.addEventListener('click', ()=>{
   updateTopbarHeight();
 });
 catRow.addEventListener('click', e=>{
+  // "Поглъщаме" click-а точно след успешно провлачване/разместване — иначе
+  // би отворил филтъра по тага, върху който е пусната бележката, вместо
+  // просто да приключи разместването (виж attachCatRowDrag()).
+  if(tagDragActive){ tagDragActive = false; return; }
   const chip = e.target.closest('[data-action="cat-filter"]');
   if(!chip) return;
   categoryFilter = chip.dataset.cat || null;
   render();
 });
+attachCatRowDrag();
 
 document.getElementById('importFileInput').addEventListener('change', e=>{
   const file = e.target.files[0];
