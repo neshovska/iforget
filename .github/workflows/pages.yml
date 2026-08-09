@@ -25,6 +25,19 @@ jobs:
         uses: actions/checkout@v7
       - name: Setup Pages
         uses: actions/configure-pages@v6
+      # Премахва вътрешни/нежелани файлове от копието, което отива публично
+      # на iforget.eu, ПРЕДИ upload-pages-artifact (`path: '.'` качва целия
+      # repo root както си е — CLAUDE.md (личен админ имейл + бизнес/ценова
+      # стратегия), functions/ (Cloud Function код), android/ios (нативни
+      # проекти), firebase.json/.firebaserc/firestore.rules, package*.json
+      # НЯМАТ работа публично достъпни на живия сайт). index.html/privacy.
+      # html/terms.html/reset-password.html/manifest.json/иконки/снимки/
+      # CNAME остават непокътнати — точно те са реалният сайт.
+      - name: Remove internal/non-public files
+        run: |
+          rm -rf CLAUDE.md functions android ios scripts node_modules \
+                 firebase.json .firebaserc firestore.rules \
+                 package.json package-lock.json capacitor.config.json .gitignore
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
         with:
