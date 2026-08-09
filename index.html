@@ -3490,8 +3490,14 @@ function renderCtxMenuMain(noteId, subId){
   if(!subId){
     html += `<button data-ctx="addsub">${ICONS.plus}${s.ctxAddSub}</button>`;
   }
-  html += `<button data-ctx="color">${ICONS.droplet}${s.ctxColor}</button>`;
-  html += `<button data-ctx="reminder">${ICONS.bell}${item && item.reminderAt ? s.ctxEditReminder : s.ctxAddReminder}</button>`;
+  // Цвят на бележка + напомняне — временно скрити от обикновените
+  // потребители (по изрична молба), видими само в админ профила
+  // (isSatoriUser()) — за момента, докато не решим кога/как да се пуснат
+  // за всички (виж плана за free/premium разделение в CLAUDE.md).
+  if(isSatoriUser()){
+    html += `<button data-ctx="color">${ICONS.droplet}${s.ctxColor}</button>`;
+    html += `<button data-ctx="reminder">${ICONS.bell}${item && item.reminderAt ? s.ctxEditReminder : s.ctxAddReminder}</button>`;
+  }
   html += `<button data-ctx="share">${ICONS.share}${s.ctxShare}</button>`;
   html += `<button class="danger" data-ctx="delete">${ICONS.trash}${s.ctxDelete}</button>`;
   const menu = document.getElementById('ctxMenu');
@@ -3747,8 +3753,11 @@ function hexToRgb(hex){
 // data-colored + inline --nc custom property за itemRow() по-долу — само
 // когато бележката/подбележката има зададен личен цвят (виж
 // renderCtxMenuColor()). Празен низ иначе (без атрибути, нормален вид).
+// Функцията е временно скрита от обикновените потребители (виж
+// renderCtxMenuMain()) — тук допълнително проверяваме isSatoriUser(), за
+// да не се вижда и стар/останал цвят от преди скриването.
 function noteColorAttr(item){
-  if(!item.color) return '';
+  if(!item.color || !isSatoriUser()) return '';
   const rgb = hexToRgb(item.color);
   return rgb ? ` data-colored style="--nc:${rgb};"` : '';
 }
@@ -3795,7 +3804,7 @@ function itemRow(item, noteId, isSub){
           <div class="txt${!isExpanded ? ' clamped' : ''}" data-key="${key}" data-action="edit" data-note="${noteId}" data-sub="${isSub?item.id:''}">${escapeHtml(item.text)}</div>
           <div class="meta">
             ${!isSub ? tagPillHtml(item, noteId) : ''}
-            ${item.reminderAt ? `<span class="reminder-badge">${ICONS.bell}${reminderLabel(item.reminderAt)}${item.reminderRepeat ? ICONS.repeat : ''}</span>` : ''}
+            ${item.reminderAt && isSatoriUser() ? `<span class="reminder-badge">${ICONS.bell}${reminderLabel(item.reminderAt)}${item.reminderRepeat ? ICONS.repeat : ''}</span>` : ''}
             ${!isSub && addingSubFor !== noteId ? `<button class="add-sub-link" data-action="sub-open" data-note="${noteId}">${t().addSubLink}</button>` : ''}
             <button class="expand-toggle" data-action="toggle-expand" data-key="${key}" style="display:${isExpanded?'inline-flex':'none'}" aria-label="${isExpanded?t().collapseAria:t().expandAria}">${isExpanded?t().collapseAria:t().expandAria}${isExpanded?ICONS.chevronUp:ICONS.chevronDown}</button>
           </div>
