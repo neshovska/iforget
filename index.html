@@ -933,6 +933,11 @@ let tagPickerAnchor = null; // елементът, спрямо който е п
 let expandedNotes = new Set(); // ключове (item.id или noteId::subId) на ръчно разгънати дълги бележки
 let ctxMenuNote = null; // {noteId, subId} на бележката с отворено long-press меню
 let ctxActiveWrap = null; // .note-wrap елементът, който в момента "изпъква" (виж openCtxMenu/closeCtxMenu)
+// Ръчно засичане на "двоен тап" за отваряне на редакция (виж attachHandlers()
+// по-долу) — не разчитаме на нативния dblclick, ненадежден на тъч устройства.
+let lastEditTapKey = null;
+let lastEditTapTime = 0;
+const DOUBLE_TAP_MS = 400;
 let theme = localStorage.getItem(THEME_KEY) || 'dark';
 let lang = localStorage.getItem(LANG_KEY) || 'bg';
 const BUILTIN_TAGS = ['personal', 'work'];
@@ -3248,12 +3253,25 @@ function attachHandlers(){
   });
   // Двоен тап/клик върху текста отваря редакция (не единичен) — по-трудно
   // е да се влезе случайно в редакция, докато четеш или скролваш.
+  // Умишлено НЕ ползваме нативния 'dblclick' — на тъч устройства браузърът
+  // не винаги успява да го синтезира надеждно (особено със собствената ни
+  // touchstart/touchmove логика за swipe/long-press на родителя .note),
+  // затова засичаме двата тапа сами през обикновен 'click' + таймер.
   document.querySelectorAll('[data-action="edit"]').forEach(el=>{
-    el.addEventListener('dblclick', ()=>{
+    el.addEventListener('click', ()=>{
       const noteId = el.dataset.note, subId = el.dataset.sub || null;
-      editingKey = subId ? noteId+'::'+subId : noteId;
-      addingSubFor = null;
-      render();
+      const key = subId ? noteId+'::'+subId : noteId;
+      const now = Date.now();
+      if(lastEditTapKey === key && now - lastEditTapTime < DOUBLE_TAP_MS){
+        lastEditTapKey = null;
+        lastEditTapTime = 0;
+        editingKey = key;
+        addingSubFor = null;
+        render();
+      }else{
+        lastEditTapKey = key;
+        lastEditTapTime = now;
+      }
     });
   });
   // Фокусираме textarea веднага, синхронно, в рамките на същия event-стек
