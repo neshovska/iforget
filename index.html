@@ -4047,6 +4047,21 @@ userChip.addEventListener('click', ()=>{
   openProfilePanel(userChip);
 });
 
+// РЕАЛЕН БЪГ, поправен тук: бутони ВЪТРЕ в #ctxMenu/#profilePanel, които
+// подменят innerHTML НА МЯСТО, докато панелът остава отворен (напр. "Цвят"/
+// "Напомняне"/"назад" в ctx-менюто, или "Твоят преглед"/"Календар" в
+// профила) — в момента на подмяната оригиналният e.target вече е DETACHED
+// от документа. Докато СЪЩОТО mousedown събитие продължава да "изкачва"
+// (bubble) нагоре до document (глобалния "затвори при клик отвън" слушател
+// по-долу), той проверява panel.contains(e.target) — за detached възел
+// това връща false, все едно кликът е бил ИЗВЪН панела → погрешно затваря
+// панела веднага след като той тъкмо е превключил изгледа (напр. "Цвят" се
+// отваряше и веднага се затваряше, връщайки към бележката). Затова спираме
+// bubbling-а на mousedown вътре в тия два панела — кликът явно си е ВЪТРЕ,
+// без значение какво прави handler-ът със съдържанието след това.
+document.getElementById('ctxMenu').addEventListener('mousedown', e=>{ e.stopPropagation(); });
+document.getElementById('profilePanel').addEventListener('mousedown', e=>{ e.stopPropagation(); });
+
 // Затваря tag-picker-а/контекстното меню/профила при клик извън тях (и
 // извън бутоните, които ги отварят).
 document.addEventListener('mousedown', e=>{
