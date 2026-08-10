@@ -517,6 +517,17 @@
   .color-sw.active{border-color:var(--text);}
   /* "По подразбиране/без цвят" — двуцветно квадратче (син/кафяв). */
   .color-sw.default-sw{background:linear-gradient(135deg, #5B96FF 50%, #8C5A2B 50%) !important;}
+  /* Заключен (Premium) цвят в профилния акцентен избор — виж
+     renderProfileMenu()/PROFILE_COLORS_FREE. Само в .profile-panel, НЕ и в
+     .ctx-menu (там renderCtxMenuColor() е изцяло зад hasAdvancedFeatures()
+     като функция — веднъж влязъл, всички цветове са свободни, без per-
+     цвят заключване). Приглушава цвета (grayscale+затъмнено) + катинарче
+     икона по средата вместо активния клик ефект. */
+  .profile-panel .color-sw.locked{
+    filter:grayscale(.55) brightness(.65);
+    display:flex;align-items:center;justify-content:center;
+    color:rgba(255,255,255,.9);cursor:default;
+  }
   .ctx-menu .color-row{padding:4px 6px 8px;}
   /* .ctx-menu button{width:100%;padding:...;border-radius:8px;...} по-долу
      иначе разтяга кръгчетата на цвят в широки правоъгълни плочки —
@@ -1283,6 +1294,15 @@ let authMode = 'signin'; // 'signin' | 'signup' — за формата с им�
 // "Капучино" палитрата, вместо да стърчат ярко — виж по-старите/по-ярките
 // стойности в git историята, ако потрябват за сравнение.
 const PROFILE_COLORS = ['', '#6E8FBF','#C97BA0','#5C9C8E','#9884C9','#C6A052','#C06F5F'];
+// Само тия 3 (по подразбиране + синьо + жълто, по изричен избор на
+// потребителя — "по-натам като стане платена") са безплатни за акцентния
+// цвят на профила; останалите 4 са заключени зад Premium (виж
+// hasAdvancedFeatures()/.color-sw.locked в renderProfileMenu()) — целта е
+// Premium да изглежда като реално "повече опции", не само превключване.
+// ЗАБЕЛЕЖКА: НЕ засяга renderCtxMenuColor() (цвят на бележка) — тя вече е
+// изцяло зад hasAdvancedFeatures() като функция; веднъж вътре, всички
+// PROFILE_COLORS са достъпни там, без допълнително заключване per-цвят.
+const PROFILE_COLORS_FREE = ['', '#6E8FBF', '#C6A052'];
 // Всеки избираем цвят си има по-тъмен "dim" вариант (за рамки/hover), в
 // същия дух като вече съществуващите --accent-dim/--gold-dim в палитрата.
 const ACCENT_DIM_MAP = {
@@ -1342,7 +1362,11 @@ const ICONS = {
   calendar: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>',
   chevronLeft: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>',
   chevronRight: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>',
-  repeat: '<svg class="ic" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>'
+  repeat: '<svg class="ic" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>',
+  // Малка катинарче иконка — за заключени Premium опции (виж .color-sw.locked
+  // в renderProfileMenu()). Умишлено без fill (плътен контур), за да е добре
+  // видима върху цветен фон на самото swatch копче.
+  lock: '<svg class="ic" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>'
 };
 
 // Текстове за двата езика — БГ (по подразбиране) и EN. t() връща обекта за
@@ -2197,9 +2221,13 @@ function renderProfileMenu(){
   const panel = document.getElementById('profilePanel');
   const email = currentUser ? (currentUser.email || '') : '';
   let html = `<div class="profile-email">${escapeHtml(email)}</div>`;
-  html += `<div class="color-row">` + PROFILE_COLORS.map(c =>
-    `<button type="button" class="color-sw${c===profileColor?' active':''}${c===''?' default-sw':''}" data-color="${c}" style="${c?`background:${c}`:''}" aria-label="${c || s.profileColorDefault}"></button>`
-  ).join('') + `</div>`;
+  // Само PROFILE_COLORS_FREE (по подразбиране + синьо + жълто) са свободни —
+  // останалите цветове се показват заключени (катинарче, приглушен цвят),
+  // докато потребителят не е Premium/админ — виж CLAUDE.md за rationale.
+  html += `<div class="color-row">` + PROFILE_COLORS.map(c => {
+    const locked = !PROFILE_COLORS_FREE.includes(c) && !hasAdvancedFeatures();
+    return `<button type="button" class="color-sw${c===profileColor?' active':''}${c===''?' default-sw':''}${locked?' locked':''}" data-color="${c}" data-locked="${locked?'1':''}" style="${c?`background:${c}`:''}" aria-label="${c || s.profileColorDefault}">${locked?ICONS.lock:''}</button>`;
+  }).join('') + `</div>`;
 
   // Premium вход/статус — виж hasAdvancedFeatures()/premiumLaunched по-горе.
   // ИЗЦЯЛО скрито, докато premiumLaunched е false (главният ключ в Firestore
@@ -2255,6 +2283,14 @@ function renderProfileMenu(){
   panel.querySelectorAll('.color-sw').forEach(b=>{
     b.addEventListener('mousedown', e=>{
       e.preventDefault(); e.stopPropagation();
+      // Заключен цвят (Premium) — не сменяме темата, вместо това отваряме
+      // плановете за ъпгрейд направо (само ако Premium изобщо е пуснато;
+      // ако premiumLaunched е false, заключените swatch-ове изобщо не се
+      // рендират такива, виж по-горе — тук е чиста защита при все пак клик).
+      if(b.dataset.locked === '1'){
+        if(premiumLaunched) renderPremiumPlans();
+        return;
+      }
       profileColor = b.dataset.color;
       localStorage.setItem(PROFILE_COLOR_KEY, profileColor);
       updateUserChip(currentUser);

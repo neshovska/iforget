@@ -427,6 +427,23 @@ Premium занапред, потребителят просто създава/�
   реален Stripe статус** — общото правило от по-рано в документа. Чисто
   административни неща (Статистика, Satori таг) си остават `isSatoriUser()`
   директно — НЕ минават през `hasAdvancedFeatures()`, не са Premium функции.
+- **Акцентният цвят на профила — частично заключен зад Premium** (по
+  изрична молба: "цветовете да останат само два цвята и основната тема,
+  другите да са премиум... за да изглежда, че даваме повече екстри").
+  `PROFILE_COLORS_FREE = ['', '#6E8FBF', '#C6A052']` (по подразбиране +
+  синьо + жълто, избрани от потребителя) — единствените свободни; останалите
+  4 цвята в `PROFILE_COLORS` се рендират с `.color-sw.locked` (`ICONS.lock`
+  катинарче, grayscale+затъмнен фон, виж CSS) в `renderProfileMenu()`,
+  ЗАКЛЮЧВАНЕТО е активно ВЕДНАГА (не чака `premiumLaunched`, същия принцип
+  като Цвят/Напомняне по-горе — `!hasAdvancedFeatures()` само, без
+  допълнителна `premiumLaunched` проверка в render логиката). Клик на
+  заключен swatch: `if(premiumLaunched) renderPremiumPlans();` иначе
+  тих no-op (Premium още не е формално пуснато, няма къде да отведе).
+  **ВАЖНО — НЕ засяга `renderCtxMenuColor()`** (цвета НА бележка) — тя е
+  изцяло зад `hasAdvancedFeatures()` като цяла функция вече; веднъж вътре
+  (Premium/админ), всичките `PROFILE_COLORS` са свободни там, без
+  допълнително per-цвят заключване — `.color-sw.locked` CSS правилото е
+  изрично скопирано само в `.profile-panel`, не и в `.ctx-menu`.
 - `renderProfileMenu()` показва (само ако `premiumLaunched && !isSatoriUser()`):
   ако `userIsPremium` → злат бадж "Premium активен"; иначе → злат бутон
   "Ъпгрейд до Premium" (`data-action="premium-upgrade"`) → `renderPremiumPlans()`.
