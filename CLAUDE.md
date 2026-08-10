@@ -521,10 +521,18 @@ write: if false` — САМО `stripeWebhook` през Admin SDK пише тук
 **Работен процес за бъдещи промени** (след като нещо се смени в
 `index.html` и трябва да стигне до нативния апп):
 ```
-npm run sync          # копира www/ наново + npx cap sync (двете платформи)
-npm run open:android  # отваря Android Studio
-npm run open:ios      # отваря Xcode
+npm run open:android  # sync + отваря Android Studio
+npm run open:ios      # sync + отваря Xcode
 ```
+`open:android`/`open:ios` вече вкарват `npm run sync` вътре в себе си
+(поправено — реален бъг, засегна първия ѝ опит: `android/
+capacitor-cordova-android-plugins/` папката е auto-generated от `cap
+sync`, но `android/.gitignore` (генериран от Capacitor, не мой файл) я
+игнорира изрично — на чисто клонирано repo тя просто не съществува,
+докато не се пусне `cap sync` поне веднъж; отварянето директно с "npx
+cap open android" преди sync гърмеше с "Could not read script
+.../cordova.variables.gradle"). Ако само трябва пресинхронизиране без да
+се отваря IDE — `npm run sync` самостоятелно.
 После обичайният native build/archive/upload flow във всеки IDE.
 
 **Остава (изисква Mac/Android Studio, не мога аз да го направя тук —
