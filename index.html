@@ -244,6 +244,14 @@
     max-height:calc(100vh - 16px);overflow-y:auto;
   }
   .tag-picker.show{display:block;}
+  /* #langPicker ползва .tag-picker класа (споделен стил), но освен от
+     topbar-а (влизайки нормално в z-index:25 стека на основния апп) се
+     отваря и от authLangBtn на .auth-screen (z-index:50) — реален бъг:
+     менюто отваряше/позиционираше се коректно, но остваше ВИЗУАЛНО зад
+     .auth-screen непрозрачния слой (25 < 50), изглеждаше все едно бутонът
+     "не работи". ID селектор тук печели над класовия .tag-picker{z-index:25}
+     (по-висока специфичност), без да пипа истинския tag-picker другаде. */
+  #langPicker{z-index:51;}
   .tag-picker button{
     width:100%;text-align:left;background:none;border:none;color:var(--text);font-size:13px;font-weight:600;
     padding:7px 8px;border-radius:8px;display:flex;align-items:center;gap:7px;font-family:inherit;
