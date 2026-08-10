@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>IForget — потвърждение на имейл</title>
+<style>
+  /* Самостоятелна страница за потвърждение на имейл, отворена от линка в
+     писмото "Потвърди своя имейл" (виж sendBrandedEmailVerification в
+     functions/index.js и resendVerifyEmail()/signup handler-а в
+     index.html). Firebase праща линк с ?mode=verifyEmail&oobCode=... —
+     тази страница обработва кода директно тук, на нашия домейн, вместо на
+     firebaseapp.com. Копие на reset-password.html (същия принцип,
+     applyActionCode() вместо confirmPasswordReset(), без форма за въвеждане
+     — верификацията не изисква нищо от потребителя освен самия линк).
+     Палитрата е копие на тъмната тема на основното приложение. */
+  :root{
+    --bg:#141B2E; --card:#1D2941; --card-2:#26344F; --border:#38496B;
+    --text:#F0F3F9; --text-dim:#98A3B9; --accent:#5B96FF; --accent-dim:#3D71C4;
+    --green:#5AB77C; --danger:#E36358;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;height:100%;}
+  body{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .card{max-width:340px;width:100%;text-align:center;}
+  h1{font-size:26px;font-weight:800;color:var(--accent);margin:0 0 8px;letter-spacing:.3px;}
+  p{font-size:14px;color:var(--text-dim);line-height:1.55;margin:0 0 22px;}
+  p strong{color:var(--text);}
+  .success-text{color:var(--green);font-size:15px;font-weight:700;margin:0 0 22px;}
+  .back-link{
+    display:inline-block;margin-top:22px;color:var(--accent-dim);font-size:13px;
+    font-weight:600;text-decoration:none;
+  }
+  .loading-text{color:var(--text-dim);font-size:14px;}
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <h1>IForget</h1>
+  <div class="loading-text" id="loadingText">Потвърждавам имейла...</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAOFzRfhPe2tZl96S1KspEfGwNlr732q5U",
+  authDomain: "iforgetbg.firebaseapp.com",
+  projectId: "iforgetbg",
+  storageBucket: "iforgetbg.firebasestorage.app",
+  messagingSenderId: "782609746488",
+  appId: "1:782609746488:web:28e5198ff82018732df4cd"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+const params = new URLSearchParams(window.location.search);
+const mode = params.get('mode');
+const oobCode = params.get('oobCode');
+const card = document.getElementById('card');
+
+function renderError(msg){
+  card.innerHTML = `
+    <h1>IForget</h1>
+    <p style="color:var(--danger)">${msg}</p>
+    <a class="back-link" href="/">← Обратно към IForget</a>`;
+}
+
+function renderSuccess(){
+  card.innerHTML = `
+    <h1>IForget</h1>
+    <div class="success-text">Имейлът е потвърден успешно!</div>
+    <a class="back-link" href="/">Обратно в IForget →</a>`;
+}
+
+if(mode !== 'verifyEmail' || !oobCode){
+  renderError('Линкът е невалиден.');
+}else{
+  auth.applyActionCode(oobCode).then(renderSuccess).catch(err=>{
+    console.error('applyActionCode failed', err);
+    renderError('Линкът е изтекъл или вече е използван. Поискай нов линк от банера в приложението.');
+  });
+}
+</script>
+</body>
+</html>

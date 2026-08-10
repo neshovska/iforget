@@ -385,6 +385,53 @@ nodemailer**, защото имейлът е Resend (`noreply@iforget.eu`, са�
 3. `firebase deploy --only functions,firestore:rules`.
 4. Реален тест — потвърдено работещо.
 
+## Брандиран email verification (потвърждение на регистрация) — КОДЪТ Е ГОТОВ, чака deploy
+
+Потребителят забеляза, че само reset-паролата беше брандирана — имейлът
+"Провери пощата си и потвърди имейла си" при регистрация още идваше от
+Firebase-default `noreply@iforgetbg.firebaseapp.com`, защото никога не е
+бил пипан (само `sendBrandedPasswordReset` съществуваше). Решението е
+**точно същия принцип, копиран 1:1**:
+
+- `functions/index.js:sendBrandedEmailVerification` (`onCall`) — вместо
+  `generatePasswordResetLink` използва `admin.auth()
+  .generateEmailVerificationLink(email, {url:'https://iforget.eu/'})`,
+  извлича `oobCode`-а, строи `https://iforget.eu/verify-email.html?
+  mode=verifyEmail&oobCode=...`, изпраща през същия Resend `fetch()` (пак
+  `RESEND_API_KEY` secret — вече зададен, не трябва нов). Throttle е
+  **по-прост** от password reset — изисква `request.auth` (потребителят
+  вече е логнат/регистриран точно преди това), значи няма anti-enumeration
+  нужда (за разлика от password reset, достъпен за всеки нелогнат с
+  произволен имейл) — само `email_verification_throttle` колекция, 5/час
+  per uid, без глобален лимит.
+- `verify-email.html` (ново, копие на `reset-password.html` по структура)
+  — чете `?mode=verifyEmail&oobCode=...`, вика `auth.applyActionCode(oobCode)`
+  (по-просто от password reset — само потвърждава кода, няма форма за нова
+  парола/данни от потребителя). **Умишлено НЕ е добавена в
+  `scripts/sync-www.js` FILES_TO_COPY** (същата логика като
+  `reset-password.html` — само за уеб flow, отваря се от имейл линк в
+  браузър, не й трябва вътре в нативния апп).
+- `firestore.rules` — нов блок `email_verification_throttle` (`allow read,
+  write: if false;`, само Admin SDK).
+- `index.html` — нова споделена `sendVerificationEmail()` функция (вика
+  `functionsInstance.httpsCallable('sendBrandedEmailVerification')({})`,
+  **без email параметър** — Cloud Function-ът чете `request.auth.token.email`
+  директно, не приема произволен email от клиента, за разлика от password
+  reset, който МОРА да приема email от нелогнат клиент). Ползва се от
+  ДВЕ места: `resendVerifyEmail()` (банерът "изпрати пак") и signup
+  handler-а (`action.then(cred => cred.user && sendVerificationEmail()...)`).
+  И двете преди викаха `user.sendEmailVerification()` директно. Същия
+  FALLBACK принцип като `handleForgotPassword()` — при
+  `'functions/not-found'` (функцията още не е деплойната) пада обратно
+  към стария `currentUser.sendEmailVerification()`, за да не остане
+  верификацията чупена в прозореца преди deploy.
+
+**Остава** (същите стъпки като password reset, вече познати на
+потребителя): `firebase deploy --only functions,firestore:rules`
+(не трябва нов secret — `RESEND_API_KEY` вече е зададен), после реален
+тест — регистрирай тестов акаунт (или "изпрати пак" бутона от банера),
+провери дали писмото идва от `noreply@iforget.eu`.
+
 ## Premium/Stripe инфраструктура — ПОДГОТВЕНА, но НЕВИДИМА за реални потребители
 
 По изрична молба: "искам да имам всички опции подготвени, после кто

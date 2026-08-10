@@ -19,6 +19,14 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Anti-abuse throttle за sendBrandedEmailVerification (виж
+    // functions/index.js) — същия принцип като password_reset_throttle
+    // по-горе, само че ключуван по uid (не email), защото тук потребителят
+    // вече е логнат (request.auth изисква се във функцията).
+    match /email_verification_throttle/{docId} {
+      allow read, write: if false;
+    }
+
     // Premium инфраструктура (виж CLAUDE.md за пълния план) — ПОДГОТВЕНА,
     // но неактивна, докато config/premium.enabled не стане true.
 

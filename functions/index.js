@@ -334,3 +334,102 @@ exports.stripeWebhook = onRequest(
       }
     },
 );
+
+// ═══════════════════════════════════════════════════════════
+// БРАНДИРАН EMAIL VERIFICATION — праща от noreply@iforget.eu вместо
+// Firebase-default noreply@iforgetbg.firebaseapp.com. СЪЩИЯ принцип
+// като sendBrandedPasswordReset по-горе (generateEmailVerificationLink
+// вместо generatePasswordResetLink, отделна статична страница
+// verify-email.html вместо reset-password.html), но по-прост throttle —
+// изисква request.auth (потребителят вече е логнат/регистриран), затова
+// няма anti-enumeration нужда (за разлика от password reset, който е
+// достъпен и за нелогнати с произволен имейл).
+// ═══════════════════════════════════════════════════════════
+
+const EMAIL_VERIFICATION_HOURLY_LIMIT = 5;
+
+exports.sendBrandedEmailVerification = onCall(
+    {secrets: [resendApiKey]},
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Трябва да си логнат.");
+      }
+      const uid = request.auth.uid;
+      const email = request.auth.token.email;
+      if (!email) {
+        throw new HttpsError("failed-precondition", "Акаунтът няма имейл адрес.");
+      }
+
+      const now = Date.now();
+      const hourBucket = Math.floor(now / (60 * 60 * 1000));
+      const throttleRef = db.collection("email_verification_throttle").doc(uid);
+
+      const allowed = await db.runTransaction(async (tx) => {
+        const snap = await tx.get(throttleRef);
+        const data = snap.exists ? snap.data() : {};
+        const count = data.hourBucket === hourBucket ? (data.count || 0) : 0;
+        if (count >= EMAIL_VERIFICATION_HOURLY_LIMIT) return false;
+        tx.set(throttleRef, {hourBucket, count: count + 1});
+        return true;
+      });
+
+      if (!allowed) {
+        // тих no-op — клиентът си има и собствен 60 сек cooldown в UI-то,
+        // това е само сървърен backstop, не съобщаваме различно поведение.
+        console.log(`Email verification throttled за uid=${uid}.`);
+        return {ok: true};
+      }
+
+      // url тук е само continueUrl fallback — не се използва реално, строим
+      // собствен линк към iforget.eu/verify-email.html със самия oobCode,
+      // по същата причина като sendBrandedPasswordReset (iforget.eu не е
+      // Firebase Hosting сайт).
+      const actionCodeSettings = {url: "https://iforget.eu/"};
+
+      let verifyLink;
+      try {
+        verifyLink = await admin.auth().generateEmailVerificationLink(email, actionCodeSettings);
+      } catch (e) {
+        console.error("generateEmailVerificationLink failed:", e);
+        throw new HttpsError("internal", "Грешка при генериране на линка.");
+      }
+
+      const oobCode = new URL(verifyLink).searchParams.get("oobCode");
+      if (!oobCode) {
+        console.error("generateEmailVerificationLink не върна oobCode в линка.");
+        throw new HttpsError("internal", "Грешка при генериране на линка.");
+      }
+      const brandedVerifyLink = `https://iforget.eu/verify-email.html?mode=verifyEmail&oobCode=${encodeURIComponent(oobCode)}`;
+
+      try {
+        const res = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${resendApiKey.value()}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: FROM_EMAIL,
+            to: email,
+            subject: "IForget — потвърди своя имейл",
+            text: `Здравей,\n\nБлагодарим, че се регистрира в IForget!\n\n` +
+              `Натисни линка по-долу, за да потвърдиш имейл адреса си:\n${brandedVerifyLink}\n\n` +
+              `Ако не си създавал/а тоя акаунт, просто игнорирай този имейл.\n\n` +
+              `— Екипът на IForget`,
+          }),
+        });
+        if (!res.ok) {
+          const errText = await res.text().catch(() => "");
+          console.error("Resend API грешка:", res.status, errText);
+          throw new HttpsError("internal", "Грешка при изпращане на имейла.");
+        }
+        console.log(`Branded email verification изпратен успешно за uid=${uid}.`);
+      } catch (e) {
+        if (e instanceof HttpsError) throw e;
+        console.error("Грешка при изпращане на verification имейл:", e);
+        throw new HttpsError("internal", "Грешка при изпращане на имейла.");
+      }
+
+      return {ok: true};
+    },
+);

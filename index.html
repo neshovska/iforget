@@ -2013,12 +2013,27 @@ function updateVerifyBanner(){
   const show = !!(currentUser && !currentUser.emailVerified);
   banner.style.display = show ? 'flex' : 'none';
 }
+// Праща БРАНДИРАН verification имейл (noreply@iforget.eu, през Resend) —
+// виж functions/index.js:sendBrandedEmailVerification(). FALLBACK към
+// стария currentUser.sendEmailVerification() при 'functions/not-found'
+// (функцията още не е деплойната) — същия принцип като
+// handleForgotPassword(), за да не остане потребител блокиран междувременно.
+function sendVerificationEmail(){
+  const sendVerify = functionsInstance.httpsCallable('sendBrandedEmailVerification');
+  return sendVerify({}).catch(err=>{
+    console.error('sendBrandedEmailVerification failed', err);
+    if(err.code === 'functions/not-found' && currentUser){
+      return currentUser.sendEmailVerification();
+    }
+    throw err;
+  });
+}
 function resendVerifyEmail(){
   if(verifyResendCooldown || !currentUser) return;
   verifyResendCooldown = true;
   const btn = document.getElementById('verifyResendBtn');
   btn.disabled = true;
-  currentUser.sendEmailVerification()
+  sendVerificationEmail()
     .then(()=> window.alert(t().verifyEmailSent))
     .catch(err=> console.error('resend verification failed', err))
     .finally(()=>{
@@ -2105,7 +2120,7 @@ function handleEmailAuthSubmit(e){
     // При регистрация изпращаме линк за потвърждение веднага — не
     // блокираме приложението, докато не се потвърди (виж
     // updateVerifyBanner()), само напомняме с банер.
-    action.then(cred => cred.user && cred.user.sendEmailVerification().catch(()=>{}));
+    action.then(cred => cred.user && sendVerificationEmail().catch(()=>{}));
   }
   action.catch(err=>{
     console.error('email auth failed', err);
