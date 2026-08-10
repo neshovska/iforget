@@ -517,17 +517,6 @@
   .color-sw.active{border-color:var(--text);}
   /* "По подразбиране/без цвят" — двуцветно квадратче (син/кафяв). */
   .color-sw.default-sw{background:linear-gradient(135deg, #5B96FF 50%, #8C5A2B 50%) !important;}
-  /* Заключен (Premium) цвят в профилния акцентен избор — виж
-     renderProfileMenu()/PROFILE_COLORS_FREE. Само в .profile-panel, НЕ и в
-     .ctx-menu (там renderCtxMenuColor() е изцяло зад hasAdvancedFeatures()
-     като функция — веднъж влязъл, всички цветове са свободни, без per-
-     цвят заключване). Приглушава цвета (grayscale+затъмнено) + катинарче
-     икона по средата вместо активния клик ефект. */
-  .profile-panel .color-sw.locked{
-    filter:grayscale(.55) brightness(.65);
-    display:flex;align-items:center;justify-content:center;
-    color:rgba(255,255,255,.9);cursor:default;
-  }
   .ctx-menu .color-row{padding:4px 6px 8px;}
   /* .ctx-menu button{width:100%;padding:...;border-radius:8px;...} по-долу
      иначе разтяга кръгчетата на цвят в широки правоъгълни плочки —
@@ -1294,15 +1283,6 @@ let authMode = 'signin'; // 'signin' | 'signup' — за формата с им�
 // "Капучино" палитрата, вместо да стърчат ярко — виж по-старите/по-ярките
 // стойности в git историята, ако потрябват за сравнение.
 const PROFILE_COLORS = ['', '#6E8FBF','#C97BA0','#5C9C8E','#9884C9','#C6A052','#C06F5F'];
-// Само тия 3 (по подразбиране + синьо + жълто, по изричен избор на
-// потребителя — "по-натам като стане платена") са безплатни за акцентния
-// цвят на профила; останалите 4 са заключени зад Premium (виж
-// hasAdvancedFeatures()/.color-sw.locked в renderProfileMenu()) — целта е
-// Premium да изглежда като реално "повече опции", не само превключване.
-// ЗАБЕЛЕЖКА: НЕ засяга renderCtxMenuColor() (цвят на бележка) — тя вече е
-// изцяло зад hasAdvancedFeatures() като функция; веднъж вътре, всички
-// PROFILE_COLORS са достъпни там, без допълнително заключване per-цвят.
-const PROFILE_COLORS_FREE = ['', '#6E8FBF', '#C6A052'];
 // Всеки избираем цвят си има по-тъмен "dim" вариант (за рамки/hover), в
 // същия дух като вече съществуващите --accent-dim/--gold-dim в палитрата.
 const ACCENT_DIM_MAP = {
@@ -2221,13 +2201,13 @@ function renderProfileMenu(){
   const panel = document.getElementById('profilePanel');
   const email = currentUser ? (currentUser.email || '') : '';
   let html = `<div class="profile-email">${escapeHtml(email)}</div>`;
-  // Само PROFILE_COLORS_FREE (по подразбиране + синьо + жълто) са свободни —
-  // останалите цветове се показват заключени (катинарче, приглушен цвят),
-  // докато потребителят не е Premium/админ — виж CLAUDE.md за rationale.
-  html += `<div class="color-row">` + PROFILE_COLORS.map(c => {
-    const locked = !PROFILE_COLORS_FREE.includes(c) && !hasAdvancedFeatures();
-    return `<button type="button" class="color-sw${c===profileColor?' active':''}${c===''?' default-sw':''}${locked?' locked':''}" data-color="${c}" data-locked="${locked?'1':''}" style="${c?`background:${c}`:''}" aria-label="${c || s.profileColorDefault}">${locked?ICONS.lock:''}</button>`;
-  }).join('') + `</div>`;
+  // Всички PROFILE_COLORS отново са свободни за всички потребители — виж
+  // CLAUDE.md/git история за краткия период, в който бяха частично
+  // заключени зад Premium (PROFILE_COLORS_FREE), после отменено по
+  // изрична молба ("отключи функциите с цветовете... за всички потребители").
+  html += `<div class="color-row">` + PROFILE_COLORS.map(c =>
+    `<button type="button" class="color-sw${c===profileColor?' active':''}${c===''?' default-sw':''}" data-color="${c}" style="${c?`background:${c}`:''}" aria-label="${c || s.profileColorDefault}"></button>`
+  ).join('') + `</div>`;
 
   // Premium вход/статус — виж hasAdvancedFeatures()/premiumLaunched по-горе.
   // ИЗЦЯЛО скрито, докато premiumLaunched е false (главният ключ в Firestore
@@ -2283,14 +2263,6 @@ function renderProfileMenu(){
   panel.querySelectorAll('.color-sw').forEach(b=>{
     b.addEventListener('mousedown', e=>{
       e.preventDefault(); e.stopPropagation();
-      // Заключен цвят (Premium) — не сменяме темата, вместо това отваряме
-      // плановете за ъпгрейд направо (само ако Premium изобщо е пуснато;
-      // ако premiumLaunched е false, заключените swatch-ове изобщо не се
-      // рендират такива, виж по-горе — тук е чиста защита при все пак клик).
-      if(b.dataset.locked === '1'){
-        if(premiumLaunched) renderPremiumPlans();
-        return;
-      }
       profileColor = b.dataset.color;
       localStorage.setItem(PROFILE_COLOR_KEY, profileColor);
       updateUserChip(currentUser);
@@ -3736,14 +3708,10 @@ function renderCtxMenuMain(noteId, subId){
   if(!subId){
     html += `<button data-ctx="addsub">${ICONS.plus}${s.ctxAddSub}</button>`;
   }
-  // Цвят на бележка + напомняне — Premium функции (виж hasAdvancedFeatures()
-  // по-горе). Видими за админ профила ВИНАГИ, за обикновените потребители
-  // само след като станат платени (userIsPremium) — виж плана за
-  // free/premium разделение в CLAUDE.md.
-  if(hasAdvancedFeatures()){
-    html += `<button data-ctx="color">${ICONS.droplet}${s.ctxColor}</button>`;
-    html += `<button data-ctx="reminder">${ICONS.bell}${item && item.reminderAt ? s.ctxEditReminder : s.ctxAddReminder}</button>`;
-  }
+  // Цвят на бележка + напомняне — отключени за всички потребители (бяха
+  // временно зад Premium/hasAdvancedFeatures(), отменено по изрична молба).
+  html += `<button data-ctx="color">${ICONS.droplet}${s.ctxColor}</button>`;
+  html += `<button data-ctx="reminder">${ICONS.bell}${item && item.reminderAt ? s.ctxEditReminder : s.ctxAddReminder}</button>`;
   html += `<button data-ctx="share">${ICONS.share}${s.ctxShare}</button>`;
   html += `<button class="danger" data-ctx="delete">${ICONS.trash}${s.ctxDelete}</button>`;
   const menu = document.getElementById('ctxMenu');
@@ -3999,11 +3967,9 @@ function hexToRgb(hex){
 // data-colored + inline --nc custom property за itemRow() по-долу — само
 // когато бележката/подбележката има зададен личен цвят (виж
 // renderCtxMenuColor()). Празен низ иначе (без атрибути, нормален вид).
-// Функцията е Premium (виж renderCtxMenuMain()) — тук допълнително
-// проверяваме hasAdvancedFeatures(), за да не се вижда стар/останал цвят
-// от преди изтичане на Premium статус или преди активиране на функцията.
+// Отключено за всички потребители (беше временно зад Premium, отменено).
 function noteColorAttr(item){
-  if(!item.color || !hasAdvancedFeatures()) return '';
+  if(!item.color) return '';
   const rgb = hexToRgb(item.color);
   return rgb ? ` data-colored style="--nc:${rgb};"` : '';
 }
@@ -4050,7 +4016,7 @@ function itemRow(item, noteId, isSub){
           <div class="txt${!isExpanded ? ' clamped' : ''}" data-key="${key}" data-action="edit" data-note="${noteId}" data-sub="${isSub?item.id:''}">${escapeHtml(item.text)}</div>
           <div class="meta">
             ${!isSub ? tagPillHtml(item, noteId) : ''}
-            ${item.reminderAt && hasAdvancedFeatures() ? `<span class="reminder-badge">${ICONS.bell}${reminderLabel(item.reminderAt)}${item.reminderRepeat ? ICONS.repeat : ''}</span>` : ''}
+            ${item.reminderAt ? `<span class="reminder-badge">${ICONS.bell}${reminderLabel(item.reminderAt)}${item.reminderRepeat ? ICONS.repeat : ''}</span>` : ''}
             ${!isSub && addingSubFor !== noteId ? `<button class="add-sub-link" data-action="sub-open" data-note="${noteId}">${t().addSubLink}</button>` : ''}
             <button class="expand-toggle" data-action="toggle-expand" data-key="${key}" style="display:${isExpanded?'inline-flex':'none'}" aria-label="${isExpanded?t().collapseAria:t().expandAria}">${isExpanded?t().collapseAria:t().expandAria}${isExpanded?ICONS.chevronUp:ICONS.chevronDown}</button>
           </div>
