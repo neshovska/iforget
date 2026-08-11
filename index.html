@@ -3311,6 +3311,23 @@ function scrollToBottom(smooth){
   activeArea.scrollTo({top: activeArea.scrollHeight, behavior: smooth ? 'smooth' : 'auto'});
 }
 
+// Фокусира поле (напр. sub-input при "+ добави подбележка") И го скролва
+// видимо в activeArea — само .focus() не стига, ако полето се появи близо
+// до дъното (напр. веднага след добавена нова бележка, скролната до края):
+// новото поле за подбележка може да остане зад bottombar-а (position:fixed,
+// не участва в scrollable областта на activeArea), невидимо, докато
+// клавиатурата не предизвика случайно преизчисление. scrollIntoView()
+// скролва в НАЙ-БЛИЗКИЯ скролиращ родител (activeArea, виж overflow-y:auto
+// на main{}), не цялата страница — точно каквото трябва тук.
+// ВАЖНО: .focus() е ПЪРВО и синхронно (без setTimeout преди него) — за да
+// отвори клавиатурата от първия допир на телефон (виж коментарите при
+// извикванията по-долу).
+function focusAndReveal(inp){
+  if(!inp) return;
+  inp.focus();
+  inp.scrollIntoView({block:'center', behavior:'smooth'});
+}
+
 function updateTopbarHeight(){
   const tb = document.querySelector('.topbar');
   if(tb) document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight + 'px');
@@ -3880,7 +3897,7 @@ function renderCtxMenuMain(noteId, subId){
         editingKey = null;
         render();
         const inp = document.querySelector('.sub-input[data-note="'+noteId2+'"]');
-        if(inp) inp.focus();
+        focusAndReveal(inp);
       }else if(action === 'share'){
         shareItem(noteId2, subId2);
       }else if(action === 'delete'){
@@ -4527,9 +4544,14 @@ function attachHandlers(){
   // Фокусираме textarea веднага, синхронно, в рамките на същия event-стек
   // като клика/допира, който я е отворил — на iOS Safari клавиатурата се
   // показва автоматично само ако focus() се извика синхронно вътре в
-  // потребителски жест, а не след setTimeout/забавяне.
+  // потребителски жест, а не след setTimeout/забавяне. scrollIntoView()
+  // след фокуса (не заменя го, виж focusAndReveal() по-горе за същия принцип
+  // при sub-input) — бележката за редакция може да е близо до дъното
+  // (напр. веднага след завъртане до най-новата), иначе полето остава зад
+  // bottombar-а, невидимо.
   document.querySelectorAll('.edit-input').forEach(el=>{
     el.focus();
+    el.scrollIntoView({block:'center', behavior:'smooth'});
     el.selectionStart = el.value.length;
     el.addEventListener('keydown', e=>{
       if(e.key === 'Enter' && !e.shiftKey){
@@ -4566,9 +4588,10 @@ function attachHandlers(){
       addingSubFor = el.dataset.note;
       editingKey = null;
       render();
-      // Синхронно, без setTimeout — за да отвори клавиатурата от първия допир.
+      // Синхронно, без setTimeout — за да отвори клавиатурата от първия допир
+      // (виж и focusAndReveal() — скролва полето видимо, не само фокус).
       const inp = document.querySelector('.sub-input[data-note="'+el.dataset.note+'"]');
-      if(inp) inp.focus();
+      focusAndReveal(inp);
     });
   });
   document.querySelectorAll('[data-action="sub-save"]').forEach(el=>{
