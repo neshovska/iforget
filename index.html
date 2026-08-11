@@ -1299,6 +1299,15 @@ function updateViewportDebug(){
   if(!box) return;
   box.style.display = 'block';
   const vv = window.visualViewport;
+  // Реален случай, хванат на живо устройство: кутийката е position:fixed
+  // спрямо LAYOUT viewport-а, но при фокус на input вътре в fixed елемент
+  // Safari понякога "панира" ВИЗУАЛНИЯ viewport независимо от layout-а —
+  // точно затова показанията ни трябват тук — резултатът: кутийката се
+  // изтласква почти изцяло извън видимия екран (виждаше се само последният
+  // ѝ ред), скривайки точно числата, които трябва да докажат/отхвърлят
+  // това. Компенсираме ръчно с vv.offsetTop, за да остане кутийката
+  // видима дори ПО ВРЕМЕ на самото паниране.
+  if(vv) box.style.top = `calc(env(safe-area-inset-top,0px) + 4px + ${vv.offsetTop.toFixed(1)}px)`;
   const now = new Date().toISOString().slice(11,19);
   viewportDebugEventLog.push(now);
   if(viewportDebugEventLog.length > 6) viewportDebugEventLog.shift();
