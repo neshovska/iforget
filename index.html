@@ -113,7 +113,8 @@
      под видимия ръб (изглежда все едно екранът е празен/замръзнал, докато
      нещо — напр. фокус върху полето за бележка — не предизвика
      преизчисление). Затова var(--app-height, 100vh): JS (updateAppHeight()
-     накрая на скрипта) следи window.visualViewport.height на живо и пази body
+     накрая на скрипта) следи window.visualViewport.height на живо (същия
+     похват като handleViewportResize() за bottomBar по-долу) и пази body
      точно колкото РЕАЛНО видимата зона, при адресна лента/клавиатура —
      100vh е само резервен вариант за частта от секундата преди JS-а/при
      много стари браузъри без CSS custom properties. */
@@ -806,7 +807,7 @@
      изчезва вместо да изпъкне над замъгления фон). Модерен iOS (13+) вече
      дава плавен momentum скрол на overflow:auto и без това свойство. */
   main{
-    padding:6px 20px 12px;
+    padding:6px 20px 0;padding-bottom:134px;
     flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;
   }
   /* min-height:100% (не height) — при малко бележки запълва main и
@@ -843,10 +844,20 @@
   }
 
   .bottombar{
-    flex-shrink:0;
+    position:fixed;left:0;right:0;bottom:0;z-index:10;
+    transition:transform .12s ease-out;
     background:linear-gradient(0deg,var(--bg) 82%,transparent);
     padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 14px);
   }
+  /* Скрита изцяло докато редактираш съществуваща бележка/подбележка или
+     добавяш подбележка (viж updateBottombarVisibility() в скрипта) — REGRESSION,
+     открит на реално устройство: след като bottombar спря да е position:fixed
+     (по-стар опит за фикс, обърнат тук), позицията му за кратко зависеше
+     единствено от --app-height и се застъпваше видимо с полето за редакция
+     (двете едновременно на екрана). Скриването е независимо от причината —
+     bottombar просто няма работа на екрана, докато вниманието е върху друго
+     поле за писане. */
+  .bottombar.editing-hide{display:none;}
   .input-row{display:flex;gap:8px;align-items:center;}
   .dictation-hint{
     font-size:11px;color:var(--text-dim);margin-top:6px;
@@ -1228,6 +1239,16 @@
   <button type="button" id="undoToastBtn">Отмени</button>
 </div>
 
+<!-- Диагностичен overlay за реални visualViewport/keyboard стойности от
+     живо устройство — виж updateViewportDebug() в скрипта. Активира се
+     само с ?debugviewport=1 в URL-а (виж инициализацията накрая на
+     скрипта), display:none по подразбиране, за да не пречи изобщо на
+     нормалната употреба. Целта: следващия път, когато тестваме на
+     реалния iPhone, вместо да гадаем защо клавиатурата крие поле за
+     писане, screenshot-ваме тук РЕАЛНИТЕ числа (visualViewport.height/
+     offsetTop, window.innerHeight, --app-height) в момента на бъга. -->
+<div id="viewportDebug" style="display:none;position:fixed;top:calc(env(safe-area-inset-top,0px) + 4px);left:4px;right:4px;z-index:9999;background:rgba(0,0,0,.85);color:#0f0;font:10px/1.4 monospace;padding:6px 8px;border-radius:6px;white-space:pre;pointer-events:none;"></div>
+
 <div class="bottombar" id="bottomBar">
   <div class="input-row">
     <input id="noteInput" type="text" placeholder="Нова бележка..." maxlength="1000">
@@ -1252,6 +1273,32 @@
 function updateAppHeight(){
   const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
   document.documentElement.style.setProperty('--app-height', h + 'px');
+  updateViewportDebug();
+}
+// Диагностика на живо за visualViewport/клавиатура — виж #viewportDebug в
+// HTML-а по-горе за пълния контекст защо съществува. Активна само с
+// ?debugviewport=1, за да е инертна при нормална употреба. eventLog пази
+// последните няколко resize/scroll събития с timestamp — важно е да личи
+// ДАЛИ изобщо се задействат при фокус на клавиатурата на реалното
+// устройство, не само последните им стойности.
+const VIEWPORT_DEBUG_ON = new URLSearchParams(location.search).get('debugviewport') === '1';
+let viewportDebugEventLog = [];
+function updateViewportDebug(){
+  if(!VIEWPORT_DEBUG_ON) return;
+  const box = document.getElementById('viewportDebug');
+  if(!box) return;
+  box.style.display = 'block';
+  const vv = window.visualViewport;
+  const now = new Date().toISOString().slice(11,19);
+  viewportDebugEventLog.push(now);
+  if(viewportDebugEventLog.length > 6) viewportDebugEventLog.shift();
+  box.textContent =
+    `window.innerHeight: ${window.innerHeight}\n` +
+    `visualViewport: ${vv ? 'да' : 'НЕ поддържа се'}\n` +
+    (vv ? `  height: ${vv.height.toFixed(1)}\n  offsetTop: ${vv.offsetTop.toFixed(1)}\n  scale: ${vv.scale}\n` : '') +
+    `--app-height: ${document.documentElement.style.getPropertyValue('--app-height')}\n` +
+    `window.scrollY: ${window.scrollY}\n` +
+    `последни updates (${viewportDebugEventLog.length}): ${viewportDebugEventLog.join(', ')}`;
 }
 updateAppHeight();
 window.addEventListener('resize', updateAppHeight);
@@ -3377,11 +3424,11 @@ function scrollToBottom(smooth){
 // Фокусира поле (напр. sub-input при "+ добави подбележка") И го скролва
 // видимо в activeArea — само .focus() не стига, ако полето се появи близо
 // до дъното (напр. веднага след добавена нова бележка, скролната до края):
-// новото поле за подбележка може да е точно на ръба на видимата част от
-// activeArea, невидимо докато клавиатурата не предизвика случайно
-// преизчисление. scrollIntoView() скролва в НАЙ-БЛИЗКИЯ скролиращ родител
-// (activeArea, виж overflow-y:auto на main{}), не цялата страница — точно
-// каквото трябва тук.
+// новото поле за подбележка може да остане зад bottombar-а (position:fixed,
+// не участва в scrollable областта на activeArea), невидимо, докато
+// клавиатурата не предизвика случайно преизчисление. scrollIntoView()
+// скролва в НАЙ-БЛИЗКИЯ скролиращ родител (activeArea, виж overflow-y:auto
+// на main{}), не цялата страница — точно каквото трябва тук.
 // ВАЖНО: .focus() е ПЪРВО и синхронно (без setTimeout преди него) — за да
 // отвори клавиатурата от първия допир на телефон (виж коментарите при
 // извикванията по-долу).
@@ -4571,7 +4618,24 @@ function render(){
   updateJumpVisibility();
 }
 
+// REGRESSION-фикс (докладван на живо устройство): докато редактираш
+// съществуваща бележка/подбележка (editingKey) или добавяш подбележка
+// (addingSubFor), полето за редакция е близо до дъното на activeArea И
+// клавиатурата вдига bottombar-а над себе си (виж handleViewportResize())
+// — двете полета за писане се застъпваха видимо. bottombar няма работа на
+// екрана, докато вниманието е върху друго поле, затова просто го крием
+// изцяло тук вместо да се опитваме да ги позиционираме да не се засичат.
+// Викa се от render() (през attachHandlers(), общата точка за двата клона
+// на render()), гарантирано при всяка промяна на editingKey/addingSubFor
+// (виж commitEdit()/cancelEdit()/сработващите handler-и по-долу — всички
+// завършват с render()).
+function updateBottombarVisibility(){
+  const hide = editingKey !== null || addingSubFor !== null;
+  document.getElementById('bottomBar').classList.toggle('editing-hide', hide);
+}
+
 function attachHandlers(){
+  updateBottombarVisibility();
   attachSwipeHandlers();
   // Показва бутона за разгъване само ако свитият текст наистина прелива
   // (scrollHeight > clientHeight) — иначе за къси бележки бутонът просто не
@@ -5014,25 +5078,30 @@ window.addEventListener('resize', ()=>{
   if(catRow.classList.contains('open')) updateCatRowExpand();
 });
 
-// bottombar вече е обикновено flex дете на body (виж .bottombar{} по-горе),
-// не position:fixed — гарантирано следва body/main преизчисляването
-// (updateAppHeight()) без отделен JS transform, който преди можеше да се
-// разминае с main{} при клавиатура (виж историята на бъга при полето за
-// нова бележка).
-// ВТОРИ, НЕЗАВИСИМ бъг обаче остава: iOS Safari/PWA има собствен вграден
-// heuristic да "панне" (скролне) целия layout viewport при фокус върху
-// поле близо до долния край, за да го "покаже" над клавиатурата — това
-// НЕ е нашият overflow:hidden скрол на activeArea, а скрол на самата
-// страница/root, който ние никога не искаме (единственият скрол в
-// приложението Е activeArea). Той се случва ДОПЪЛНИТЕЛНО върху
-// собственото ни преизчисление чрез --app-height, затова резултатът е
-// двойна компенсация: голяма празна ивица между клавиатурата и bottombar,
-// докато целият списък се качва твърде нагоре (докладвано на живо устройство,
-// не се възпроизвежда в desktop viewport emulation). window.scrollTo(0,0)
-// анулира този вграден пан при всяка visualViewport промяна.
+// iOS Safari премества/"вдига" position:fixed елементи неточно, когато се
+// покаже клавиатурата (класически бъг) — вместо да разчитаме на fixed
+// самичко, следим visualViewport и изтласкваме лентата за нова бележка точно
+// над клавиатурата ръчно, без скок.
+// ИСТОРИЯ: за кратко тук стоеше експеримент — bottombar без position:fixed
+// (нормално flex дете на body), с идеята позицията да следва --app-height
+// автоматично, без този transform. НЕ помогна на реалния бъг (полето
+// продължи да е скрито зад клавиатурата на живо устройство) и добави
+// регресия (bottombar се застъпваше видимо с полето за редакция при
+// съществуваща бележка) — обърнато тук. Причината вероятно е, че
+// --app-height/visualViewport НЕ се обновява надеждно в тази standalone
+// PWA среда (виж диагностичния overlay — ?debugviewport=1 — добавен, за
+// да потвърди/отхвърли това с реални стойности от устройството, вместо
+// да продължаваме да гадаем). position:fixed поне пази нативното
+// iOS-behavior като база, докато не получим реални данни.
 function handleViewportResize(){
-  if(window.scrollX || window.scrollY) window.scrollTo(0, 0);
+  if(!window.visualViewport) return;
+  const vv = window.visualViewport;
+  const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+  const tr = offset ? `translateY(-${offset}px)` : '';
+  const bar = document.getElementById('bottomBar');
+  if(bar) bar.style.transform = tr;
   updateJumpVisibility();
+  updateViewportDebug();
 }
 if(window.visualViewport){
   window.visualViewport.addEventListener('resize', handleViewportResize);
