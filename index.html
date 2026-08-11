@@ -3421,21 +3421,45 @@ function scrollToBottom(smooth){
   activeArea.scrollTo({top: activeArea.scrollHeight, behavior: smooth ? 'smooth' : 'auto'});
 }
 
-// Фокусира поле (напр. sub-input при "+ добави подбележка") И го скролва
-// видимо в activeArea — само .focus() не стига, ако полето се появи близо
-// до дъното (напр. веднага след добавена нова бележка, скролната до края):
-// новото поле за подбележка може да остане зад bottombar-а (position:fixed,
-// не участва в scrollable областта на activeArea), невидимо, докато
-// клавиатурата не предизвика случайно преизчисление. scrollIntoView()
-// скролва в НАЙ-БЛИЗКИЯ скролиращ родител (activeArea, виж overflow-y:auto
-// на main{}), не цялата страница — точно каквото трябва тук.
+// Фокусира поле (sub-input, .edit-input) И го скролва видимо в activeArea —
+// ЕДНОКРАТЕН .scrollIntoView() (стария подход) НЕ стига: изчислява
+// позицията спрямо ТЕКУЩИЯ изглед В МОМЕНТА на извикване, но клавиатурата
+// на телефона се отваря АНИМИРАНО (~250-300ms) — виждаемата зона продължава
+// да се смалява СЛЕД това единствено извикване, и полето отново пропада
+// зад клавиатурата, макар кодът да е "скролнал го видимо" миг по-рано.
+// Реален бъг, докладван от потребител (полето за редакция на бележка
+// изчезва напълно зад клавиатурата). Същия клас бъг/фикс като вече
+// работещия openTagPicker()/repositionTagPickerOnScroll() по-долу —
+// window.visualViewport 'resize'/'scroll' се задействат по НЯКОЛКО пъти по
+// време на анимацията на клавиатурата, не еднократно, затова преизчисляваме
+// при всяко от тях, докато полето остане фокусирано (спира на blur).
 // ВАЖНО: .focus() е ПЪРВО и синхронно (без setTimeout преди него) — за да
 // отвори клавиатурата от първия допир на телефон (виж коментарите при
 // извикванията по-долу).
+let viewportRevealInput = null;
+let viewportRevealFn = null;
+function stopViewportReveal(){
+  if(!viewportRevealFn) return;
+  if(window.visualViewport){
+    window.visualViewport.removeEventListener('resize', viewportRevealFn);
+    window.visualViewport.removeEventListener('scroll', viewportRevealFn);
+  }
+  viewportRevealInput = null;
+  viewportRevealFn = null;
+}
 function focusAndReveal(inp){
   if(!inp) return;
+  stopViewportReveal(); // спира проследяването на предишното поле, ако имаше
   inp.focus();
-  inp.scrollIntoView({block:'center', behavior:'smooth'});
+  const reveal = () => inp.scrollIntoView({block:'center', behavior:'smooth'});
+  reveal();
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', reveal);
+    window.visualViewport.addEventListener('scroll', reveal);
+  }
+  viewportRevealInput = inp;
+  viewportRevealFn = reveal;
+  inp.addEventListener('blur', stopViewportReveal, {once:true});
 }
 
 function updateTopbarHeight(){
@@ -4687,17 +4711,13 @@ function attachHandlers(){
       }
     });
   });
-  // Фокусираме textarea веднага, синхронно, в рамките на същия event-стек
-  // като клика/допира, който я е отворил — на iOS Safari клавиатурата се
-  // показва автоматично само ако focus() се извика синхронно вътре в
-  // потребителски жест, а не след setTimeout/забавяне. scrollIntoView()
-  // след фокуса (не заменя го, виж focusAndReveal() по-горе за същия принцип
-  // при sub-input) — бележката за редакция може да е близо до дъното
-  // (напр. веднага след завъртане до най-новата), иначе полето остава зад
-  // bottombar-а, невидимо.
+  // focusAndReveal() (виж по-горе) — фокусира синхронно (за да отвори
+  // клавиатурата от жеста, който е отворил редакцията) И продължава да
+  // скролва видимо, докато клавиатурата анимирано се отваря — само еднократен
+  // scrollIntoView() не стигаше (полето пропадаше зад клавиатурата, докато тя
+  // довърши анимацията си, реален докладван бъг).
   document.querySelectorAll('.edit-input').forEach(el=>{
-    el.focus();
-    el.scrollIntoView({block:'center', behavior:'smooth'});
+    focusAndReveal(el);
     el.selectionStart = el.value.length;
     el.addEventListener('keydown', e=>{
       if(e.key === 'Enter' && !e.shiftKey){
