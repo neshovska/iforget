@@ -98,20 +98,26 @@
     font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
     -webkit-font-smoothing:antialiased;height:100%;}
   html{background:var(--bg);transition:background-color .15s ease;}
-  body{display:flex;flex-direction:column;min-height:100vh;transition:background-color .15s ease,color .15s ease;}
+  /* height:100vh (не min-height) + overflow:hidden — body вече НЕ скролва
+     като страница. Топбар/долна лента за бележка остават фиксирани
+     "региони" на живо (виж .topbar/.bottombar по-долу), а #activeArea
+     (списъкът с бележки) е ЕДИНСТВЕНИЯТ вътрешно скролиращ елемент между
+     тях (overflow-y:auto на main по-долу) — по изрична заявка, вместо
+     предишния модел с position:sticky topbar + скрол на цялата страница
+     (капризен на мобилни браузъри — адресна лента, клавиатура и т.н.). */
+  body{display:flex;flex-direction:column;height:100vh;overflow:hidden;transition:background-color .15s ease,color .15s ease;}
 
   /* Фонов десен от гинко листенца — реални изображения (доставени от
      потребителя), едно на цвят/тема: bg-dark-v3.jpg (синьо-навигационно+
      златни контури) за тъмната тема, bg-light.jpg (кремаво+
      бежови контури) за светлата. Тайлва се безшевно и хоризонтално, и
      вертикално за произволно дълъг списък с бележки.
-     ВАЖНО: тук е на html, НЕ на body. html/body по-горе имат height:100%
-     (фиксирана, не auto стойност) — при по-дълъг списък бележки съдържанието
-     прелива извън собствената кутия на body (нормално преливане, видимо е),
-     но собственият ѝ background спира точно на 100vh, защото html вече има
-     плътен (непрозрачен) background-color и не "предава" фона на body към
-     цялото платно. html като корен елемент винаги покрива цялото платно на
-     страницата, без значение колко е дълго съдържанието — затова е тук. */
+     ВАЖНО: тук е на html, НЕ на body. И двата имат height:100% — след
+     промяната по-горе (body{height:100vh;overflow:hidden}) body вече не
+     прелива никога (главния скрол е вътре в #activeArea, виж main{} по-
+     долу), но фонът пак е на html, не на body — по-безопасно (html като
+     корен елемент винаги покрива цялото платно на страницата, независимо
+     от вътрешен layout), и няма нужда да се пипа/тества отново. */
   html{
     background-image:url("bg-dark-v3.jpg");
     background-repeat:repeat;
@@ -124,7 +130,7 @@
   /* Декоративна pull-to-refresh анимация — чисто козметична (НЕ презарежда
      нищо), малка искряща иконка над topbar-а, която се "изважда" при
      дърпане надолу на върха на списъка. Виж IIFE логиката накрая на
-     скрипта, която мери window.scrollY и позиционира елемента inline. */
+     скрипта, която мери activeArea.scrollTop и позиционира елемента inline. */
   .pull-refresh{
     position:fixed;top:0;left:50%;z-index:19;pointer-events:none;
     width:32px;height:32px;border-radius:50%;
@@ -146,8 +152,12 @@
      на текущата тема. */
   svg.ic{display:block;flex-shrink:0;}
 
+  /* flex-shrink:0 — фиксиран "регион" горе, никога не се свива/скролва
+     (body вече не скролва като страница, виж body{} по-горе — не се налага
+     повече position:sticky, топбарът си стои на мястото, определено от
+     flex подредбата на body). */
   .topbar{
-    position:sticky;top:0;z-index:20;flex-shrink:0;
+    z-index:20;flex-shrink:0;
     background:var(--bg);
     padding:calc(env(safe-area-inset-top,0px) + 14px) 16px 10px;
   }
@@ -734,15 +744,39 @@
   .profile-panel .sub-form-actions button.primary{background:var(--accent);color:var(--bg);}
   .profile-panel .sub-form-actions button.primary.danger{background:var(--danger);color:#fff;}
 
-  /* Активната зона запълва останалото пространство и подрежда съдържанието
-     си долу (justify-content:flex-end) — така при малко бележки те стоят
-     залепени до полето за писане, а не окачени горе с празно място под тях.
-     Когато бележките станат повече от наличното място, изтласкват се нагоре
-     естествено, както в чат приложение. */
+  /* Активната зона (main#activeArea) запълва останалото пространство МЕЖДУ
+     topbar и bottombar (виж body{height:100vh;overflow:hidden} по-горе) и е
+     ЕДИНСТВЕНИЯТ вътрешно скролиращ елемент в приложението — topbar/
+     bottombar остават фиксирани "региони" независимо от броя бележки.
+     min-height:0 е ЗАДЪЛЖИТЕЛНО тук — flex елемент по подразбиране има
+     min-height:auto (расте до височината на съдържанието си вместо да се
+     свива до наличното място), което би "счупило" overflow-y:auto по-долу
+     (класически flexbox капан).
+     main самò е ОБИКНОВЕН блоков контейнер (не display:flex) — умишлено.
+     Съдържанието (списъкът бележки) се пише в #notesInner, детето му (виж
+     .notes-inner по-долу), КОЕТО е display:flex+justify-content:flex-end,
+     за да застава долу при малко бележки (залепени до полето за писане).
+     Двете отговорности НЕ са на един и същ елемент заради познат браузърен
+     бъг: overflow:auto + justify-content:flex-end на ЕДИН И СЪЩ flex
+     контейнер води до грешно scrollHeight, когато съдържанието прелее
+     отгоре (leading overflow) — main.scrollHeight остава равен на
+     clientHeight, сякаш няма какво да се скролва, макар списъкът реално да
+     прелива над наличното място. Разделянето (main скролва, notesInner
+     подрежда) заобикаля бъга изцяло. */
   main{
     padding:6px 20px 0;padding-bottom:134px;
-    flex:1 0 auto;display:flex;flex-direction:column;justify-content:flex-end;
+    flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
   }
+  /* min-height:100% (не height) — при малко бележки запълва main и
+     justify-content:flex-end ги залепва долу; когато съдържанието
+     надхвърли 100%, елементът просто расте над това (min е "поне толкова",
+     не таван) и main го скролва нормално (обикновено блоково преливане,
+     без бъга по-горе). flex-shrink:0 на децата — защита в повече, ако
+     някога получи и собствено ограничение по височина. */
+  .notes-inner{
+    display:flex;flex-direction:column;justify-content:flex-end;min-height:100%;
+  }
+  .notes-inner > *{flex-shrink:0;}
 
   /* Заглавие на статус-секция — стои над всички дневни блокове с дадения
      статус, за да личи ясно разделението Приключени / Активни (в прогрес +
@@ -1121,7 +1155,16 @@
   </div>
 </div>
 
-<main id="activeArea"></main>
+<!-- #activeArea скролва (overflow-y:auto, обикновен блоков контейнер, виж
+     main{} в <style>); #notesInner вътре е ЕДИНСТВЕНОТО му дете и Е
+     display:flex, за justify-content:flex-end (къс списък застава долу,
+     залепен до полето за писане) — умишлено НЕ на самия #activeArea:
+     overflow:auto + justify-content:flex-end на ЕДИН И СЪЩ flex контейнер е
+     познат браузърен бъг (leading overflow при преливане отгоре не влиза в
+     scrollable областта — main.scrollHeight остава равен на clientHeight,
+     сякаш няма какво да се скролва, макар съдържанието реално да прелива).
+     render() пише в #notesInner, не директно в #activeArea. -->
+<main id="activeArea"><div class="notes-inner" id="notesInner"></div></main>
 
 <button class="jump-btn" id="jumpBtn"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg><span id="jumpLabel">Най-нови</span></button>
 
@@ -1144,6 +1187,18 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
 <script>
+// #activeArea (<main>) е ЕДИНСТВЕНИЯТ вътрешно скролиращ елемент в
+// приложението (виж body/main{} в <style> по-горе) — topbar/bottombar са
+// фиксирани "региони" и никога не скролват. Затова навсякъде по-долу, където
+// преди се четеше/сменяше скрола на СТРАНИЦАТА (window.scrollY/scrollTo,
+// document.documentElement.scrollHeight), сега се ползва activeArea вместо
+// window/document (виж scrollToBottom()/updateJumpVisibility()/pull-to-
+// refresh IIFE-то/openTagPicker() по-долу).
+const activeArea = document.getElementById('activeArea');
+// #notesInner е ЕДИНСТВЕНОТО дете на #activeArea — render() пише СЪДЪРЖАНИЕТО
+// (innerHTML) тук, НЕ директно в activeArea (виж .notes-inner в <style> за
+// причината — overflow+justify-content бъг, ако са на един елемент).
+const notesInner = document.getElementById('notesInner');
 const STORAGE_KEY = 'notes';
 const THEME_KEY = 'theme';
 const LANG_KEY = 'lang';
@@ -3221,7 +3276,7 @@ function requestPersistentStorage(){
 }
 
 function scrollToBottom(smooth){
-  window.scrollTo({top: document.documentElement.scrollHeight, behavior: smooth ? 'smooth' : 'auto'});
+  activeArea.scrollTo({top: activeArea.scrollHeight, behavior: smooth ? 'smooth' : 'auto'});
 }
 
 function updateTopbarHeight(){
@@ -3623,7 +3678,10 @@ function openTagPicker(noteId, anchorEl){
   picker.innerHTML = html;
   picker.classList.add('show'); // трябва да е видим ПРЕДИ да измерим offsetHeight
   positionTagPicker(anchorEl);
-  window.addEventListener('scroll', repositionTagPickerOnScroll, {passive:true});
+  // #activeArea е единственият вътрешно скролиращ елемент (виж коментара
+  // над него по-горе) — тук скролва СПИСЪКЪТ с бележки (не window/document),
+  // затова слушаме на него, не на window.
+  activeArea.addEventListener('scroll', repositionTagPickerOnScroll, {passive:true});
   // Клавиатурата (при тапване на полето за нов таг) не променя
   // window.innerHeight, но ГИ променя visualViewport.height/offsetTop —
   // без този слушател picker-ът не се преместваше и бутонът "потвърди"
@@ -3658,7 +3716,7 @@ function closeTagPicker(){
   document.getElementById('tagPicker').classList.remove('show');
   activeTagNoteId = null;
   tagPickerAnchor = null;
-  window.removeEventListener('scroll', repositionTagPickerOnScroll);
+  activeArea.removeEventListener('scroll', repositionTagPickerOnScroll);
   if(window.visualViewport) window.visualViewport.removeEventListener('resize', repositionTagPickerOnScroll);
 }
 
@@ -4330,7 +4388,7 @@ function render(){
         </div>`
       : `<div class="empty">${t().noResultsFor(escapeHtml(searchQuery.trim()))}</div>`;
 
-    document.getElementById('activeArea').innerHTML = html;
+    notesInner.innerHTML = html;
     updateTopbarHeight();
     attachHandlers();
     updateJumpVisibility();
@@ -4353,7 +4411,7 @@ function render(){
         </div>`
       : `<div class="empty">${t().noNotesForTag}</div>`;
 
-    document.getElementById('activeArea').innerHTML = html;
+    notesInner.innerHTML = html;
     updateTopbarHeight();
     attachHandlers();
     updateJumpVisibility();
@@ -4376,7 +4434,7 @@ function render(){
   // блок дори когато е празна — покана да напишеш нещо.
   html += sectionHeader(t().sectionActive, rest.length, 'active') + statusGroupHtml(rest, true);
 
-  document.getElementById('activeArea').innerHTML = html;
+  notesInner.innerHTML = html;
   updateTopbarHeight();
   attachHandlers();
   updateJumpVisibility();
@@ -4684,10 +4742,10 @@ authLangBtn.addEventListener('click', e=>{
 // да е пораснало/намаляло височина без събитие "scroll").
 const jumpBtn = document.getElementById('jumpBtn');
 function updateJumpVisibility(){
-  const fromBottom = document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
+  const fromBottom = activeArea.scrollHeight - activeArea.scrollTop - activeArea.clientHeight;
   jumpBtn.classList.toggle('show', fromBottom > 120);
 }
-window.addEventListener('scroll', updateJumpVisibility);
+activeArea.addEventListener('scroll', updateJumpVisibility);
 window.addEventListener('resize', updateJumpVisibility);
 jumpBtn.addEventListener('click', ()=>scrollToBottom(true));
 
@@ -4699,7 +4757,9 @@ document.getElementById('undoToastBtn').addEventListener('click', ()=>{
 // Декоративен pull-to-refresh — НЕ презарежда никакви данни (Firestore вече
 // синхронизира на живо), просто малка искряща анимация за приятно усещане,
 // когато потребителят дръпне надолу на самия връх на списъка. Активна само
-// когато window.scrollY===0 и екранът за вход не се показва.
+// когато activeArea.scrollTop===0 (върхът на списъка, не window.scrollY —
+// той вече винаги е 0, скролва activeArea, виж коментара горе в скрипта) и
+// екранът за вход не се показва.
 (function(){
   const el = document.getElementById('pullRefresh');
   if(!el) return;
@@ -4720,7 +4780,7 @@ document.getElementById('undoToastBtn').addEventListener('click', ()=>{
   document.addEventListener('touchstart', e=>{
     const authScreen = document.getElementById('authScreen');
     if(authScreen && authScreen.classList.contains('show')) return;
-    if(window.scrollY > 0 || e.touches.length !== 1) return;
+    if(activeArea.scrollTop > 0 || e.touches.length !== 1) return;
     startY = e.touches[0].clientY;
     pulling = true;
     el.classList.add('pulling');
@@ -4728,7 +4788,7 @@ document.getElementById('undoToastBtn').addEventListener('click', ()=>{
 
   document.addEventListener('touchmove', e=>{
     if(!pulling || startY === null) return;
-    if(window.scrollY > 0){ pulling = false; el.classList.remove('pulling'); clearInline(); return; }
+    if(activeArea.scrollTop > 0){ pulling = false; el.classList.remove('pulling'); clearInline(); return; }
     const dy = e.touches[0].clientY - startY;
     if(dy <= 0){ setPull(0); return; }
     setPull(dy * 0.45);

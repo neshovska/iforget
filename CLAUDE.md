@@ -294,16 +294,40 @@ Firestore документ `users/{uid}` също съдържа `tagOrder: stri
   смисъл и са ОК. При добавяне на нова визуална иконка — винаги нов запис
   в `ICONS`, никога суров emoji символ в HTML/JS низовете.
 - **Фоновата ginkgo снимка (`bg-dark-v3.jpg`/`bg-light.jpg`) трябва да е на
-  `html`, НЕ на `body`.** html и body имат `height:100%` (фиксирана
-  стойност, не `auto`) — при по-дълъг списък бележки съдържанието прелива
-  извън собствената кутия и на двата елемента (нормално, видимо е), но
-  background на елемент спира точно на неговата собствена изчислена
-  височина, освен ако е на html (кореновият елемент по спецификация винаги
-  покрива цялото платно на страницата, без значение колко е дълго
-  съдържанието). `body` затова е БЕЗ собствен `background-color` — иначе
-  плътният му цвят би скрил образа на html точно в първия екран (виж git
-  history за фикса, ако това някога се разпадне отново при бъдещи промени
-  в CSS-а на `html,body{...}`).
+  `html`, НЕ на `body`.** background на елемент спира точно на неговата
+  собствена изчислена височина, освен ако е на html (кореновият елемент по
+  спецификация винаги покрива цялото платно на страницата, без значение от
+  вътрешния layout). `body` затова е БЕЗ собствен `background-color` —
+  иначе плътният му цвят би скрил образа на html. (Историческа бележка:
+  преди layout промяната по-долу body преливаше физически извън собствената
+  си кутия при дълъг списък бележки, което беше ДОПЪЛНИТЕЛНА причина фонът
+  да е на html — вече не прелива (`body{height:100vh;overflow:hidden}`,
+  скролът е вътре в `#activeArea`), но фонът си остава на html, по-безопасно
+  е и няма нужда да се пипа/тества отново.)
+- **Layout: topbar/bottombar са фиксирани "региони", `#activeArea` (`<main>`)
+  е ЕДИНСТВЕНИЯТ вътрешно скролиращ елемент** (`body{height:100vh;
+  overflow:hidden}`, `main{flex:1 1 auto;min-height:0;overflow-y:auto}`) —
+  вместо предишния модел с `position:sticky` topbar + скрол на цялата
+  страница (капризен на мобилни браузъри — адресна лента, клавиатура).
+  Затова `window.scrollY`/`window.scrollTo`/`document.documentElement.
+  scrollHeight` вече НЕ се ползват никъде за списъка с бележки — вместо тях
+  `activeArea.scrollTop`/`.scrollTo()`/`.scrollHeight` (виж
+  `scrollToBottom()`/`updateJumpVisibility()`/pull-to-refresh IIFE-то/
+  `openTagPicker()`/`closeTagPicker()`). `min-height:0` на `main` е
+  задължително — flex елемент има `min-height:auto` по подразбиране (расте
+  до съдържанието си вместо да се свива до наличното място), което би
+  счупило `overflow-y:auto`.
+  **Реален браузърен бъг, хванат и заобиколен при тази промяна:**
+  `overflow:auto` + `justify-content:flex-end` на ЕДИН И СЪЩ flex контейнер
+  дава грешно `scrollHeight`, когато съдържанието прелее ОТГОРЕ (leading
+  overflow) — `scrollHeight` остава равен на `clientHeight`, все едно няма
+  какво да се скролва, макар списъкът реално да прелива (needed за "къс
+  списък застава долу, залепен до полето за писане" ефекта). Затова
+  скролът (`main{overflow-y:auto}`) и подредбата (`justify-content:flex-end`
+  за bottom-anchor) са на ДВА различни елемента: `main#activeArea` (обикновен
+  блоков контейнер, скролва) → дете `.notes-inner#notesInner` (`display:flex;
+  justify-content:flex-end;min-height:100%`, подрежда). `render()` пише
+  `innerHTML` в `notesInner`, НЕ директно в `activeArea`.
 - **Позициониране на плаващи панели (tag-picker/ctx-menu/lang-picker) спрямо
   екранната клавиатура: НИКОГА само `window.innerHeight`.** На телефон
   клавиатурата НЕ смалява `window.innerHeight` — само `window.visualViewport
