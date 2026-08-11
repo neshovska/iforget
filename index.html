@@ -3781,7 +3781,7 @@ function openTagPicker(noteId, anchorEl){
     html += `<button data-set="${SATORI_TAG}"><span class="sw" style="background:var(--tag-satori)"></span>Satori</button>`;
   }
   html += `<hr><div class="tag-newrow">
-      <input type="text" id="newTagInput" placeholder="${t().newTagPlaceholder}" maxlength="24">
+      <input type="text" id="newTagInput" placeholder="${t().newTagPlaceholder}" maxlength="24" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
       <button type="button" class="tag-confirm" id="newTagConfirm" aria-label="${t().saveAria}">${ICONS.check}</button>
     </div>
     <hr><button data-set=""><span class="sw" style="background:var(--text-dim)"></span>${t().noTag}</button>`;
@@ -3798,7 +3798,14 @@ function openTagPicker(noteId, anchorEl){
   // window.innerHeight, но ГИ променя visualViewport.height/offsetTop —
   // без този слушател picker-ът не се преместваше и бутонът "потвърди"
   // оставаше скрит зад клавиатурата (виж visibleViewportBox() по-горе).
-  if(window.visualViewport) window.visualViewport.addEventListener('resize', repositionTagPickerOnScroll);
+  // И двете събития (не само resize) — iOS понякога панва visualViewport-а
+  // (offsetTop се мени) БЕЗ да смени height-а му, точно както при
+  // handleViewportResize()/bottombar-а по-горе (виж коментара там за
+  // същия клас бъг с полето "Нова бележка").
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', repositionTagPickerOnScroll);
+    window.visualViewport.addEventListener('scroll', repositionTagPickerOnScroll);
+  }
 
   picker.querySelectorAll('button[data-set]').forEach(b=>{
     b.addEventListener('mousedown', e=>{
@@ -3823,13 +3830,22 @@ function openTagPicker(noteId, anchorEl){
   // Съзнателно НЕ фокусираме input-а автоматично — повечето пъти потребителят
   // просто избира съществуващ таг с едно тапване; клавиатурата да изскача
   // веднага би пречела на picker-а. Полето за нов таг чака ръчно тапване.
+  // Но щом потребителят САМ го тапне, преизчисляваме позицията веднага
+  // (requestAnimationFrame — след кадъра, в който клавиатурата/panning-ът
+  // реално е приложен), вместо да чакаме единствено visualViewport
+  // събитието — същата логика като noteInput.addEventListener('focus',...)
+  // по-долу, приложена тук за консистентност (виж доклада за двата бъга).
+  inp.addEventListener('focus', ()=>{ requestAnimationFrame(repositionTagPickerOnScroll); });
 }
 function closeTagPicker(){
   document.getElementById('tagPicker').classList.remove('show');
   activeTagNoteId = null;
   tagPickerAnchor = null;
   activeArea.removeEventListener('scroll', repositionTagPickerOnScroll);
-  if(window.visualViewport) window.visualViewport.removeEventListener('resize', repositionTagPickerOnScroll);
+  if(window.visualViewport){
+    window.visualViewport.removeEventListener('resize', repositionTagPickerOnScroll);
+    window.visualViewport.removeEventListener('scroll', repositionTagPickerOnScroll);
+  }
 }
 
 // Падащо меню за избор на език — 5 възможности (bg/en/ru/de/es), позиционирано
