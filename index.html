@@ -4108,12 +4108,18 @@ function shareItem(noteId, subId){
 function copyItemText(noteId, subId){
   const item = subId ? findSub(noteId, subId) : findNote(noteId);
   if(!item) return;
-  // Съзнателно БЕЗ потвърждение (alert) при успех, по изрична заявка —
-  // за разлика от shareItem()/handleForgotPassword() и т.н., тук копирането
-  // е достатъчно "очевидно" действие само по себе си, не се нуждае от
-  // допълнително прекъсване. Грешка все пак се поглъща тихо, не се сигнализира.
+  // Съзнателно БЕЗ alert при успех, по изрична заявка — вместо това лек
+  // визуален сигнал: бележката леко "проблясва" по рамката (pulseHighlight(),
+  // реюзната от onboarding turorial-а — виж коментара над нея защо е
+  // big=true тук: inset сянка, безопасна под .swipe-shell{overflow:hidden},
+  // без уголемяване). closeCtxMenu() вече е викнат преди това (виж
+  // диспечъра по-долу), бележката си стои на нормалното място в списъка.
+  // Грешка се поглъща тихо, не се сигнализира.
   if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(item.text).catch(()=>{});
+    navigator.clipboard.writeText(item.text).then(()=>{
+      const key = subId ? noteId+'::'+subId : noteId;
+      pulseHighlight(document.querySelector(`.note[data-swipe-key="${key}"]`), true);
+    }).catch(()=>{});
   }
 }
 
