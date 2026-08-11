@@ -3451,7 +3451,12 @@ function focusAndReveal(inp){
   if(!inp) return;
   stopViewportReveal(); // спира проследяването на предишното поле, ако имаше
   inp.focus();
-  const reveal = () => inp.scrollIntoView({block:'center', behavior:'smooth'});
+  // block:'end' (не 'center') — долепя полето плътно над клавиатурата
+  // (activeArea вече има padding-bottom резерв точно за целта, виж main{}),
+  // вместо да го центрира в останалото пространство и да оставя голяма
+  // неизползвана "въздушна" зона под него, докато над него реално има
+  // повече бележки за показване.
+  const reveal = () => inp.scrollIntoView({block:'end', behavior:'smooth'});
   reveal();
   if(window.visualViewport){
     window.visualViewport.addEventListener('resize', reveal);
@@ -5120,6 +5125,17 @@ function handleViewportResize(){
   const tr = offset ? `translateY(-${offset}px)` : '';
   const bar = document.getElementById('bottomBar');
   if(bar) bar.style.transform = tr;
+  // main{} се свива с клавиатурата (виж body{height:var(--app-height)}), но
+  // activeArea.scrollTop НЕ се преизчислява автоматично само защото
+  // clientHeight е станал по-малък — старата стойност си остава "валидна"
+  // (просто вече не сочи най-долу спрямо новия, по-малък прозорец),
+  // оставяйки видима празнина между последната бележка и (вече правилно
+  // преместената над клавиатурата, чрез transform-а по-горе) bottombar-а.
+  // Само при полето за нова бележка — за редакция на съществуваща бележка/
+  // подбележка се грижи focusAndReveal() индивидуално за конкретния елемент.
+  if(document.activeElement === noteInput){
+    activeArea.scrollTo({top: activeArea.scrollHeight, behavior:'auto'});
+  }
   updateJumpVisibility();
   updateViewportDebug();
 }
