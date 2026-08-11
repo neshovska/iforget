@@ -107,7 +107,20 @@
   html,body{margin:0;padding:0;color:var(--text);
     font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
     -webkit-font-smoothing:antialiased;height:100%;}
-  html{background:var(--bg);transition:background-color .15s ease;}
+  /* overflow:hidden ТУК (не само на body по-долу) — реален бъг, потвърден
+     с ?debugviewport=1 на живо устройство: window.scrollY реално се
+     покачваше (0 → 107 → 211px) при фокус върху #noteInput (вътре в
+     .bottombar{position:fixed}), докато клавиатурата се отваряше — самата
+     СТРАНИЦА се скролваше, не просто visualViewport-ът панираше визуално.
+     Причина: document.scrollingElement в standards mode е <html>, НЕ
+     <body> — overflow:hidden само на body спира body да прелива/скролва
+     самò, но не пречи на iOS Safari да скролне <html> директно чрез
+     нативната си "покажи фокусирания input" логика (класически пропуск,
+     когато двата елемента не се заключват заедно). Резултатът: целият
+     фиксиран layout (topbar/bottombar/фон) се "занишкваше" в синхрон,
+     оставяйки видима "празнина" (реално изместен фон, не липсващо
+     съдържание) над полето за нова бележка. */
+  html{background:var(--bg);overflow:hidden;transition:background-color .15s ease;}
   /* height (не min-height) + overflow:hidden — body вече НЕ скролва като
      страница. Топбар/долна лента за бележка остават фиксирани "региони" на
      живо (виж .topbar/.bottombar по-долу), а #activeArea (списъкът с
