@@ -4706,6 +4706,11 @@ noteInput.addEventListener('input', ()=>{
   noteCancelBtn.classList.toggle('show', noteInput.value.length > 0);
 });
 noteCancelBtn.addEventListener('mousedown', e=>{ e.preventDefault(); clearNoteInput(); });
+// iOS Safari понякога панва страницата (виж handleViewportResize() по-долу)
+// синхронно със самия focus, преди visualViewport да е гръмнал своето
+// resize/scroll събитие — requestAnimationFrame изчаква следващия кадър,
+// когато панирането реално е приложено, за да го анулираме без "проблясък".
+noteInput.addEventListener('focus', ()=>{ requestAnimationFrame(handleViewportResize); });
 
 const searchBtn = document.getElementById('searchBtn');
 const searchRow = document.getElementById('searchRow');
@@ -4997,9 +5002,20 @@ window.addEventListener('resize', ()=>{
 // не position:fixed — гарантирано следва body/main преизчисляването
 // (updateAppHeight()) без отделен JS transform, който преди можеше да се
 // разминае с main{} при клавиатура (виж историята на бъга при полето за
-// нова бележка). Тук остава само преизчисляване на видимостта на копчето
-// "най-нови" при промяна на видимата зона.
+// нова бележка).
+// ВТОРИ, НЕЗАВИСИМ бъг обаче остава: iOS Safari/PWA има собствен вграден
+// heuristic да "панне" (скролне) целия layout viewport при фокус върху
+// поле близо до долния край, за да го "покаже" над клавиатурата — това
+// НЕ е нашият overflow:hidden скрол на activeArea, а скрол на самата
+// страница/root, който ние никога не искаме (единственият скрол в
+// приложението Е activeArea). Той се случва ДОПЪЛНИТЕЛНО върху
+// собственото ни преизчисление чрез --app-height, затова резултатът е
+// двойна компенсация: голяма празна ивица между клавиатурата и bottombar,
+// докато целият списък се качва твърде нагоре (докладвано на живо устройство,
+// не се възпроизвежда в desktop viewport emulation). window.scrollTo(0,0)
+// анулира този вграден пан при всяка visualViewport промяна.
 function handleViewportResize(){
+  if(window.scrollX || window.scrollY) window.scrollTo(0, 0);
   updateJumpVisibility();
 }
 if(window.visualViewport){
