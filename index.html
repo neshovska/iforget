@@ -210,6 +210,25 @@
     background:none;border:none;color:var(--text-dim);padding:4px 8px;
     display:flex;align-items:center;justify-content:center;
   }
+  /* Компактен преглед на резултатите от търсенето — вижда се ДОКАТО пишеш,
+     веднага под .search-row (топбарът е фиксиран горе, виж body/main{}
+     по-долу — затова не се крие зад клавиатурата, за разлика от стария
+     модел, при който резултатите излизаха в основния списък, залепени
+     долу с justify-content:flex-end, там където е bottombar-ът, не
+     полето за търсене). Собствен вътрешен скрол (max-height), в случай на
+     много съвпадения — топбарът пази разумна височина. Виж
+     renderSearchPreview()/jumpToNote() в скрипта. */
+  .search-preview{display:none;max-height:38vh;overflow-y:auto;margin-top:8px;}
+  .search-preview.show{display:block;}
+  .search-preview-item{
+    -webkit-appearance:none;appearance:none;width:100%;text-align:left;font-family:inherit;
+    background:var(--card-2);border:1px solid var(--border);border-radius:10px;
+    padding:9px 11px;margin-bottom:6px;color:var(--text);font-size:13px;line-height:1.4;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  }
+  .search-preview-item:last-child{margin-bottom:0;}
+  .search-preview-item:active{border-color:var(--accent-dim);}
+  .search-preview-empty{color:var(--text-dim);font-size:13px;text-align:center;padding:14px 4px;}
   /* Ред с категории — чипове за филтриране по таг, отваря се от иконата
      до търсенето, подобно на search-row. position:relative — .cat-row-more
      (стрелката за разгъване) се позиционира спрямо реда, виж по-долу. */
@@ -1111,6 +1130,11 @@
     <input id="searchInput" type="text" placeholder="Търси в бележките...">
     <button id="searchClear"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg></button>
   </div>
+  <!-- Компактен преглед на резултатите от търсенето — вижда се ДОКАТО пишеш,
+       веднага под полето (не зад клавиатурата, виж renderSearchPreview()).
+       Тап върху резултат (или Enter в полето) → jumpToNote(): затваря
+       търсенето и скролва/проблясва бележката в нормалния изглед. -->
+  <div class="search-preview" id="searchPreview"></div>
 </div>
 
 <!-- Банер за непотвърден имейл — виж updateVerifyBanner() в скрипта.
@@ -1478,7 +1502,7 @@ const STRINGS = {
     addSubLink: '+ добави', cancelAria: 'Откажи', saveAria: 'Запази',
     jumpLatest: 'Най-нови',
     today: 'Днес', yesterday: 'Вчера', noNotes: 'Няма бележки',
-    results: 'Резултати', noResultsFor: q => `Няма намерени бележки за "${q}"`,
+    noResultsFor: q => `Няма намерени бележки за "${q}"`,
     tagProgress: 'в прогрес', tagDone: 'завършено',
     sectionDone: 'Приключени', sectionProgress: 'В прогрес', sectionActive: 'Активни',
     confirmDelete: 'Да изтрия ли тази бележка?',
@@ -1573,7 +1597,7 @@ const STRINGS = {
     addSubLink: '+ add', cancelAria: 'Cancel', saveAria: 'Save',
     jumpLatest: 'Latest',
     today: 'Today', yesterday: 'Yesterday', noNotes: 'No notes',
-    results: 'Results', noResultsFor: q => `No notes found for "${q}"`,
+    noResultsFor: q => `No notes found for "${q}"`,
     tagProgress: 'in progress', tagDone: 'done',
     sectionDone: 'Completed', sectionProgress: 'In progress', sectionActive: 'Active',
     confirmDelete: 'Delete this note?',
@@ -1668,7 +1692,7 @@ const STRINGS = {
     addSubLink: '+ добавить', cancelAria: 'Отмена', saveAria: 'Сохранить',
     jumpLatest: 'Новые',
     today: 'Сегодня', yesterday: 'Вчера', noNotes: 'Нет заметок',
-    results: 'Результаты', noResultsFor: q => `Заметки для "${q}" не найдены`,
+    noResultsFor: q => `Заметки для "${q}" не найдены`,
     tagProgress: 'в процессе', tagDone: 'выполнено',
     sectionDone: 'Выполненные', sectionProgress: 'В процессе', sectionActive: 'Активные',
     confirmDelete: 'Удалить эту заметку?',
@@ -1763,7 +1787,7 @@ const STRINGS = {
     addSubLink: '+ hinzufügen', cancelAria: 'Abbrechen', saveAria: 'Speichern',
     jumpLatest: 'Neueste',
     today: 'Heute', yesterday: 'Gestern', noNotes: 'Keine Notizen',
-    results: 'Ergebnisse', noResultsFor: q => `Keine Notizen gefunden für "${q}"`,
+    noResultsFor: q => `Keine Notizen gefunden für "${q}"`,
     tagProgress: 'in Bearbeitung', tagDone: 'erledigt',
     sectionDone: 'Erledigt', sectionProgress: 'In Bearbeitung', sectionActive: 'Aktiv',
     confirmDelete: 'Diese Notiz löschen?',
@@ -1858,7 +1882,7 @@ const STRINGS = {
     addSubLink: '+ añadir', cancelAria: 'Cancelar', saveAria: 'Guardar',
     jumpLatest: 'Recientes',
     today: 'Hoy', yesterday: 'Ayer', noNotes: 'Sin notas',
-    results: 'Resultados', noResultsFor: q => `No se encontraron notas para "${q}"`,
+    noResultsFor: q => `No se encontraron notas para "${q}"`,
     tagProgress: 'en curso', tagDone: 'hecho',
     sectionDone: 'Completadas', sectionProgress: 'En curso', sectionActive: 'Activas',
     confirmDelete: '¿Eliminar esta nota?',
@@ -1998,6 +2022,26 @@ function dateSearchStrings(ts){
 }
 function dateMatches(ts, q, qLatin){
   return dateSearchStrings(ts).some(s => textMatches(s, q, qLatin));
+}
+
+// Всички бележки, съвпадащи с текущото търсене q (вече trim+lowercase) —
+// по текст (кирилица ⇄ латиница чрез транслитерация) и по дата (ISO, дд.мм,
+// ден от седмицата, месец, "днес"/"вчера" и т.н.), включително ако
+// съвпадението идва от текста на ПОДбележка (тогава връща РОДИТЕЛСКАТА
+// бележка — резултатите винаги са цели бележки, виж renderSearchPreview()).
+// Изтритите (кошчето) съзнателно не участват — намират се само през
+// филтъра "Изтрити" горе, за да не се "изпречват" случайно. Сортирани по
+// последна активност (най-новите най-горе). Ползва се и от
+// renderSearchPreview(), и от Enter-а в полето (jumpToNote() на първия
+// резултат).
+function computeSearchResults(q){
+  if(!q) return [];
+  const qLatin = toLatin(q);
+  const noteHit = n =>
+    textMatches(n.text, q, qLatin) ||
+    dateMatches(n.createdAt, q, qLatin) ||
+    (n.subs||[]).some(s => textMatches(s.text, q, qLatin) || dateMatches(s.createdAt, q, qLatin));
+  return notes.filter(n => n.tag !== DELETED_TAG && noteHit(n)).sort((a,b)=>b.createdAt-a.createdAt);
 }
 
 function todayStr(){ return new Date().toISOString().slice(0,10); }
@@ -4434,41 +4478,18 @@ function attachCatRowDrag(){
   });
 }
 
+// render() вече НЕ показва резултатите от търсенето в основния списък —
+// вместо това renderSearchPreview() ги показва компактно точно под полето
+// за търсене (виж #searchPreview), докато основният списък отдолу си остава
+// в нормалния (групиран по статус) изглед. Причина: main е с
+// justify-content:flex-end (залепва съдържанието долу до полето за нова
+// бележка) — резултат, показан ТАМ, докато търсиш ГОРЕ, увисваше зад
+// клавиатурата и създаваше илюзия, че нищо не е намерено. Тап върху
+// резултат (или Enter) → jumpToNote() затваря търсенето и скролва/
+// проблясва бележката в нормалния изглед.
 function render(){
   renderCatRow();
   updateStreakBadge();
-  const q = searchQuery.trim().toLowerCase();
-
-  // Докато търсим: показваме плосък списък с "предложения" веднага, докато
-  // потребителят пише — всички съвпадащи бележки, без значение от статуса
-  // им, сортирани по последна активност (най-скорошните най-горе), без
-  // разделяне по статус/дни. Съвпадението работи по текст (кирилица ⇄
-  // латиница чрез транслитерация) и по дата (ISO, дд.мм, ден от седмицата,
-  // месец, "днес"/"вчера" и т.н.). Щом полето се изчисти, се връщаме към
-  // нормалния изглед, групиран по статус.
-  if(q){
-    const qLatin = toLatin(q);
-    const noteHit = n =>
-      textMatches(n.text, q, qLatin) ||
-      dateMatches(n.createdAt, q, qLatin) ||
-      (n.subs||[]).some(s => textMatches(s.text, q, qLatin) || dateMatches(s.createdAt, q, qLatin));
-    // Изтритите (кошчето) съзнателно не участват в общото търсене — намират
-    // се само през филтъра "Изтрити" горе, за да не се "изпречват" случайно.
-    const results = notes.filter(n => n.tag !== DELETED_TAG && noteHit(n)).sort((a,b)=>b.createdAt-a.createdAt);
-
-    const html = results.length
-      ? `<div class="day-block">
-          <div class="day-label">${t().results}<span class="count">${results.length}</span></div>
-          ${results.map(n=>itemRow(n, n.id, false)).join('')}
-        </div>`
-      : `<div class="empty">${t().noResultsFor(escapeHtml(searchQuery.trim()))}</div>`;
-
-    notesInner.innerHTML = html;
-    updateTopbarHeight();
-    attachHandlers();
-    updateJumpVisibility();
-    return;
-  }
 
   // Филтър по категория: плосък списък (както при търсене), без разделяне
   // по статус — просто всички бележки с избрания таг (или, за PROGRESS_FILTER,
@@ -4670,6 +4691,7 @@ noteCancelBtn.addEventListener('mousedown', e=>{ e.preventDefault(); clearNoteIn
 const searchBtn = document.getElementById('searchBtn');
 const searchRow = document.getElementById('searchRow');
 const searchInput = document.getElementById('searchInput');
+const searchPreview = document.getElementById('searchPreview');
 const catBtn = document.getElementById('catBtn');
 const catRow = document.getElementById('catRow');
 
@@ -4679,17 +4701,67 @@ const catRow = document.getElementById('catRow');
 function closeCatRow(){ catRow.classList.remove('open'); catBtn.classList.remove('active'); catRowExpanded = false; }
 function closeSearchRow(){ searchRow.classList.remove('open'); searchBtn.classList.remove('active'); }
 
+// Компактен преглед на резултатите от търсенето, точно под полето — виж
+// коментара над render() защо не се показват вече в основния списък.
+// Скрива се напълно, ако полето е празно.
+function renderSearchPreview(){
+  const q = searchQuery.trim().toLowerCase();
+  if(!q){
+    searchPreview.classList.remove('show');
+    searchPreview.innerHTML = '';
+    updateTopbarHeight();
+    return;
+  }
+  const results = computeSearchResults(q);
+  searchPreview.innerHTML = results.length
+    ? results.map(n => `<button type="button" class="search-preview-item" data-jump="${n.id}">${escapeHtml(n.text)}</button>`).join('')
+    : `<div class="search-preview-empty">${t().noResultsFor(escapeHtml(searchQuery.trim()))}</div>`;
+  searchPreview.classList.add('show');
+  updateTopbarHeight();
+}
+// Тап върху резултат от прегледа — делегирано веднъж (панелът е постоянен
+// контейнер, само innerHTML се сменя при всяко renderSearchPreview()).
+searchPreview.addEventListener('click', e=>{
+  const item = e.target.closest('[data-jump]');
+  if(item) jumpToNote(item.dataset.jump);
+});
+
+// Затваря търсенето и скролва/проблясва целевата бележка в нормалния
+// (групиран по статус) изглед — виж коментара над render(). Изчиства и
+// categoryFilter, за да е сигурно, че бележката е видима, независимо какъв
+// филтър е бил активен преди (търсенето е винаги "през" всички тагове).
+function jumpToNote(noteId){
+  searchQuery = '';
+  searchInput.value = '';
+  categoryFilter = null;
+  closeSearchRow();
+  renderSearchPreview();
+  render();
+  const el = document.querySelector(`.note[data-swipe-key="${noteId}"]`);
+  if(el){
+    el.scrollIntoView({block:'center', behavior:'smooth'});
+    pulseHighlight(el, true);
+  }
+}
+
 searchBtn.addEventListener('click', ()=>{
   const open = searchRow.classList.toggle('open');
   searchBtn.classList.toggle('active', open);
   if(open){ closeCatRow(); closeProfilePanel(); }
   updateTopbarHeight();
   if(open){ searchInput.focus(); }
-  else{ searchQuery=''; searchInput.value=''; render(); }
+  else{ searchQuery=''; searchInput.value=''; renderSearchPreview(); }
 });
-searchInput.addEventListener('input', e=>{ searchQuery = e.target.value; render(); });
+searchInput.addEventListener('input', e=>{ searchQuery = e.target.value; renderSearchPreview(); });
+// Enter в полето → скача направо на първия (най-новия) резултат, без да е
+// нужно да се тапва изрично в компактния преглед.
+searchInput.addEventListener('keydown', e=>{
+  if(e.key !== 'Enter') return;
+  const results = computeSearchResults(searchQuery.trim().toLowerCase());
+  if(results.length) jumpToNote(results[0].id);
+});
 document.getElementById('searchClear').addEventListener('click', ()=>{
-  searchQuery=''; searchInput.value=''; searchInput.focus(); render();
+  searchQuery=''; searchInput.value=''; searchInput.focus(); renderSearchPreview();
 });
 
 // Категории: тапването на иконата отваря/затваря реда с чипове (взаимно
