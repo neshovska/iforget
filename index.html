@@ -1188,7 +1188,7 @@
 
 <div class="bottombar" id="bottomBar">
   <div class="input-row">
-    <input id="noteInput" type="text" placeholder="Нова бележка..." maxlength="500">
+    <input id="noteInput" type="text" placeholder="Нова бележка..." maxlength="1000">
     <button id="noteCancelBtn" aria-label="Откажи"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg></button>
     <button id="addBtn"><svg class="ic" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></button>
   </div>
@@ -4128,7 +4128,7 @@ function itemRow(item, noteId, isSub){
         <div class="note-main">
           <div class="dot">${icon}</div>
           <div class="body">
-            <textarea class="edit-input" rows="2" data-editkey="${key}">${escapeHtml(item.text)}</textarea>
+            <textarea class="edit-input" rows="2" maxlength="${isSub ? 600 : 1000}" data-editkey="${key}">${escapeHtml(item.text)}</textarea>
             <div class="edit-actions">
               <button class="cancel" data-action="edit-cancel" aria-label="${t().cancelAria}">${ICONS.close}</button>
               <button class="save" data-action="edit-save" data-editkey="${key}" aria-label="${t().saveAria}">${ICONS.check}</button>
@@ -4178,7 +4178,7 @@ function subsBlock(note){
   if(addingSubFor === note.id){
     html += `<div class="add-sub-row" style="margin-left:20px;">
       <div class="add-sub-input-row">
-        <input type="text" class="sub-input" data-note="${note.id}" placeholder="${t().subPlaceholder}" maxlength="300">
+        <input type="text" class="sub-input" data-note="${note.id}" placeholder="${t().subPlaceholder}" maxlength="600">
         <button class="save" data-action="sub-save" data-note="${note.id}" aria-label="${t().saveAria}">${ICONS.check}</button>
         <button class="cancel" data-action="sub-cancel" data-note="${note.id}" aria-label="${t().cancelAria}">${ICONS.close}</button>
       </div>
