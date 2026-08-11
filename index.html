@@ -188,9 +188,27 @@
     display:flex;align-items:center;justify-content:center;
   }
   /* Ред с категории — чипове за филтриране по таг, отваря се от иконата
-     до търсенето, подобно на search-row. */
-  .cat-row{display:none;gap:6px;margin-top:10px;flex-wrap:wrap;}
+     до търсенето, подобно на search-row. position:relative — .cat-row-more
+     (стрелката за разгъване) се позиционира спрямо реда, виж по-долу. */
+  .cat-row{display:none;gap:6px;margin-top:10px;flex-wrap:wrap;position:relative;}
   .cat-row.open{display:flex;}
+  /* Свит до 2 реда, когато таговете преливат повече — виж
+     updateCatRowExpand() (max-height се задава инлайн от JS, точно до
+     долния край на втория ред). padding-right разчиства място за
+     .cat-row-more, за да не се застъпва с последния чип на втория ред. */
+  .cat-row.collapsed{overflow:hidden;padding-right:30px;}
+  /* Кръгла стрелка за разгъване/свиване — вижда се само когато чиповете
+     реално преливат над 2 реда (виж updateCatRowExpand()). Закачена в
+     долния десен ъгъл на реда (не участва в общото flex-подреждане на
+     чиповете). */
+  .cat-row-more{
+    position:absolute;right:0;bottom:0;width:22px;height:22px;border-radius:50%;
+    display:none;align-items:center;justify-content:center;
+    background:var(--card-2);border:1px solid var(--border);color:var(--text-dim);
+    flex-shrink:0;
+  }
+  .cat-row-more svg{transition:transform .2s ease;}
+  .cat-row-more.expanded svg{transform:rotate(180deg);}
   .cat-chip{
     border:1px solid var(--border);border-radius:20px;padding:5px 11px;font-size:11.5px;font-weight:600;
     background:var(--card-2);color:var(--text-dim);display:flex;align-items:center;gap:5px;
@@ -1154,6 +1172,10 @@ let editingKey = null;
 let addingSubFor = null;
 let searchQuery = '';
 let categoryFilter = null; // null = "Всички"; PROGRESS_FILTER | 'personal' | 'work' | DELETED_TAG | произволен таг
+// Дали редът с тагове е разгънат до пълния списък (иначе свит до 2 реда,
+// когато преливат — виж updateCatRowExpand()). Нулира се на false при
+// всяко затваряне на реда (closeCatRow()), за да стартира свит следващия път.
+let catRowExpanded = false;
 // Спец. стойност за categoryFilter — филтрира по СТАТУС (progress), не по
 // таг (виж render()/renderCatRow()). Няма как да съвпадне с истински
 // потребителски таг (долна черта в началото не е обичаен вход).
@@ -4132,7 +4154,40 @@ function renderCatRow(){
   orderedCustomTags().forEach(tg=>{
     html += chip(tg, escapeHtml(tagLabel(tg)), counts[tg]||0, ' data-reorder="1"');
   });
+  // Стрелка за разгъване/свиване, когато чиповете преливат над 2 реда —
+  // видимостта/иконата се решават в updateCatRowExpand() (не тук), защото
+  // изисква реално layout измерване (offsetTop), възможно само след като
+  // html-ът вече е сложен в DOM-а.
+  html += `<button type="button" id="catRowMoreBtn" class="cat-row-more" data-action="cat-row-toggle" aria-label="${t().expandAria}">${ICONS.chevronDown}</button>`;
   document.getElementById('catRow').innerHTML = html;
+  if(catRow.classList.contains('open')) updateCatRowExpand();
+}
+
+// Свива реда с тагове до 2 реда (с малка стрелка за разгъване), ако
+// чиповете реално преливат над 2 реда — вика се след renderCatRow() (докато
+// редът е видим) и при resize/отваряне/тап на стрелката. Измерва чрез
+// offsetTop на чиповете (различни стойности = различни редове); работи
+// коректно дори когато редът вече Е свит (overflow:hidden не маха елементите
+// от layout-а, само ги отрязва визуално).
+function updateCatRowExpand(){
+  const moreBtn = document.getElementById('catRowMoreBtn');
+  if(!moreBtn) return;
+  catRow.classList.remove('collapsed');
+  catRow.style.maxHeight = '';
+  const chips = Array.from(catRow.querySelectorAll('.cat-chip'));
+  const tops = [...new Set(chips.map(c=>c.offsetTop))].sort((a,b)=>a-b);
+  if(tops.length <= 2){
+    moreBtn.style.display = 'none';
+    return;
+  }
+  moreBtn.style.display = 'flex';
+  moreBtn.classList.toggle('expanded', catRowExpanded);
+  moreBtn.setAttribute('aria-label', catRowExpanded ? t().collapseAria : t().expandAria);
+  if(!catRowExpanded){
+    const secondRowBottom = Math.max(...chips.filter(c=>c.offsetTop===tops[1]).map(c=>c.offsetTop + c.offsetHeight));
+    catRow.style.maxHeight = secondRowBottom + 'px';
+    catRow.classList.add('collapsed');
+  }
 }
 
 // Разместване на потребителските тагове в реда с категории — дълго
@@ -4224,7 +4279,22 @@ function attachCatRowDrag(){
   catRow.addEventListener('pointerup', ()=>{
     clearTimeout(pressTimer);
     if(pendingChip){
-      categoryFilter = pendingChip.dataset.cat || null;
+      const tag = pendingChip.dataset.cat;
+      categoryFilter = tag || null;
+      // Ако таговете преливат над 2 реда, местим избрания таг най-отпред
+      // сред потребителските (веднага след фиксираните: Всички/В прогрес/
+      // Работни/Лични/Satori/Изтрити), за да е видим следващия път без да
+      // се разгъва редът, и свиваме обратно до 2 реда — по изрична заявка.
+      // offsetTop работи вярно дори докато редът Е свит (overflow:hidden не
+      // маха елементите от layout-а, само ги отрязва визуално).
+      const tops = [...new Set(Array.from(catRow.querySelectorAll('.cat-chip')).map(c=>c.offsetTop))];
+      if(tag && tops.length > 2){
+        const order = orderedCustomTags().filter(tg=>tg!==tag);
+        order.unshift(tag);
+        tagOrder = order;
+        saveTagOrder();
+        catRowExpanded = false;
+      }
       pendingChip = null;
       render();
     }
@@ -4464,7 +4534,10 @@ const searchInput = document.getElementById('searchInput');
 const catBtn = document.getElementById('catBtn');
 const catRow = document.getElementById('catRow');
 
-function closeCatRow(){ catRow.classList.remove('open'); catBtn.classList.remove('active'); }
+// Нулира catRowExpanded при всяко затваряне (независимо дали от самия
+// catBtn, или защото се отваря друг панел — search/профил) — редът винаги
+// стартира свит до 2 реда при следващо отваряне.
+function closeCatRow(){ catRow.classList.remove('open'); catBtn.classList.remove('active'); catRowExpanded = false; }
 function closeSearchRow(){ searchRow.classList.remove('open'); searchBtn.classList.remove('active'); }
 
 searchBtn.addEventListener('click', ()=>{
@@ -4484,10 +4557,20 @@ document.getElementById('searchClear').addEventListener('click', ()=>{
 // изключващ се с търсенето, за да не се струпват два реда наведнъж). Самите
 // чипове се регенерират при всеки render(), затова слушателят е делегиран
 // върху постоянния контейнер #catRow, а не се закача наново всеки път.
+// Второ тапване (докато редът вече е отворен) освен затваряне ИЗЧИСТВА и
+// маркирания таг — връща на "Всички", по изрична заявка (иначе само
+// затваряне на реда, филтърът стоеше маркиран).
 catBtn.addEventListener('click', ()=>{
-  const open = catRow.classList.toggle('open');
-  catBtn.classList.toggle('active', open);
-  if(open){ closeSearchRow(); closeProfilePanel(); }
+  const wasOpen = catRow.classList.contains('open');
+  if(wasOpen){
+    closeCatRow();
+    if(categoryFilter !== null){ categoryFilter = null; render(); }
+  }else{
+    catRow.classList.add('open');
+    catBtn.classList.add('active');
+    closeSearchRow(); closeProfilePanel();
+    updateCatRowExpand();
+  }
   updateTopbarHeight();
 });
 catRow.addEventListener('click', e=>{
@@ -4495,6 +4578,13 @@ catRow.addEventListener('click', e=>{
   // би отворил филтъра по тага, върху който е пусната бележката, вместо
   // просто да приключи разместването (виж attachCatRowDrag()).
   if(tagDragActive){ tagDragActive = false; return; }
+  const moreBtn = e.target.closest('[data-action="cat-row-toggle"]');
+  if(moreBtn){
+    catRowExpanded = !catRowExpanded;
+    updateCatRowExpand();
+    updateTopbarHeight();
+    return;
+  }
   const chip = e.target.closest('[data-action="cat-filter"]');
   if(!chip) return;
   // Чиповете с data-reorder="1" (потребителските тагове) вече се обработват
@@ -4502,6 +4592,11 @@ catRow.addEventListener('click', e=>{
   // за тях (виж коментара там защо). Тук остават само фиксираните чипове.
   if(chip.dataset.reorder === '1') return;
   categoryFilter = chip.dataset.cat || null;
+  // Ако таговете преливат над 2 реда, свиваме обратно при избор на филтър —
+  // за да не заема голяма част от екрана (виж и pointerup в
+  // attachCatRowDrag() за същото при потребителски тагове, там местим и
+  // избрания таг най-отпред).
+  if(catRowExpanded){ catRowExpanded = false; }
   render();
 });
 attachCatRowDrag();
@@ -4658,7 +4753,13 @@ document.getElementById('undoToastBtn').addEventListener('click', ()=>{
   document.addEventListener('touchcancel', endPull);
 })();
 
-window.addEventListener('resize', updateTopbarHeight);
+window.addEventListener('resize', ()=>{
+  updateTopbarHeight();
+  // Броят редове, в които се събират чиповете, зависи от ширината на
+  // екрана — при завъртане/промяна на прозореца преизмерваме дали все още
+  // е нужна стрелката за разгъване (виж updateCatRowExpand()).
+  if(catRow.classList.contains('open')) updateCatRowExpand();
+});
 
 // iOS Safari премества/"вдига" position:fixed елементи неточно, когато се
 // покаже клавиатурата (класически бъг) — вместо да разчитаме на fixed
