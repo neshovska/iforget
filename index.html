@@ -1072,6 +1072,15 @@
      индент на подбележките вляво — както е дефолтно за .subs) — за
      потребители, които държат телефона с лявата ръка. */
   html.left-handed .topbar-row{flex-direction:row-reverse;}
+  /* .topbar-row по-горе само мести ЦЯЛАТА група бутони отляво надясно (или
+     обратно) — самите бутони вътре в групата пазеха оригиналния си ред
+     (EN → тема → тагове → търсене → профил), само групата сменяше страна.
+     По изрична заявка: бутоните вътре в групата също се огледалват
+     (обратен ред), не само мястото на цялата група. getBoundingClientRect()
+     навсякъде другаде (openProfilePanel()/positionTagPicker() и т.н.) чете
+     РЕАЛНАТА позиция на екрана, затова не се пипа нищо друго — просто
+     проследява къде реално застава бутонът. */
+  html.left-handed .topbar-actions{flex-direction:row-reverse;}
   html.left-handed .auth-lang-btn{right:auto;left:16px;}
   html.left-handed .input-row{flex-direction:row-reverse;}
   html.left-handed .jump-btn{right:auto;left:16px;}
