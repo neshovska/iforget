@@ -794,10 +794,21 @@
      отгоре (leading overflow) — main.scrollHeight остава равен на
      clientHeight, сякаш няма какво да се скролва, макар списъкът реално да
      прелива над наличното място. Разделянето (main скролва, notesInner
-     подрежда) заобикаля бъга изцяло. */
+     подрежда) заобикаля бъга изцяло.
+     ВАЖНО: БЕЗ -webkit-overflow-scrolling:touch тук — умишлено премахнато.
+     Изглежда безобидно (само "по-плавен" скрол на по-стари iOS), но на
+     практика форсира скролиращия контейнер на СОБСТВЕН compositing layer в
+     WebKit/iOS Safari — познат бъг: съдържание ВЪТРЕ в такъв слой, което се
+     опитва да "изскочи" над position:fixed елемент ИЗВЪН слоя чрез z-index
+     (виж .note-wrap.ctx-active по-долу — трябва да застане над
+     .ctx-backdrop), понякога изобщо не се вижда (компресира се "зад" слоя,
+     все едно изчезва). Реален бъг, докладван от потребител точно с тази
+     комбинация (задържане на бележка → менюто се отваря, но самата бележка
+     изчезва вместо да изпъкне над замъгления фон). Модерен iOS (13+) вече
+     дава плавен momentum скрол на overflow:auto и без това свойство. */
   main{
     padding:6px 20px 0;padding-bottom:134px;
-    flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
+    flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;
   }
   /* min-height:100% (не height) — при малко бележки запълва main и
      justify-content:flex-end ги залепва долу; когато съдържанието
