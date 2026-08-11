@@ -1454,6 +1454,7 @@ const ICONS = {
   doc: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>',
   droplet: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5s7 7.6 7 12.5a7 7 0 0 1-14 0c0-4.9 7-12.5 7-12.5z"></path></svg>',
   share: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"></line><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line></svg>',
+  copy: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="14" height="14" rx="2"></rect><path d="M4 16a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2"></path></svg>',
   bell: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>',
   arrowLeft: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>',
   trend: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 6"></polyline><polyline points="15 6 21 6 21 12"></polyline></svg>',
@@ -1534,7 +1535,7 @@ const STRINGS = {
     expandAria: 'Разгъни', collapseAria: 'Свий',
     deletedUndo: 'Бележката е изтрита.', undoBtn: 'Отмени', deleteAria: 'Изтрий',
     ctxEdit: 'Редактирай', ctxDelete: 'Изтрий', ctxAddSub: 'Добави подбележка',
-    ctxShare: 'Сподели', shareCopied: 'Копирано в клипборда.',
+    ctxShare: 'Сподели', ctxCopy: 'Копирай', shareCopied: 'Копирано в клипборда.',
     ctxColor: 'Цвят', noteColorNone: 'Без цвят',
     ctxAddReminder: 'Добави напомняне', ctxEditReminder: 'Промени напомняне',
     reminderInactiveHint: 'Напомнянията ще изпращат push нотификация, след като IForget излезе в App Store / Google Play. Засега датата само се запазва.',
@@ -1629,7 +1630,7 @@ const STRINGS = {
     expandAria: 'Expand', collapseAria: 'Collapse',
     deletedUndo: 'Note deleted.', undoBtn: 'Undo', deleteAria: 'Delete',
     ctxEdit: 'Edit', ctxDelete: 'Delete', ctxAddSub: 'Add sub-note',
-    ctxShare: 'Share', shareCopied: 'Copied to clipboard.',
+    ctxShare: 'Share', ctxCopy: 'Copy', shareCopied: 'Copied to clipboard.',
     ctxColor: 'Color', noteColorNone: 'No color',
     ctxAddReminder: 'Add reminder', ctxEditReminder: 'Edit reminder',
     reminderInactiveHint: 'Reminders will send a push notification once IForget is available on the App Store / Google Play. For now the date is just saved.',
@@ -1724,7 +1725,7 @@ const STRINGS = {
     expandAria: 'Развернуть', collapseAria: 'Свернуть',
     deletedUndo: 'Заметка удалена.', undoBtn: 'Отменить', deleteAria: 'Удалить',
     ctxEdit: 'Редактировать', ctxDelete: 'Удалить', ctxAddSub: 'Добавить подзаметку',
-    ctxShare: 'Поделиться', shareCopied: 'Скопировано в буфер обмена.',
+    ctxShare: 'Поделиться', ctxCopy: 'Копировать', shareCopied: 'Скопировано в буфер обмена.',
     ctxColor: 'Цвет', noteColorNone: 'Без цвета',
     ctxAddReminder: 'Добавить напоминание', ctxEditReminder: 'Изменить напоминание',
     reminderInactiveHint: 'Напоминания будут отправлять push-уведомление, когда IForget появится в App Store / Google Play. Пока дата просто сохраняется.',
@@ -1819,7 +1820,7 @@ const STRINGS = {
     expandAria: 'Ausklappen', collapseAria: 'Einklappen',
     deletedUndo: 'Notiz gelöscht.', undoBtn: 'Rückgängig', deleteAria: 'Löschen',
     ctxEdit: 'Bearbeiten', ctxDelete: 'Löschen', ctxAddSub: 'Unternotiz hinzufügen',
-    ctxShare: 'Teilen', shareCopied: 'In die Zwischenablage kopiert.',
+    ctxShare: 'Teilen', ctxCopy: 'Kopieren', shareCopied: 'In die Zwischenablage kopiert.',
     ctxColor: 'Farbe', noteColorNone: 'Keine Farbe',
     ctxAddReminder: 'Erinnerung hinzufügen', ctxEditReminder: 'Erinnerung ändern',
     reminderInactiveHint: 'Erinnerungen senden eine Push-Benachrichtigung, sobald IForget im App Store / bei Google Play verfügbar ist. Vorerst wird nur das Datum gespeichert.',
@@ -1914,7 +1915,7 @@ const STRINGS = {
     expandAria: 'Expandir', collapseAria: 'Contraer',
     deletedUndo: 'Nota eliminada.', undoBtn: 'Deshacer', deleteAria: 'Eliminar',
     ctxEdit: 'Editar', ctxDelete: 'Eliminar', ctxAddSub: 'Añadir subnota',
-    ctxShare: 'Compartir', shareCopied: 'Copiado al portapapeles.',
+    ctxShare: 'Compartir', ctxCopy: 'Copiar', shareCopied: 'Copiado al portapapeles.',
     ctxColor: 'Color', noteColorNone: 'Sin color',
     ctxAddReminder: 'Añadir recordatorio', ctxEditReminder: 'Editar recordatorio',
     reminderInactiveHint: 'Los recordatorios enviarán una notificación push cuando IForget esté disponible en App Store / Google Play. Por ahora solo se guarda la fecha.',
@@ -3879,6 +3880,7 @@ function renderCtxMenuMain(noteId, subId){
   html += `<button data-ctx="color">${ICONS.droplet}${s.ctxColor}</button>`;
   html += `<button data-ctx="reminder">${ICONS.bell}${item && item.reminderAt ? s.ctxEditReminder : s.ctxAddReminder}</button>`;
   html += `<button data-ctx="share">${ICONS.share}${s.ctxShare}</button>`;
+  html += `<button data-ctx="copy">${ICONS.copy}${s.ctxCopy}</button>`;
   html += `<button class="danger" data-ctx="delete">${ICONS.trash}${s.ctxDelete}</button>`;
   const menu = document.getElementById('ctxMenu');
   menu.innerHTML = html;
@@ -3909,6 +3911,8 @@ function renderCtxMenuMain(noteId, subId){
         focusAndReveal(inp);
       }else if(action === 'share'){
         shareItem(noteId2, subId2);
+      }else if(action === 'copy'){
+        copyItemText(noteId2, subId2);
       }else if(action === 'delete'){
         deleteBySwipe(noteId2, subId2);
       }
@@ -4038,6 +4042,19 @@ function shareItem(noteId, subId){
     navigator.share({text}).catch(()=>{});
   }else if(navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(text).then(()=> window.alert(t().shareCopied)).catch(()=>{});
+  }
+}
+
+// "Копирай" в контекстното меню — за разлика от shareItem() по-горе, ВИНАГИ
+// копира директно в клипборда (не отваря share sheet-а, дори на устройства
+// с navigator.share) — по изрична заявка за отделен, предвидим бутон само
+// за копиране. Копира ЦЕЛИЯ съхранен текст на бележката/подбележката
+// (item.text), не само видимата (евентуално свита/clamped) част на екрана.
+function copyItemText(noteId, subId){
+  const item = subId ? findSub(noteId, subId) : findNote(noteId);
+  if(!item) return;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(item.text).then(()=> window.alert(t().shareCopied)).catch(()=>{});
   }
 }
 
