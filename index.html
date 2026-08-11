@@ -2192,7 +2192,20 @@ function openProfilePanel(anchorEl){
   const panel = document.getElementById('profilePanel');
   const rect = anchorEl.getBoundingClientRect();
   panel.style.top = (rect.bottom + 4) + 'px';
-  panel.style.right = (window.innerWidth - rect.right) + 'px';
+  // В лявата ръка режим топбарът е row-reverse (виж html.left-handed
+  // .topbar-row по-горе) — самото копче за профил се мести вляво. Панелът
+  // трябва да закачи ЛЯВАТА си страна за копчето (left:), не дясната
+  // (right:) — иначе остава закотвен все едно копчето пак е вдясно и
+  // изчезва извън/накрая на екрана. Аналогично на edgeAlignedLeft()
+  // (tag-picker/ctx-menu) по-долу, само че тук панелът винаги е закачен
+  // директно за копчето (не за края на карта), затова е по-просто.
+  if(leftHanded){
+    panel.style.left = rect.left + 'px';
+    panel.style.right = 'auto';
+  }else{
+    panel.style.right = (window.innerWidth - rect.right) + 'px';
+    panel.style.left = 'auto';
+  }
   panel.classList.add('show');
 }
 function closeProfilePanel(){
