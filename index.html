@@ -5153,6 +5153,24 @@ window.addEventListener('resize', ()=>{
 function handleViewportResize(){
   if(!window.visualViewport) return;
   const vv = window.visualViewport;
+  // ГЛАВНАТА причина за "празнината", измерена с реални числа от устройството
+  // (?debugviewport=1, при отворена клавиатура за нова бележка):
+  //   window.innerHeight: 433 | visualViewport.height: 433 | --app-height: 433px
+  //   visualViewport.offsetTop: 211 | window.scrollY: 211
+  // Тоест документът е ТОЧНО колкото видимата зона (нищо не може да се
+  // скролва — html/body са overflow:hidden с точната височина), но Safari
+  // въпреки това е "избутал" визуалния прозорец 211px НАДОЛУ, отвъд края на
+  // документа. Видимата "празнина" не е празно място В приложението — това е
+  // зоната ПОД края на страницата, където се вижда само фоновият тайл на html
+  // (затова изглежда като безкраен фон с гинко листа). Полето за писане пък е
+  // долепено долу, защото position:fixed елементите на iOS се закачат за
+  // ВИЗУАЛНИЯ прозорец, а не за layout-а.
+  // Изместването е чист остатък от нативната логика "покажи фокусирания
+  // input" — Safari го смята ПРЕДИ layout-ът да се свие, и не го връща
+  // обратно, след като свиването вече е освободило нужното място. Нулираме
+  // го ръчно: при заключен документ всяко scrollY различно от 0 е точно този
+  // паразитен pan (пазим се от безкраен цикъл с проверката).
+  if(window.scrollY !== 0) window.scrollTo(0, 0);
   const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
   const tr = offset ? `translateY(-${offset}px)` : '';
   const bar = document.getElementById('bottomBar');
