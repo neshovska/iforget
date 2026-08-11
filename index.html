@@ -4108,8 +4108,12 @@ function shareItem(noteId, subId){
 function copyItemText(noteId, subId){
   const item = subId ? findSub(noteId, subId) : findNote(noteId);
   if(!item) return;
+  // Съзнателно БЕЗ потвърждение (alert) при успех, по изрична заявка —
+  // за разлика от shareItem()/handleForgotPassword() и т.н., тук копирането
+  // е достатъчно "очевидно" действие само по себе си, не се нуждае от
+  // допълнително прекъсване. Грешка все пак се поглъща тихо, не се сигнализира.
   if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(item.text).then(()=> window.alert(t().shareCopied)).catch(()=>{});
+    navigator.clipboard.writeText(item.text).catch(()=>{});
   }
 }
 
