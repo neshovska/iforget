@@ -2,7 +2,17 @@
 <html lang="bg">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<!-- interactive-widget=resizes-content (iOS 17+ Safari, съвременен Chrome/
+     Android): казва на браузъра САМ да смалява layout viewport-а (не само
+     visual viewport) при отваряне на клавиатурата — window.innerHeight,
+     100vh и обикновен CSS layout автоматично отразяват видимата зона, без
+     ръчни JS изчисления през visualViewport. Заобикаля цял клас бъгове
+     наведнъж (celия механизъм в handleViewportResize()/updateAppHeight()
+     по-долу съществува точно заради липсата на това). На браузър, който не
+     го поддържа, стойността просто се игнорира — старият JS fallback
+     продължава да работи както досега, затова промяната е безопасна и
+     обратно съвместима. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="IForget">

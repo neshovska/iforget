@@ -385,6 +385,34 @@ Firestore документ `users/{uid}` също съдържа `tagOrder: stri
   добавена изрична котва в `handleViewportResize()`:
   `if(document.activeElement === noteInput){ activeArea.scrollTo({top:
   activeArea.scrollHeight, behavior:'auto'}); }`.
+  **Трето кръгче — реалният сигнал, че цялата ръчна JS схема не стига:**
+  след горните два фикса, `#noteInput` (полето за НОВА бележка, живее
+  ВЪТРЕ в `.bottombar{position:fixed}`, за разлика от `.edit-input`, което
+  е в нормалния scroll flow) продължи да показва празнина на реално
+  устройство — потвърдено с `?debugviewport=1` overlay screenshot от
+  друг сценарий (подбележка, работещ коректно), докато точно за
+  счупения сценарий overlay-ят липсваше от снимката (вероятно паникирал/
+  избутан извън видимата зона — самият overlay е `position:fixed;top:...`,
+  същия клас елемент като bottombar-а). Класически признак за реален iOS
+  Safari бъг: фокус върху `<input>` ВЪТРЕ в `position:fixed` контейнер
+  кара браузъра сам да "панира"/премести VISUAL VIEWPORT-а (независимо от
+  `visualViewport.offsetTop`, което следим), докато LAYOUT VIEWPORT-ът
+  (спрямо който `position:fixed` се позиционира) остава непроменен —
+  никаква комбинация от ръчни `scrollTo`/`transform` изчисления не може
+  надеждно да компенсира това, защото ние виждаме само СЛЕДСТВИЯТА
+  (`visualViewport` стойности), не самата причина.
+  **Фиксът в основата, вместо поредна ръчна кръпка:** добавен
+  `interactive-widget=resizes-content` към `<meta name="viewport">` (iOS
+  17+ Safari, съвременен Chrome/Android) — казва на браузъра сам да
+  смалява LAYOUT viewport-а (не само visual viewport) при клавиатура,
+  така че `window.innerHeight`/`100vh`/обикновен CSS layout автоматично
+  отразяват видимата зона, без ръчни `visualViewport` изчисления изобщо.
+  На браузър без поддръжка стойността просто се игнорира — старият JS
+  fallback (`updateAppHeight()`/`handleViewportResize()`) продължава да
+  работи както досега, така че промяната е обратно съвместима. Очакван
+  ефект при поддръжка: `offset` в `handleViewportResize()` пресмята ~0
+  (`window.innerHeight` вече съвпада с `visualViewport.height`), transform-ът
+  на bottombar-а остава празен низ — не е бъг, просто вече не е нужен.
 - **Бутони ВЪТРЕ в #ctxMenu/#profilePanel, които подменят innerHTML НА
   МЯСТО (панелът остава отворен, само превключва изгледа — напр. "Цвят"/
   "Напомняне"/"назад" в ctx-менюто, "Твоят преглед"/"Календар" в профила),
