@@ -113,8 +113,7 @@
      под видимия ръб (изглежда все едно екранът е празен/замръзнал, докато
      нещо — напр. фокус върху полето за бележка — не предизвика
      преизчисление). Затова var(--app-height, 100vh): JS (updateAppHeight()
-     накрая на скрипта) следи window.visualViewport.height на живо (същия
-     похват като handleViewportResize() за bottomBar по-долу) и пази body
+     накрая на скрипта) следи window.visualViewport.height на живо и пази body
      точно колкото РЕАЛНО видимата зона, при адресна лента/клавиатура —
      100vh е само резервен вариант за частта от секундата преди JS-а/при
      много стари браузъри без CSS custom properties. */
@@ -807,7 +806,7 @@
      изчезва вместо да изпъкне над замъгления фон). Модерен iOS (13+) вече
      дава плавен momentum скрол на overflow:auto и без това свойство. */
   main{
-    padding:6px 20px 0;padding-bottom:134px;
+    padding:6px 20px 12px;
     flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;
   }
   /* min-height:100% (не height) — при малко бележки запълва main и
@@ -844,8 +843,7 @@
   }
 
   .bottombar{
-    position:fixed;left:0;right:0;bottom:0;z-index:10;
-    transition:transform .12s ease-out;
+    flex-shrink:0;
     background:linear-gradient(0deg,var(--bg) 82%,transparent);
     padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 14px);
   }
@@ -3379,11 +3377,11 @@ function scrollToBottom(smooth){
 // Фокусира поле (напр. sub-input при "+ добави подбележка") И го скролва
 // видимо в activeArea — само .focus() не стига, ако полето се появи близо
 // до дъното (напр. веднага след добавена нова бележка, скролната до края):
-// новото поле за подбележка може да остане зад bottombar-а (position:fixed,
-// не участва в scrollable областта на activeArea), невидимо, докато
-// клавиатурата не предизвика случайно преизчисление. scrollIntoView()
-// скролва в НАЙ-БЛИЗКИЯ скролиращ родител (activeArea, виж overflow-y:auto
-// на main{}), не цялата страница — точно каквото трябва тук.
+// новото поле за подбележка може да е точно на ръба на видимата част от
+// activeArea, невидимо докато клавиатурата не предизвика случайно
+// преизчисление. scrollIntoView() скролва в НАЙ-БЛИЗКИЯ скролиращ родител
+// (activeArea, виж overflow-y:auto на main{}), не цялата страница — точно
+// каквото трябва тук.
 // ВАЖНО: .focus() е ПЪРВО и синхронно (без setTimeout преди него) — за да
 // отвори клавиатурата от първия допир на телефон (виж коментарите при
 // извикванията по-долу).
@@ -4995,17 +4993,13 @@ window.addEventListener('resize', ()=>{
   if(catRow.classList.contains('open')) updateCatRowExpand();
 });
 
-// iOS Safari премества/"вдига" position:fixed елементи неточно, когато се
-// покаже клавиатурата (класически бъг) — вместо да разчитаме на fixed
-// самичко, следим visualViewport и изтласкваме лентата за нова бележка точно
-// над клавиатурата ръчно, без скок.
+// bottombar вече е обикновено flex дете на body (виж .bottombar{} по-горе),
+// не position:fixed — гарантирано следва body/main преизчисляването
+// (updateAppHeight()) без отделен JS transform, който преди можеше да се
+// разминае с main{} при клавиатура (виж историята на бъга при полето за
+// нова бележка). Тук остава само преизчисляване на видимостта на копчето
+// "най-нови" при промяна на видимата зона.
 function handleViewportResize(){
-  if(!window.visualViewport) return;
-  const vv = window.visualViewport;
-  const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-  const tr = offset ? `translateY(-${offset}px)` : '';
-  const bar = document.getElementById('bottomBar');
-  if(bar) bar.style.transform = tr;
   updateJumpVisibility();
 }
 if(window.visualViewport){
