@@ -98,14 +98,27 @@
     font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
     -webkit-font-smoothing:antialiased;height:100%;}
   html{background:var(--bg);transition:background-color .15s ease;}
-  /* height:100vh (не min-height) + overflow:hidden — body вече НЕ скролва
-     като страница. Топбар/долна лента за бележка остават фиксирани
-     "региони" на живо (виж .topbar/.bottombar по-долу), а #activeArea
-     (списъкът с бележки) е ЕДИНСТВЕНИЯТ вътрешно скролиращ елемент между
-     тях (overflow-y:auto на main по-долу) — по изрична заявка, вместо
+  /* height (не min-height) + overflow:hidden — body вече НЕ скролва като
+     страница. Топбар/долна лента за бележка остават фиксирани "региони" на
+     живо (виж .topbar/.bottombar по-долу), а #activeArea (списъкът с
+     бележки) е ЕДИНСТВЕНИЯТ вътрешно скролиращ елемент между тях
+     (overflow-y:auto на main по-долу) — по изрична заявка, вместо
      предишния модел с position:sticky topbar + скрол на цялата страница
-     (капризен на мобилни браузъри — адресна лента, клавиатура и т.н.). */
-  body{display:flex;flex-direction:column;height:100vh;overflow:hidden;transition:background-color .15s ease,color .15s ease;}
+     (капризен на мобилни браузъри — адресна лента, клавиатура и т.н.).
+     ВАЖНО: height:100vh САМО (статична стойност) е РЕАЛЕН бъг на мобилни
+     браузъри — 100vh е спрямо НАЙ-ГОЛЕМИЯ възможен viewport (адресна лента
+     скрита), но реално видимата зона често е по-малка (адресна лента
+     видима, после клавиатура) — body става "по-висок" от видимия екран, а
+     без скрол (overflow:hidden) няма как да се стигне до частта, увиснала
+     под видимия ръб (изглежда все едно екранът е празен/замръзнал, докато
+     нещо — напр. фокус върху полето за бележка — не предизвика
+     преизчисление). Затова var(--app-height, 100vh): JS (updateAppHeight()
+     накрая на скрипта) следи window.visualViewport.height на живо (същия
+     похват като handleViewportResize() за bottomBar по-долу) и пази body
+     точно колкото РЕАЛНО видимата зона, при адресна лента/клавиатура —
+     100vh е само резервен вариант за частта от секундата преди JS-а/при
+     много стари браузъри без CSS custom properties. */
+  body{display:flex;flex-direction:column;height:100vh;height:var(--app-height, 100vh);overflow:hidden;transition:background-color .15s ease,color .15s ease;}
 
   /* Фонов десен от гинко листенца — реални изображения (доставени от
      потребителя), едно на цвят/тема: bg-dark-v3.jpg (синьо-навигационно+
@@ -1187,6 +1200,25 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
 <script>
+// body{height:var(--app-height, 100vh)} (виж <style> по-горе) — статичното
+// 100vh НЕ отразява реално видимата зона на мобилен браузър (адресна лента/
+// клавиатура), затова пазим точната пикселна височина тук, следена на живо
+// през window.visualViewport (същия похват като handleViewportResize() за
+// bottomBar по-долу, само приложен и за самия body). Извиква се веднага
+// (преди първия render(), докато скриптът се зарежда), и на всяка следваща
+// промяна на видимата зона.
+function updateAppHeight(){
+  const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  document.documentElement.style.setProperty('--app-height', h + 'px');
+}
+updateAppHeight();
+window.addEventListener('resize', updateAppHeight);
+window.addEventListener('orientationchange', updateAppHeight);
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', updateAppHeight);
+  window.visualViewport.addEventListener('scroll', updateAppHeight);
+}
+
 // #activeArea (<main>) е ЕДИНСТВЕНИЯТ вътрешно скролиращ елемент в
 // приложението (виж body/main{} в <style> по-горе) — topbar/bottombar са
 // фиксирани "региони" и никога не скролват. Затова навсякъде по-долу, където
