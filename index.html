@@ -140,6 +140,37 @@
   }
   /* Подбележките с топъл кремав нюанс — бялото на картите иначе се слива. */
   :root.school-theme[data-theme="light"] .subs .note{background-color:#F6F1EA;}
+  /* ── ЧИСТА ВИЗИЯ ─────────────────────────────────────────────────────
+     Единствената визия БЕЗ фонова шарка — плътен цвят и нищо друго.
+     За разлика от ученическата НЕ форсира светла тема: следва слънце/луна
+     и има свой вариант за всяка. Затова и кръгчето ѝ в реда с цветовете е
+     двуцветно (бяло/графит) — показва точно това.
+     Специфичност: :root.clean-look е 0,2,0 — равна на
+     :root[data-theme="light"], затова светлият вариант е с добавен атрибут
+     (0,3,0) и стои СЛЕД тъмния. Не разменяй двата блока. */
+  :root.clean-look{
+    --bg:#12151A;--card:#1B1F26;--card-2:#20252E;
+    --card-rgb:27,31,38;--card2-rgb:32,37,46;
+    --border:#2D343E;--text:#E9ECF1;--text-dim:#98A2B0;--text-dim-rgb:152,162,176;
+    --gold:#D9A441;--gold-dim:#B2842F;--gold-rgb:217,164,65;
+    --accent:#6E93FF;--accent-rgb:110,147,255;--accent-dim:#5478DB;
+    --green:#4FB37E;--danger:#E5675F;
+  }
+  :root.clean-look[data-theme="light"]{
+    --bg:#F4F5F7;--card:#FFFFFF;--card-2:#FFFFFF;
+    --card-rgb:255,255,255;--card2-rgb:255,255,255;
+    --border:#E1E5EA;--text:#1B222C;--text-dim:#6C7684;--text-dim-rgb:108,118,132;
+    --gold:#C08A1E;--gold-dim:#976C16;--gold-rgb:192,138,30;
+    --accent:#4F63C6;--accent-rgb:79,99,198;--accent-dim:#3B4CA3;
+    --green:#3E9E6B;--danger:#D64B45;
+  }
+  /* Целият смисъл на визията — маха се фоновата снимка, остава плътен цвят. */
+  html.clean-look, html.clean-look[data-theme="light"]{background-image:none;}
+  :root.clean-look .subs .note{background-color:#20252E;}
+  :root.clean-look[data-theme="light"] .subs .note{background-color:#F1F3F6;}
+  /* Кръгчето в реда с цветовете — двуцветно като "по подразбиране", но
+     бяло/графит: така личи, че визията важи и за светла, и за тъмна тема. */
+  .color-sw.clean-sw{background:linear-gradient(135deg, #F4F5F7 50%, #12151A 50%) !important;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   /* background:var(--bg) е само на html (не и на body) — виж коментара при
      html{background-image:...} по-долу защо: body с плътен цвят би скрил
@@ -1509,6 +1540,13 @@ function applyGlassNotes(){
 // Ученическа визия — светла тема с акварелен училищен фон. Пази се локално
 // (както прозрачните/неоновите бележки), защото е въпрос на устройство и
 // вкус, не на акаунт.
+// Чиста визия — единствената без фонова шарка. Следва слънце/луна (има
+// вариант и за тъмна, и за светла), затова НЕ пипа theme при включване.
+const CLEAN_LOOK_KEY = 'cleanLook';
+let cleanLook = localStorage.getItem(CLEAN_LOOK_KEY) === '1';
+function applyCleanLook(){
+  document.documentElement.classList.toggle('clean-look', cleanLook);
+}
 const SCHOOL_THEME_KEY = 'schoolTheme';
 let schoolTheme = localStorage.getItem(SCHOOL_THEME_KEY) === '1';
 function applySchoolTheme(){
@@ -1802,6 +1840,7 @@ const STRINGS = {
     glassNotesToggle: 'Прозрачни бележки',
     neonNotesToggle: 'Неонови цветове',
     schoolThemeToggle: 'Ученическа визия',
+    cleanLookLabel: 'Чиста визия — без фон',
     replayTutorial: 'Пусни обучението пак',
     profileGroupView: 'Изглед', profileGroupData: 'Данни', profileGroupAccount: 'Акаунт', profileGroupHelp: 'Помощ',
     premiumUpgradeBtn: 'Ъпгрейд до Premium', premiumChoosePlan: 'Избери план',
@@ -1903,6 +1942,7 @@ const STRINGS = {
     glassNotesToggle: 'Transparent notes',
     neonNotesToggle: 'Neon colours',
     schoolThemeToggle: 'School look',
+    cleanLookLabel: 'Clean look — no background',
     replayTutorial: 'Replay the tutorial',
     profileGroupView: 'View', profileGroupData: 'Data', profileGroupAccount: 'Account', profileGroupHelp: 'Help',
     premiumUpgradeBtn: 'Upgrade to Premium', premiumChoosePlan: 'Choose a plan',
@@ -2002,6 +2042,7 @@ const STRINGS = {
     glassNotesToggle: 'Прозрачные заметки',
     neonNotesToggle: 'Неоновые цвета',
     schoolThemeToggle: 'Школьный вид',
+    cleanLookLabel: 'Чистый вид — без фона',
     replayTutorial: 'Пройти обучение заново',
     profileGroupView: 'Вид', profileGroupData: 'Данные', profileGroupAccount: 'Аккаунт', profileGroupHelp: 'Помощь',
     premiumUpgradeBtn: 'Перейти на Premium', premiumChoosePlan: 'Выбери план',
@@ -2105,6 +2146,7 @@ const STRINGS = {
     glassNotesToggle: 'Transparente Notizen',
     neonNotesToggle: 'Neonfarben',
     schoolThemeToggle: 'Schul-Look',
+    cleanLookLabel: 'Klarer Look — ohne Hintergrund',
     replayTutorial: 'Einführung erneut ansehen',
     profileGroupView: 'Ansicht', profileGroupData: 'Daten', profileGroupAccount: 'Konto', profileGroupHelp: 'Hilfe',
     premiumUpgradeBtn: 'Auf Premium upgraden', premiumChoosePlan: 'Plan wählen',
@@ -2206,6 +2248,7 @@ const STRINGS = {
     glassNotesToggle: 'Notas transparentes',
     neonNotesToggle: 'Colores neón',
     schoolThemeToggle: 'Estilo escolar',
+    cleanLookLabel: 'Estilo limpio — sin fondo',
     replayTutorial: 'Repetir la introducción',
     profileGroupView: 'Vista', profileGroupData: 'Datos', profileGroupAccount: 'Cuenta', profileGroupHelp: 'Ayuda',
     premiumUpgradeBtn: 'Actualizar a Premium', premiumChoosePlan: 'Elige un plan',
@@ -2714,9 +2757,12 @@ function renderProfileMenu(){
   // CLAUDE.md/git история за краткия период, в който бяха частично
   // заключени зад Premium (PROFILE_COLORS_FREE), после отменено по
   // изрична молба ("отключи функциите с цветовете... за всички потребители").
+  // Накрая на реда — кръгчето за чистата визия. НЕ е цвят, затова носи
+  // data-look вместо data-color и се пропуска от слушателя за цветовете
+  // (иначе profileColor щеше да стане undefined).
   html += `<div class="color-row">` + PROFILE_COLORS.map(c =>
     `<button type="button" class="color-sw${c===profileColor?' active':''}${c===''?' default-sw':''}" data-color="${c}" style="${c?`background:${c}`:''}" aria-label="${c || s.profileColorDefault}"></button>`
-  ).join('') + `</div>`;
+  ).join('') + `<button type="button" class="color-sw clean-sw${cleanLook?' active':''}" data-look="clean" aria-label="${s.cleanLookLabel}" title="${s.cleanLookLabel}"></button>` + `</div>`;
 
   // Premium вход/статус — виж hasAdvancedFeatures()/premiumLaunched по-горе.
   // ИЗЦЯЛО скрито, докато premiumLaunched е false (главният ключ в Firestore
@@ -2773,7 +2819,7 @@ function renderProfileMenu(){
 
   panel.innerHTML = html;
 
-  panel.querySelectorAll('.color-sw').forEach(b=>{
+  panel.querySelectorAll('.color-sw:not([data-look])').forEach(b=>{
     b.addEventListener('mousedown', e=>{
       e.preventDefault(); e.stopPropagation();
       profileColor = b.dataset.color;
@@ -2822,6 +2868,20 @@ function renderProfileMenu(){
     const docRef = currentUser ? db.collection('users').doc(currentUser.uid) : null;
     runOnboardingTour(docRef);
   });
+  panel.querySelector('[data-look="clean"]').addEventListener('mousedown', e=>{
+    e.preventDefault(); e.stopPropagation();
+    cleanLook = !cleanLook;
+    localStorage.setItem(CLEAN_LOOK_KEY, cleanLook ? '1' : '0');
+    // Двете визии се изключват взаимно — иначе двата CSS блока се борят и
+    // резултатът зависи от реда им, което е крехко.
+    if(cleanLook && schoolTheme){
+      schoolTheme = false;
+      localStorage.setItem(SCHOOL_THEME_KEY, '0');
+      applySchoolTheme();
+    }
+    applyCleanLook();
+    renderProfileMenu();
+  });
   panel.querySelector('[data-action="toggle-school-theme"]').addEventListener('mousedown', e=>{
     e.preventDefault(); e.stopPropagation();
     schoolTheme = !schoolTheme;
@@ -2829,6 +2889,11 @@ function renderProfileMenu(){
     // Ученическата визия Е светла тема с друга палитра — при включване
     // задаваме и самата светла тема, иначе компонентните правила на
     // тъмната (подбележки, полета) остават и се получава каша.
+    if(schoolTheme && cleanLook){
+      cleanLook = false;
+      localStorage.setItem(CLEAN_LOOK_KEY, '0');
+      applyCleanLook();
+    }
     if(schoolTheme && theme !== 'light'){
       theme = 'light';
       localStorage.setItem(THEME_KEY, theme);
@@ -5607,6 +5672,7 @@ applyLeftHanded();
 applyGlassNotes();
 applyNeonNotes();
 applySchoolTheme();
+applyCleanLook();
 applyStaticText();
 requestPersistentStorage();
 loadPremiumConfig();
