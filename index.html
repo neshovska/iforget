@@ -108,7 +108,7 @@
     font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
     -webkit-font-smoothing:antialiased;height:100%;}
   /* overflow:hidden ТУК (не само на body по-долу) — реален бъг, потвърден
-     с ?debugviewport=1 на живо устройство: window.scrollY реално се
+     с измервания на живо устройство: window.scrollY реално се
      покачваше (0 → 107 → 211px) при фокус върху #noteInput (вътре в
      .bottombar{position:fixed}), докато клавиатурата се отваряше — самата
      СТРАНИЦА се скролваше, не просто visualViewport-ът панираше визуално.
@@ -874,7 +874,7 @@
 
   /* НОРМАЛНО flex дете на body (като .topbar горе), НЕ position:fixed —
      решаващо, не козметика. Реален бъг, диагностициран с числа от живо
-     устройство (?debugviewport=1): при фокус върху input ВЪТРЕ в
+     устройство: при фокус върху input ВЪТРЕ в
      position:fixed контейнер iOS Safari измества (panning) визуалния
      прозорец надолу, отвъд края на документа, за да "покаже" полето — и
      не го връща, след като клавиатурата вече е свила layout-а. Резултат:
@@ -1290,16 +1290,6 @@
   <button type="button" id="undoToastBtn">Отмени</button>
 </div>
 
-<!-- Диагностичен overlay за реални visualViewport/keyboard стойности от
-     живо устройство — виж updateViewportDebug() в скрипта. Активира се
-     само с ?debugviewport=1 в URL-а (виж инициализацията накрая на
-     скрипта), display:none по подразбиране, за да не пречи изобщо на
-     нормалната употреба. Целта: следващия път, когато тестваме на
-     реалния iPhone, вместо да гадаем защо клавиатурата крие поле за
-     писане, screenshot-ваме тук РЕАЛНИТЕ числа (visualViewport.height/
-     offsetTop, window.innerHeight, --app-height) в момента на бъга. -->
-<div id="viewportDebug" style="display:none;position:fixed;top:calc(env(safe-area-inset-top,0px) + 4px);left:4px;right:4px;z-index:9999;background:rgba(0,0,0,.85);color:#0f0;font:10px/1.4 monospace;padding:6px 8px;border-radius:6px;white-space:pre;pointer-events:none;"></div>
-
 <div class="bottombar" id="bottomBar">
   <div class="input-row">
     <input id="noteInput" type="text" placeholder="Нова бележка..." maxlength="1000">
@@ -1324,41 +1314,6 @@
 function updateAppHeight(){
   const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
   document.documentElement.style.setProperty('--app-height', h + 'px');
-  updateViewportDebug();
-}
-// Диагностика на живо за visualViewport/клавиатура — виж #viewportDebug в
-// HTML-а по-горе за пълния контекст защо съществува. Активна само с
-// ?debugviewport=1, за да е инертна при нормална употреба. eventLog пази
-// последните няколко resize/scroll събития с timestamp — важно е да личи
-// ДАЛИ изобщо се задействат при фокус на клавиатурата на реалното
-// устройство, не само последните им стойности.
-const VIEWPORT_DEBUG_ON = new URLSearchParams(location.search).get('debugviewport') === '1';
-let viewportDebugEventLog = [];
-function updateViewportDebug(){
-  if(!VIEWPORT_DEBUG_ON) return;
-  const box = document.getElementById('viewportDebug');
-  if(!box) return;
-  box.style.display = 'block';
-  const vv = window.visualViewport;
-  // Реален случай, хванат на живо устройство: кутийката е position:fixed
-  // спрямо LAYOUT viewport-а, но при фокус на input вътре в fixed елемент
-  // Safari понякога "панира" ВИЗУАЛНИЯ viewport независимо от layout-а —
-  // точно затова показанията ни трябват тук — резултатът: кутийката се
-  // изтласква почти изцяло извън видимия екран (виждаше се само последният
-  // ѝ ред), скривайки точно числата, които трябва да докажат/отхвърлят
-  // това. Компенсираме ръчно с vv.offsetTop, за да остане кутийката
-  // видима дори ПО ВРЕМЕ на самото паниране.
-  if(vv) box.style.top = `calc(env(safe-area-inset-top,0px) + 4px + ${vv.offsetTop.toFixed(1)}px)`;
-  const now = new Date().toISOString().slice(11,19);
-  viewportDebugEventLog.push(now);
-  if(viewportDebugEventLog.length > 6) viewportDebugEventLog.shift();
-  box.textContent =
-    `window.innerHeight: ${window.innerHeight}\n` +
-    `visualViewport: ${vv ? 'да' : 'НЕ поддържа се'}\n` +
-    (vv ? `  height: ${vv.height.toFixed(1)}\n  offsetTop: ${vv.offsetTop.toFixed(1)}\n  scale: ${vv.scale}\n` : '') +
-    `--app-height: ${document.documentElement.style.getPropertyValue('--app-height')}\n` +
-    `window.scrollY: ${window.scrollY}\n` +
-    `последни updates (${viewportDebugEventLog.length}): ${viewportDebugEventLog.join(', ')}`;
 }
 updateAppHeight();
 window.addEventListener('resize', updateAppHeight);
@@ -5176,7 +5131,8 @@ window.addEventListener('resize', ()=>{
 function handleViewportResize(){
   if(!window.visualViewport) return;
   // ГЛАВНАТА причина за "празнината", измерена с реални числа от устройството
-  // (?debugviewport=1, при отворена клавиатура за нова бележка):
+  // (чрез временен диагностичен overlay, махнат след като бъгът беше решен;
+  // стойностите при отворена клавиатура за нова бележка бяха):
   //   window.innerHeight: 433 | visualViewport.height: 433 | --app-height: 433px
   //   visualViewport.offsetTop: 211 | window.scrollY: 211
   // Тоест документът е ТОЧНО колкото видимата зона (нищо не може да се
@@ -5207,7 +5163,6 @@ function handleViewportResize(){
     activeArea.scrollTo({top: activeArea.scrollHeight, behavior:'auto'});
   }
   updateJumpVisibility();
-  updateViewportDebug();
 }
 if(window.visualViewport){
   window.visualViewport.addEventListener('resize', handleViewportResize);
