@@ -2760,9 +2760,17 @@ function renderProfileMenu(){
   // Накрая на реда — кръгчето за чистата визия. НЕ е цвят, затова носи
   // data-look вместо data-color и се пропуска от слушателя за цветовете
   // (иначе profileColor щеше да стане undefined).
-  html += `<div class="color-row">` + PROFILE_COLORS.map(c =>
-    `<button type="button" class="color-sw${c===profileColor?' active':''}${c===''?' default-sw':''}" data-color="${c}" style="${c?`background:${c}`:''}" aria-label="${c || s.profileColorDefault}"></button>`
-  ).join('') + `<button type="button" class="color-sw clean-sw${cleanLook?' active':''}" data-look="clean" aria-label="${s.cleanLookLabel}" title="${s.cleanLookLabel}"></button>` + `</div>`;
+  html += `<div class="color-row">` + PROFILE_COLORS.map(c => {
+    // Двуцветните кръгчета (първото "по подразбиране" и чистата визия) се
+    // четат като ИЗБОР НА ОБЛИК, не като ключ — затова първото свети само
+    // когато обликът наистина е основният, а не просто когато няма избран
+    // акцентен цвят.
+    const isDefault = c === '';
+    const active = isDefault
+      ? (profileColor === '' && !cleanLook && !schoolTheme)
+      : (c === profileColor);
+    return `<button type="button" class="color-sw${active?' active':''}${isDefault?' default-sw':''}" data-color="${c}" style="${c?`background:${c}`:''}" aria-label="${c || s.profileColorDefault}"></button>`;
+  }).join('') + `<button type="button" class="color-sw clean-sw${cleanLook?' active':''}" data-look="clean" aria-label="${s.cleanLookLabel}" title="${s.cleanLookLabel}"></button>` + `</div>`;
 
   // Premium вход/статус — виж hasAdvancedFeatures()/premiumLaunched по-горе.
   // ИЗЦЯЛО скрито, докато premiumLaunched е false (главният ключ в Firestore
@@ -2824,6 +2832,13 @@ function renderProfileMenu(){
       e.preventDefault(); e.stopPropagation();
       profileColor = b.dataset.color;
       localStorage.setItem(PROFILE_COLOR_KEY, profileColor);
+      // Първото кръгче е двуцветно и значи "основен облик" — връща и фона,
+      // не само акцента. Така редът работи като избор: цъкаш друго кръгче и
+      // то сменя, вместо да трябва повторно да гасиш предишното.
+      if(profileColor === ''){
+        if(cleanLook){ cleanLook = false; localStorage.setItem(CLEAN_LOOK_KEY,'0'); applyCleanLook(); }
+        if(schoolTheme){ schoolTheme = false; localStorage.setItem(SCHOOL_THEME_KEY,'0'); applySchoolTheme(); }
+      }
       updateUserChip(currentUser);
       applyAccentColor();
       renderProfileMenu();
@@ -2870,11 +2885,14 @@ function renderProfileMenu(){
   });
   panel.querySelector('[data-look="clean"]').addEventListener('mousedown', e=>{
     e.preventDefault(); e.stopPropagation();
-    cleanLook = !cleanLook;
-    localStorage.setItem(CLEAN_LOOK_KEY, cleanLook ? '1' : '0');
+    // Избор, не ключ: повторен клик върху вече избраната визия не я маха —
+    // излиза се като се цъкне ДРУГО кръгче (първото = основен облик).
+    if(cleanLook) return;
+    cleanLook = true;
+    localStorage.setItem(CLEAN_LOOK_KEY, '1');
     // Двете визии се изключват взаимно — иначе двата CSS блока се борят и
     // резултатът зависи от реда им, което е крехко.
-    if(cleanLook && schoolTheme){
+    if(schoolTheme){
       schoolTheme = false;
       localStorage.setItem(SCHOOL_THEME_KEY, '0');
       applySchoolTheme();
