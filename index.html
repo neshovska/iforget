@@ -1682,6 +1682,8 @@ const ICONS = {
   shield: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6l-8-4z"></path></svg>',
   doc: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>',
   droplet: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5s7 7.6 7 12.5a7 7 0 0 1-14 0c0-4.9 7-12.5 7-12.5z"></path></svg>',
+  // Кръгова стрелка — "Пусни обучението пак" в профила.
+  replay: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"></path><polyline points="3 4 3 10 9 10"></polyline></svg>',
   // Светкавица — за неоновия режим (виж NEON_NOTES_KEY/applyNeonNotes()).
   zap: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 4 14 11 14 10 22 20 10 13 10 13 2"></polygon></svg>',
   share: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"></line><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line></svg>',
@@ -1735,6 +1737,7 @@ const STRINGS = {
     profileColorDefault: 'По подразбиране', leftHandedMode: 'Режим за лявата ръка',
     glassNotesToggle: 'Прозрачни бележки',
     neonNotesToggle: 'Неонови цветове',
+    replayTutorial: 'Пусни обучението пак',
     profileGroupView: 'Изглед', profileGroupData: 'Данни', profileGroupAccount: 'Акаунт', profileGroupHelp: 'Помощ',
     premiumUpgradeBtn: 'Ъпгрейд до Premium', premiumChoosePlan: 'Избери план',
     premiumMonthly: 'Месечно — 2.99€/месец', premiumYearly: 'Годишно — 19.99€/година (-44%)',
@@ -1834,6 +1837,7 @@ const STRINGS = {
     profileColorDefault: 'Default', leftHandedMode: 'Left-handed mode',
     glassNotesToggle: 'Transparent notes',
     neonNotesToggle: 'Neon colours',
+    replayTutorial: 'Replay the tutorial',
     profileGroupView: 'View', profileGroupData: 'Data', profileGroupAccount: 'Account', profileGroupHelp: 'Help',
     premiumUpgradeBtn: 'Upgrade to Premium', premiumChoosePlan: 'Choose a plan',
     premiumMonthly: 'Monthly — €2.99/month', premiumYearly: 'Yearly — €19.99/year (-44%)',
@@ -1931,6 +1935,7 @@ const STRINGS = {
     profileColorDefault: 'По умолчанию', leftHandedMode: 'Режим для левшей',
     glassNotesToggle: 'Прозрачные заметки',
     neonNotesToggle: 'Неоновые цвета',
+    replayTutorial: 'Пройти обучение заново',
     profileGroupView: 'Вид', profileGroupData: 'Данные', profileGroupAccount: 'Аккаунт', profileGroupHelp: 'Помощь',
     premiumUpgradeBtn: 'Перейти на Premium', premiumChoosePlan: 'Выбери план',
     premiumMonthly: 'Ежемесячно — 2.99€/месяц', premiumYearly: 'Ежегодно — 19.99€/год (-44%)',
@@ -2032,6 +2037,7 @@ const STRINGS = {
     profileColorDefault: 'Standard', leftHandedMode: 'Linkshänder-Modus',
     glassNotesToggle: 'Transparente Notizen',
     neonNotesToggle: 'Neonfarben',
+    replayTutorial: 'Einführung erneut ansehen',
     profileGroupView: 'Ansicht', profileGroupData: 'Daten', profileGroupAccount: 'Konto', profileGroupHelp: 'Hilfe',
     premiumUpgradeBtn: 'Auf Premium upgraden', premiumChoosePlan: 'Plan wählen',
     premiumMonthly: 'Monatlich — 2,99€/Monat', premiumYearly: 'Jährlich — 19,99€/Jahr (-44%)',
@@ -2131,6 +2137,7 @@ const STRINGS = {
     profileColorDefault: 'Predeterminado', leftHandedMode: 'Modo para zurdos',
     glassNotesToggle: 'Notas transparentes',
     neonNotesToggle: 'Colores neón',
+    replayTutorial: 'Repetir la introducción',
     profileGroupView: 'Vista', profileGroupData: 'Datos', profileGroupAccount: 'Cuenta', profileGroupHelp: 'Ayuda',
     premiumUpgradeBtn: 'Actualizar a Premium', premiumChoosePlan: 'Elige un plan',
     premiumMonthly: 'Mensual — 2,99€/mes', premiumYearly: 'Anual — 19,99€/año (-44%)',
@@ -2681,6 +2688,7 @@ function renderProfileMenu(){
   // Помощ — Поверителност/Общи условия по ситен шрифт (.small-link) по
   // изрична молба — по-малко визуално тегло от истинските действия.
   html += profileGroupBlock('help', ICONS.mail, s.profileGroupHelp, `
+    <button type="button" class="action" data-action="replay-tutorial">${ICONS.replay}${L(s.replayTutorial)}</button>
     <a class="action" href="mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('iForget — обратна връзка')}">${ICONS.mail}${L(s.feedbackBtn)}</a>
     <a class="action small-link" href="privacy.html" target="_blank" rel="noopener">${ICONS.shield}${L(s.privacyLink)}</a>
     <a class="action small-link" href="terms.html" target="_blank" rel="noopener">${ICONS.doc}${L(s.termsLink)}</a>
@@ -2726,6 +2734,16 @@ function renderProfileMenu(){
     localStorage.setItem(GLASS_NOTES_KEY, glassNotes ? '1' : '0');
     applyGlassNotes();
     renderProfileMenu();
+  });
+  // Обучението се показва иначе само при първи вход (onboarded:true), а е
+  // полезно и за припомняне, и за тестване след промяна в стъпките.
+  panel.querySelector('[data-action="replay-tutorial"]').addEventListener('mousedown', e=>{
+    e.preventDefault(); e.stopPropagation();
+    closeProfilePanel();          // иначе панелът стои върху подсказките
+    // Подаваме истинския docRef, за да се отбележи onboarded:true и ако
+    // потребителят е пропуснал обучението първия път.
+    const docRef = currentUser ? db.collection('users').doc(currentUser.uid) : null;
+    runOnboardingTour(docRef);
   });
   panel.querySelector('[data-action="toggle-neon-notes"]').addEventListener('mousedown', e=>{
     e.preventDefault(); e.stopPropagation();
