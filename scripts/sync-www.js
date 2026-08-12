@@ -27,6 +27,7 @@ const FILES_TO_COPY = [
   'favicon-32.png',
   'bg-dark-v3.jpg',
   'bg-light.jpg',
+  'bg-school.svg',
   'auth-bg.jpg',
 ];
 

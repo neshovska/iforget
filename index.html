@@ -100,6 +100,46 @@
     --tag-deleted:#75695A;
     --tag-deleted-bg:rgba(117,105,90,.15);
   }
+  /* ── УЧЕНИЧЕСКА ВИЗИЯ ────────────────────────────────────────────────
+     Включва се от профила → "Изглед" (виж SCHOOL_THEME_KEY/
+     applySchoolTheme()), НЕ от бутона слънце/луна горе — по изрична
+     заявка горната лента не се пипа.
+     Технически е СВЕТЛА тема с друга палитра и друг фон: при включване
+     кодът задава и data-theme="light", за да важат всички компонентни
+     правила на светлата тема (подбележки, полета и т.н.), а този блок
+     презаписва само променливите. Специфичността на :root.school-theme
+     е равна на :root[data-theme="light"], затова блокът стои СЛЕД него —
+     при равенство печели последното правило. Не размествай реда. */
+  :root.school-theme{
+    --bg:#FCFAF7;
+    --card:#FFFFFF;
+    --card-2:#FFFFFF;
+    --card-rgb:255,255,255;
+    --card2-rgb:255,255,255;
+    --border:#E2DAD0;
+    --text:#2C3A4B;
+    --text-dim:#6B7C90;
+    --text-dim-rgb:107,124,144;
+    --gold:#E08A2E;
+    --gold-dim:#B96D1C;
+    --gold-rgb:224,138,46;
+    --accent:#E4726B;
+    --accent-rgb:228,114,107;
+    --accent-dim:#C4544D;
+    --green:#4FA97B;
+    --danger:#DD5B54;
+  }
+  /* Фонът е ВЕКТОРЕН (SVG, ~13 KB) — за разлика от гинко снимките остава
+     резък на всяка плътност екран и тежи нищожно. cover+center, защото е
+     композиция с петна по краищата и чист център, не безшевна плочка. */
+  html.school-theme[data-theme="light"]{
+    background-image:url("bg-school.svg");
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+  }
+  /* Подбележките с топъл кремав нюанс — бялото на картите иначе се слива. */
+  :root.school-theme[data-theme="light"] .subs .note{background-color:#F6F1EA;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   /* background:var(--bg) е само на html (не и на body) — виж коментара при
      html{background-image:...} по-долу защо: body с плътен цвят би скрил
@@ -1466,6 +1506,14 @@ function applyGlassNotes(){
 // data-colored]) решава кой от двата да ползва. Изчисляване "в движение"
 // (filter:saturate/brightness) беше отхвърлено — прилага се върху целия
 // елемент, включително текста, и го прави нечетим.
+// Ученическа визия — светла тема с акварелен училищен фон. Пази се локално
+// (както прозрачните/неоновите бележки), защото е въпрос на устройство и
+// вкус, не на акаунт.
+const SCHOOL_THEME_KEY = 'schoolTheme';
+let schoolTheme = localStorage.getItem(SCHOOL_THEME_KEY) === '1';
+function applySchoolTheme(){
+  document.documentElement.classList.toggle('school-theme', schoolTheme);
+}
 const NEON_NOTES_KEY = 'neonNotes';
 let neonNotes = localStorage.getItem(NEON_NOTES_KEY) === '1';
 function applyNeonNotes(){
@@ -1696,6 +1744,8 @@ const ICONS = {
   shield: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6l-8-4z"></path></svg>',
   doc: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>',
   droplet: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5s7 7.6 7 12.5a7 7 0 0 1-14 0c0-4.9 7-12.5 7-12.5z"></path></svg>',
+  // Тетрадка — ученическата визия в профила.
+  book: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 0 4 22z"></path><path d="M8 2v18"></path></svg>',
   // Кръгова стрелка — "Пусни обучението пак" в профила.
   replay: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"></path><polyline points="3 4 3 10 9 10"></polyline></svg>',
   // Светкавица — за неоновия режим (виж NEON_NOTES_KEY/applyNeonNotes()).
@@ -1751,6 +1801,7 @@ const STRINGS = {
     profileColorDefault: 'По подразбиране', leftHandedMode: 'Режим за лявата ръка',
     glassNotesToggle: 'Прозрачни бележки',
     neonNotesToggle: 'Неонови цветове',
+    schoolThemeToggle: 'Ученическа визия',
     replayTutorial: 'Пусни обучението пак',
     profileGroupView: 'Изглед', profileGroupData: 'Данни', profileGroupAccount: 'Акаунт', profileGroupHelp: 'Помощ',
     premiumUpgradeBtn: 'Ъпгрейд до Premium', premiumChoosePlan: 'Избери план',
@@ -1851,6 +1902,7 @@ const STRINGS = {
     profileColorDefault: 'Default', leftHandedMode: 'Left-handed mode',
     glassNotesToggle: 'Transparent notes',
     neonNotesToggle: 'Neon colours',
+    schoolThemeToggle: 'School look',
     replayTutorial: 'Replay the tutorial',
     profileGroupView: 'View', profileGroupData: 'Data', profileGroupAccount: 'Account', profileGroupHelp: 'Help',
     premiumUpgradeBtn: 'Upgrade to Premium', premiumChoosePlan: 'Choose a plan',
@@ -1949,6 +2001,7 @@ const STRINGS = {
     profileColorDefault: 'По умолчанию', leftHandedMode: 'Режим для левшей',
     glassNotesToggle: 'Прозрачные заметки',
     neonNotesToggle: 'Неоновые цвета',
+    schoolThemeToggle: 'Школьный вид',
     replayTutorial: 'Пройти обучение заново',
     profileGroupView: 'Вид', profileGroupData: 'Данные', profileGroupAccount: 'Аккаунт', profileGroupHelp: 'Помощь',
     premiumUpgradeBtn: 'Перейти на Premium', premiumChoosePlan: 'Выбери план',
@@ -2051,6 +2104,7 @@ const STRINGS = {
     profileColorDefault: 'Standard', leftHandedMode: 'Linkshänder-Modus',
     glassNotesToggle: 'Transparente Notizen',
     neonNotesToggle: 'Neonfarben',
+    schoolThemeToggle: 'Schul-Look',
     replayTutorial: 'Einführung erneut ansehen',
     profileGroupView: 'Ansicht', profileGroupData: 'Daten', profileGroupAccount: 'Konto', profileGroupHelp: 'Hilfe',
     premiumUpgradeBtn: 'Auf Premium upgraden', premiumChoosePlan: 'Plan wählen',
@@ -2151,6 +2205,7 @@ const STRINGS = {
     profileColorDefault: 'Predeterminado', leftHandedMode: 'Modo para zurdos',
     glassNotesToggle: 'Notas transparentes',
     neonNotesToggle: 'Colores neón',
+    schoolThemeToggle: 'Estilo escolar',
     replayTutorial: 'Repetir la introducción',
     profileGroupView: 'Vista', profileGroupData: 'Datos', profileGroupAccount: 'Cuenta', profileGroupHelp: 'Ayuda',
     premiumUpgradeBtn: 'Actualizar a Premium', premiumChoosePlan: 'Elige un plan',
@@ -2681,6 +2736,7 @@ function renderProfileMenu(){
   html += profileGroupBlock('view', ICONS.droplet, s.profileGroupView, `
     <button type="button" class="action" data-action="toggle-glass-notes">${ICONS.droplet}${L(s.glassNotesToggle)}${glassNotes ? ICONS.check : ''}</button>
     <button type="button" class="action" data-action="toggle-neon-notes">${ICONS.zap}${L(s.neonNotesToggle)}${neonNotes ? ICONS.check : ''}</button>
+    <button type="button" class="action" data-action="toggle-school-theme">${ICONS.book}${L(s.schoolThemeToggle)}${schoolTheme ? ICONS.check : ''}</button>
     <button type="button" class="action" data-action="toggle-left-handed">${ICONS.flip}${L(s.leftHandedMode)}${leftHanded ? ICONS.check : ''}</button>
   `);
 
@@ -2765,6 +2821,21 @@ function renderProfileMenu(){
     // потребителят е пропуснал обучението първия път.
     const docRef = currentUser ? db.collection('users').doc(currentUser.uid) : null;
     runOnboardingTour(docRef);
+  });
+  panel.querySelector('[data-action="toggle-school-theme"]').addEventListener('mousedown', e=>{
+    e.preventDefault(); e.stopPropagation();
+    schoolTheme = !schoolTheme;
+    localStorage.setItem(SCHOOL_THEME_KEY, schoolTheme ? '1' : '0');
+    // Ученическата визия Е светла тема с друга палитра — при включване
+    // задаваме и самата светла тема, иначе компонентните правила на
+    // тъмната (подбележки, полета) остават и се получава каша.
+    if(schoolTheme && theme !== 'light'){
+      theme = 'light';
+      localStorage.setItem(THEME_KEY, theme);
+      applyTheme();
+    }
+    applySchoolTheme();
+    renderProfileMenu();
   });
   panel.querySelector('[data-action="toggle-neon-notes"]').addEventListener('mousedown', e=>{
     e.preventDefault(); e.stopPropagation();
@@ -5351,6 +5422,14 @@ document.addEventListener('mousedown', e=>{
 });
 
 document.getElementById('themeBtn').addEventListener('click', ()=>{
+  // Ученическата визия покрива палитрата на светлата тема — ако е включена,
+  // бутонът щеше да изглежда счупен (натискаш, нищо не се променя видимо).
+  // Затова първо я изключваме: явен изход обратно към обикновените теми.
+  if(schoolTheme){
+    schoolTheme = false;
+    localStorage.setItem(SCHOOL_THEME_KEY, '0');
+    applySchoolTheme();
+  }
   theme = theme === 'light' ? 'dark' : 'light';
   localStorage.setItem(THEME_KEY, theme);
   applyTheme();
@@ -5527,6 +5606,7 @@ applyAccentColor();
 applyLeftHanded();
 applyGlassNotes();
 applyNeonNotes();
+applySchoolTheme();
 applyStaticText();
 requestPersistentStorage();
 loadPremiumConfig();
