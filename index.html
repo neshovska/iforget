@@ -2409,9 +2409,15 @@ function applyStaticText(){
 // само напомня; бутонът "изпрати пак" презпраща линка с 60 сек охлаждане,
 // за да не се спами Firebase изпращането.
 let verifyResendCooldown = false;
+// Докато тече обучението, банерът за потвърждение на имейл се СКРИВА.
+// Реален проблем: точно при първи вход двете съвпадат по време (нов акаунт
+// = непотвърден имейл + автоматично обучение), банерът стои най-горе и
+// закрива подсказките. Напомнянето не е спешно — изчаква края на
+// обучението, където finishOnboarding() вика updateVerifyBanner() наново.
+let onboardingActive = false;
 function updateVerifyBanner(){
   const banner = document.getElementById('verifyBanner');
-  const show = !!(currentUser && !currentUser.emailVerified);
+  const show = !!(currentUser && !currentUser.emailVerified) && !onboardingActive;
   banner.style.display = show ? 'flex' : 'none';
 }
 // Праща БРАНДИРАН verification имейл (noreply@iforget.eu, през Resend) —
@@ -3491,6 +3497,8 @@ function demoSwipePreview(noteEl){
 // "Изтрити" при съвсем прясна сметка) и бележи onboarded:true, за да не се
 // показва обучението пак при следващ вход.
 function finishOnboarding(docRef, demoId){
+  onboardingActive = false;
+  updateVerifyBanner();   // напомнянето се връща чак сега
   document.getElementById('onboardTip').classList.remove('show');
   hideOnboardArrow();
   hideOnboardCtxDemo();
@@ -3507,6 +3515,8 @@ function finishOnboarding(docRef, demoId){
 const ONBOARD_TOTAL_STEPS = 8;
 async function runOnboardingTour(docRef){
   const s = t();
+  onboardingActive = true;
+  updateVerifyBanner();   // скрива банера веднага, преди първата подсказка
   await wait(500);
   animateTopbarIcons();
   await wait(1300);
