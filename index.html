@@ -978,11 +978,26 @@
   }
   .swipe-bg.complete{background:var(--green);justify-content:flex-start;}
   .swipe-bg.delete{background:var(--danger);justify-content:flex-end;}
+  /* -webkit-touch-callout/-webkit-user-select:none — същият похват като при
+     .cat-chip[data-reorder="1"] по-горе, по същата причина, но заради РЕАЛНО
+     докладвано объркване: при задържане върху бележка (за контекстното меню)
+     iOS Safari успоредно пускаше и СОБСТВЕНИЯ си дълъг-натиск — маркираше в
+     синьо случайна дума под пръста и показваше нативната лента Copy / Find
+     Selection / Look Up ВЪРХУ нашето меню. Изглеждаше все едно бутонът
+     "Копирай" ще копира само маркираната дума, а не цялата бележка (копира
+     цялата, виж copyItemText()). Изборът на текст тук няма и практическа
+     полза — за копиране си има бутон в менюто. Полетата за писане пазят
+     нормалния избор на текст изрично (виж input/textarea правилото долу). */
   .note{
     background-color:var(--card);border:1px solid var(--border);border-radius:11px;
     padding:8px 10px;display:flex;flex-direction:column;gap:2px;position:relative;
     touch-action:pan-y;transition:transform .22s ease,background-color .15s ease,box-shadow .15s ease;
+    -webkit-touch-callout:none;-webkit-user-select:none;user-select:none;
   }
+  /* Изборът на текст остава НОРМАЛЕН в полетата за писане — user-select:none
+     на .note по-горе се наследява от .edit-input вътре в бележката, а там
+     маркирането е нужно (курсор, избор на дума при редакция). */
+  input,textarea,.edit-input{-webkit-user-select:text;user-select:text;}
   /* "Прозрачни бележки" — ЕКСТРА опция (изключена по подразбиране, виж
      GLASS_NOTES_KEY/applyGlassNotes() в скрипта и бутона в профила),
      НЕ подменя плътните карти по подразбиране. Полупрозрачен фон (rgba на
