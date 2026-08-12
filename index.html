@@ -529,6 +529,19 @@
   /* Мотото на приложението — под заглавието, над функционалния текст. */
   .auth-motto{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;font-style:italic;color:var(--gold);line-height:1.4;margin:0 0 10px;}
   .auth-card p{font-size:14px;color:var(--text-dim);line-height:1.55;margin:0 0 20px;}
+  /* Трите такта под мотото — ритъмът на приложението (запиши → направи →
+     приключи). Разреден шрифт и главни букви, за да се четат като отделни
+     стъпки, а не като изречение. */
+  .auth-beats{
+    font-size:12px;font-weight:600;letter-spacing:1.4px;text-transform:uppercase;
+    color:var(--accent-dim);margin:0 0 18px !important;line-height:1.6;
+  }
+  /* Подпис най-долу — затваря страницата, вместо да прекъсва пътя към
+     формата за вход. Оттам и мястото: под връзките за вход/регистрация. */
+  .auth-signature{
+    font-family:'Cormorant Garamond',serif;font-size:13.5px;font-style:italic;
+    color:var(--text-dim);margin:18px 0 0 !important;line-height:1.5;opacity:.85;
+  }
   /* Кратък списък с най-важните функции над формата за вход — първото,
      което вижда нов човек, преди изобщо да е влязъл. */
   .auth-features{
@@ -1326,12 +1339,12 @@
   <button type="button" id="authLangBtn" class="icon-btn auth-lang-btn" aria-label="Език">EN</button>
   <div class="auth-card">
     <h1>iForget</h1>
-    <p class="auth-motto" id="authMotto">Помни това, което има значение.</p>
+    <p class="auth-motto" id="authMotto">Think less. Do more.</p>
+    <p class="auth-beats" id="authBeats">Запиши. Направи. Приключи.</p>
     <ul class="auth-features" id="authFeatures">
-      <li><span class="ico"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 20 6"></polyline><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"></path></svg></span><span id="authFeat1">Ден за ден — днешните задачи, без да се трупат</span></li>
-      <li><span class="ico"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 8 3 12 7 16"></polyline><polyline points="17 8 21 12 17 16"></polyline><line x1="3" y1="12" x2="21" y2="12"></line></svg></span><span id="authFeat2">Swipe жестове — завърши или изтрий с едно движение</span></li>
-      <li><span class="ico"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" stroke="none"><path d="M12 2c1 3-3 4-3 8a3 3 0 0 0 6 0c1.2 1 2 2.6 2 4.2A5.2 5.2 0 0 1 6.8 19c-2.8-2.2-3-6.4-.6-9.4C7.6 7.8 9 6 12 2z"></path></svg></span><span id="authFeat3">Streak — малко мотивация всеки ден</span></li>
-      <li><span class="ico"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L4 3a1 1 0 0 0-1 1l.24 5.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.35-4.35a2 2 0 0 0 0-2.82Z"></path><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor" stroke="none"></circle></svg></span><span id="authFeat4">Тагове, подбележки и бързо търсене</span></li>
+      <li><span class="ico"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12.5 9.5 18 20 6.5"></polyline></svg></span><span id="authFeat1">Твоите бележки</span></li>
+      <li><span class="ico"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12.5 9.5 18 20 6.5"></polyline></svg></span><span id="authFeat2">Твоят прогрес</span></li>
+      <li><span class="ico"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12.5 9.5 18 20 6.5"></polyline></svg></span><span id="authFeat3">Твоят контрол</span></li>
     </ul>
     <div id="authFormWrap">
       <form id="emailAuthForm" class="email-auth-form">
@@ -1348,6 +1361,7 @@
       </div>
     </div>
     <div class="auth-loading" id="authLoading" style="display:none;">Зареждане...</div>
+    <p class="auth-signature" id="authSignature">iForget — помни това, което има значение.</p>
     <div class="auth-legal-links">
       <a href="privacy.html" target="_blank" rel="noopener" id="authPrivacyLink">Политика за поверителност</a>
       <span>·</span>
@@ -1725,13 +1739,13 @@ const STRINGS = {
     backupHint: 'Safari на iPhone/iPad понякога изчиства данните на сайта (особено при икона на началния екран или дълго неотваряне). Пази резервно копие от време на време, за да не загубиш бележките си.',
     confirmImport: 'Възстановяването ще замени текущите бележки с тези от файла. Продължи?',
     importSuccess: 'Бележките са възстановени успешно.', importError: 'Файлът не можа да се прочете — провери дали е валиден резервен файл.',
-    authMotto: 'Помни това, което има значение.',
-    authSubtitle: 'Днешните задачи, подредени и свършени — влез, за да продължиш.',
-    authFeat1: 'Ден за ден — днешните задачи, без да се трупат',
+    authMotto: 'Think less. Do more.',
+    authBeats: 'Запиши. Направи. Приключи.',
+    authFeat1: 'Твоите бележки',
     retentionNote: 'Приключените бележки отиват в „Изтрити“ след 30 дни, а кошчето се чисти след 5 — приложението е за днешния ден, не за архив. Серията и календарът се запазват.',
-    authFeat2: 'Swipe жестове — завърши или изтрий с едно движение',
-    authFeat3: 'Streak — малко мотивация всеки ден',
-    authFeat4: 'Тагове, подбележки и бързо търсене',
+    authFeat2: 'Твоят прогрес',
+    authFeat3: 'Твоят контрол',
+    authSignature: 'iForget — помни това, което има значение.',
     authLoadingText: 'Зареждане...', authError: 'Неуспешен вход. Опитай отново.',
     confirmLogout: 'Да излезеш ли от акаунта?', profileAria: 'Профил',
     profileColorDefault: 'По подразбиране', leftHandedMode: 'Режим за лявата ръка',
@@ -1825,13 +1839,13 @@ const STRINGS = {
     backupHint: 'Safari on iPhone/iPad can sometimes clear site data (especially with a Home Screen icon or long periods without opening it). Keep an occasional backup so you never lose your notes.',
     confirmImport: 'Restoring will replace your current notes with the ones from the file. Continue?',
     importSuccess: 'Notes restored successfully.', importError: "Could not read the file — make sure it's a valid backup file.",
-    authMotto: 'Remember what matters.',
-    authSubtitle: 'Today’s tasks, sorted and done — sign in to continue.',
-    authFeat1: 'Day by day — today’s tasks, without piling up',
+    authMotto: 'Think less. Do more.',
+    authBeats: 'Write it. Do it. Done.',
+    authFeat1: 'Your notes',
     retentionNote: 'Completed notes move to “Deleted” after 30 days, and the trash clears after 5 — this app is for today, not an archive. Your streak and calendar are kept.',
-    authFeat2: 'Swipe gestures — complete or delete in one move',
-    authFeat3: 'Streak — a little daily motivation',
-    authFeat4: 'Tags, sub-notes and quick search',
+    authFeat2: 'Your progress',
+    authFeat3: 'Your control',
+    authSignature: 'iForget — remember what matters.',
     authLoadingText: 'Loading...', authError: 'Sign-in failed. Please try again.',
     confirmLogout: 'Sign out of your account?', profileAria: 'Profile',
     profileColorDefault: 'Default', leftHandedMode: 'Left-handed mode',
@@ -1923,13 +1937,13 @@ const STRINGS = {
     backupHint: 'Safari на iPhone/iPad иногда очищает данные сайта (особенно при значке на главном экране или долгом отсутствии). Периодически сохраняй резервную копию, чтобы не потерять заметки.',
     confirmImport: 'Восстановление заменит текущие заметки данными из файла. Продолжить?',
     importSuccess: 'Заметки успешно восстановлены.', importError: 'Не удалось прочитать файл — проверь, что это корректный файл резервной копии.',
-    authMotto: 'Помни то, что важно.',
-    authSubtitle: 'Задачи на сегодня, собранные и выполненные — войди, чтобы продолжить.',
-    authFeat1: 'День за днём — задачи на сегодня, без завалов',
+    authMotto: 'Think less. Do more.',
+    authBeats: 'Запиши. Сделай. Заверши.',
+    authFeat1: 'Твои заметки',
     retentionNote: 'Завершённые заметки попадают в «Удалённые» через 30 дней, а корзина очищается через 5 — приложение для сегодняшнего дня, а не архив. Серия и календарь сохраняются.',
-    authFeat2: 'Жесты свайпа — завершай или удаляй одним движением',
-    authFeat3: 'Streak — немного мотивации каждый день',
-    authFeat4: 'Теги, подзаметки и быстрый поиск',
+    authFeat2: 'Твой прогресс',
+    authFeat3: 'Твой контроль',
+    authSignature: 'iForget — помни то, что важно.',
     authLoadingText: 'Загрузка...', authError: 'Не удалось войти. Попробуй снова.',
     confirmLogout: 'Выйти из аккаунта?', profileAria: 'Профиль',
     profileColorDefault: 'По умолчанию', leftHandedMode: 'Режим для левшей',
@@ -2025,13 +2039,13 @@ const STRINGS = {
     backupHint: 'Safari auf iPhone/iPad löscht manchmal Website-Daten (besonders bei einem Symbol auf dem Home-Bildschirm oder langer Nichtnutzung). Erstelle ab und zu ein Backup, damit du deine Notizen nicht verlierst.',
     confirmImport: 'Die Wiederherstellung ersetzt deine aktuellen Notizen durch die aus der Datei. Fortfahren?',
     importSuccess: 'Notizen erfolgreich wiederhergestellt.', importError: 'Datei konnte nicht gelesen werden — prüfe, ob es eine gültige Backup-Datei ist.',
-    authMotto: 'Merke dir, was zählt.',
-    authSubtitle: 'Die Aufgaben von heute, geordnet und erledigt — melde dich an, um fortzufahren.',
-    authFeat1: 'Tag für Tag — die Aufgaben von heute, ohne Stau',
+    authMotto: 'Think less. Do more.',
+    authBeats: 'Notiere. Erledige. Hake ab.',
+    authFeat1: 'Deine Notizen',
     retentionNote: 'Erledigte Notizen wandern nach 30 Tagen in „Gelöscht“, der Papierkorb leert sich nach 5 — die App ist für heute, kein Archiv. Serie und Kalender bleiben erhalten.',
-    authFeat2: 'Wischgesten — in einer Bewegung erledigen oder löschen',
-    authFeat3: 'Streak — etwas tägliche Motivation',
-    authFeat4: 'Tags, Unternotizen und schnelle Suche',
+    authFeat2: 'Dein Fortschritt',
+    authFeat3: 'Deine Kontrolle',
+    authSignature: 'iForget — erinnere dich an das, was zählt.',
     authLoadingText: 'Wird geladen...', authError: 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
     confirmLogout: 'Vom Konto abmelden?', profileAria: 'Profil',
     profileColorDefault: 'Standard', leftHandedMode: 'Linkshänder-Modus',
@@ -2125,13 +2139,13 @@ const STRINGS = {
     backupHint: 'Safari en iPhone/iPad a veces borra los datos del sitio (especialmente con un icono en la pantalla de inicio o tras mucho tiempo sin abrirlo). Guarda una copia de seguridad de vez en cuando para no perder tus notas.',
     confirmImport: 'Restaurar reemplazará tus notas actuales con las del archivo. ¿Continuar?',
     importSuccess: 'Notas restauradas correctamente.', importError: 'No se pudo leer el archivo — comprueba que sea un archivo de copia de seguridad válido.',
-    authMotto: 'Recuerda lo que importa.',
-    authSubtitle: 'Las tareas de hoy, ordenadas y hechas — inicia sesión para continuar.',
-    authFeat1: 'Día a día — las tareas de hoy, sin acumularse',
+    authMotto: 'Think less. Do more.',
+    authBeats: 'Anótalo. Hazlo. Listo.',
+    authFeat1: 'Tus notas',
     retentionNote: 'Las notas completadas pasan a «Eliminadas» tras 30 días y la papelera se vacía tras 5 — la app es para hoy, no un archivo. Tu racha y el calendario se conservan.',
-    authFeat2: 'Gestos de deslizar — completa o elimina con un solo movimiento',
-    authFeat3: 'Racha — un poco de motivación diaria',
-    authFeat4: 'Etiquetas, subnotas y búsqueda rápida',
+    authFeat2: 'Tu progreso',
+    authFeat3: 'Tu control',
+    authSignature: 'iForget — recuerda lo que importa.',
     authLoadingText: 'Cargando...', authError: 'No se pudo iniciar sesión. Inténtalo de nuevo.',
     confirmLogout: '¿Cerrar sesión de la cuenta?', profileAria: 'Perfil',
     profileColorDefault: 'Predeterminado', leftHandedMode: 'Modo para zurdos',
@@ -2389,7 +2403,8 @@ function applyStaticText(){
   document.getElementById('authFeat1').textContent = s.authFeat1;
   document.getElementById('authFeat2').textContent = s.authFeat2;
   document.getElementById('authFeat3').textContent = s.authFeat3;
-  document.getElementById('authFeat4').textContent = s.authFeat4;
+  document.getElementById('authBeats').textContent = s.authBeats;
+  document.getElementById('authSignature').textContent = s.authSignature;
   document.getElementById('authLoading').textContent = s.authLoadingText;
   document.getElementById('userChip').setAttribute('aria-label', s.profileAria);
   document.getElementById('authEmail').setAttribute('placeholder', s.emailPlaceholder);
