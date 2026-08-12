@@ -693,6 +693,12 @@
   /* Личен седмичен/месечен преглед (виж renderMyReview()) — "завършени X от Y"
      с прогрес лента за всеки период, плюс streak накрая. */
   .profile-panel .review-panel{display:flex;flex-direction:column;gap:2px;padding:2px;}
+  /* Обяснителен ред в профила (в момента: срокът, след който приключените
+     бележки се прибират — виж archiveOldCompleted()). Данни, които изчезват
+     сами, трябва да са казани на потребителя, а не само в кода. */
+  .profile-panel .profile-hint{
+    margin:8px 2px 2px;font-size:11.5px;line-height:1.45;color:var(--text-dim);
+  }
   .profile-panel .review-sub{font-size:11.5px;color:var(--text-dim);line-height:1.5;margin-bottom:10px;}
   .profile-panel .review-block{margin-bottom:14px;}
   .profile-panel .review-block-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px;gap:8px;}
@@ -1305,7 +1311,7 @@
     <h1>IForget</h1>
     <p class="auth-motto" id="authMotto">Помни това, което има значение.</p>
     <ul class="auth-features" id="authFeatures">
-      <li><span class="ico"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg></span><span id="authFeat1">Синхронизация в облака — на всяко устройство</span></li>
+      <li><span class="ico"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 20 6"></polyline><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"></path></svg></span><span id="authFeat1">Ден за ден — днешните задачи, без да се трупат</span></li>
       <li><span class="ico"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 8 3 12 7 16"></polyline><polyline points="17 8 21 12 17 16"></polyline><line x1="3" y1="12" x2="21" y2="12"></line></svg></span><span id="authFeat2">Swipe жестове — завърши или изтрий с едно движение</span></li>
       <li><span class="ico"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" stroke="none"><path d="M12 2c1 3-3 4-3 8a3 3 0 0 0 6 0c1.2 1 2 2.6 2 4.2A5.2 5.2 0 0 1 6.8 19c-2.8-2.2-3-6.4-.6-9.4C7.6 7.8 9 6 12 2z"></path></svg></span><span id="authFeat3">Streak — малко мотивация всеки ден</span></li>
       <li><span class="ico"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L4 3a1 1 0 0 0-1 1l.24 5.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l4.35-4.35a2 2 0 0 0 0-2.82Z"></path><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor" stroke="none"></circle></svg></span><span id="authFeat4">Тагове, подбележки и бързо търсене</span></li>
@@ -1701,8 +1707,9 @@ const STRINGS = {
     confirmImport: 'Възстановяването ще замени текущите бележки с тези от файла. Продължи?',
     importSuccess: 'Бележките са възстановени успешно.', importError: 'Файлът не можа да се прочете — провери дали е валиден резервен файл.',
     authMotto: 'Помни това, което има значение.',
-    authSubtitle: 'Твоите бележки, синхронизирани в облака — влез, за да продължиш.',
-    authFeat1: 'Синхронизация в облака — на всяко устройство',
+    authSubtitle: 'Днешните задачи, подредени и свършени — влез, за да продължиш.',
+    authFeat1: 'Ден за ден — днешните задачи, без да се трупат',
+    retentionNote: 'Приключените бележки отиват в „Изтрити“ след 30 дни, а кошчето се чисти след 5 — приложението е за днешния ден, не за архив. Серията и календарът се запазват.',
     authFeat2: 'Swipe жестове — завърши или изтрий с едно движение',
     authFeat3: 'Streak — малко мотивация всеки ден',
     authFeat4: 'Тагове, подбележки и бързо търсене',
@@ -1770,6 +1777,8 @@ const STRINGS = {
     onboardStep3: 'Всяка бележка може да има подбележки — за под-задачи и детайли.',
     onboardStep4: 'Плъзни надясно за бързо завършване, наляво за изтриване — винаги можеш да отмениш.',
     onboardStepCtx: 'Задръж пръст върху бележка (без да местиш), за да отвориш бързо меню — Редактирай, Добави подбележка, Сподели, Добави напомняне, Изтрий.',
+    onboardStepLook: 'В профила горе избираш как изглеждат бележките — меки цветове, неон или прозрачни.',
+    onboardStepCleanup: 'Приключените бележки се прибират сами след 30 дни, а кошчето се чисти след 5 — списъкът остава за днешния ден. Серията и календарът се запазват.',
     onboardStep5: 'Готово! Пиши първата си истинска бележка тук долу.',
     onboardNext: 'Напред', onboardBack: 'Назад', onboardGotIt: 'Разбрах', onboardSkip: 'Пропусни обучението',
     verifyBannerText: 'Провери пощата си и потвърди имейла си — линкът е изпратен при регистрацията.',
@@ -1797,8 +1806,9 @@ const STRINGS = {
     confirmImport: 'Restoring will replace your current notes with the ones from the file. Continue?',
     importSuccess: 'Notes restored successfully.', importError: "Could not read the file — make sure it's a valid backup file.",
     authMotto: 'Remember what matters.',
-    authSubtitle: 'Your notes, synced to the cloud — sign in to continue.',
-    authFeat1: 'Cloud sync — on every device',
+    authSubtitle: 'Today’s tasks, sorted and done — sign in to continue.',
+    authFeat1: 'Day by day — today’s tasks, without piling up',
+    retentionNote: 'Completed notes move to “Deleted” after 30 days, and the trash clears after 5 — this app is for today, not an archive. Your streak and calendar are kept.',
     authFeat2: 'Swipe gestures — complete or delete in one move',
     authFeat3: 'Streak — a little daily motivation',
     authFeat4: 'Tags, sub-notes and quick search',
@@ -1893,8 +1903,9 @@ const STRINGS = {
     confirmImport: 'Восстановление заменит текущие заметки данными из файла. Продолжить?',
     importSuccess: 'Заметки успешно восстановлены.', importError: 'Не удалось прочитать файл — проверь, что это корректный файл резервной копии.',
     authMotto: 'Помни то, что важно.',
-    authSubtitle: 'Твои заметки, синхронизированные в облаке — войди, чтобы продолжить.',
-    authFeat1: 'Синхронизация в облаке — на любом устройстве',
+    authSubtitle: 'Задачи на сегодня, собранные и выполненные — войди, чтобы продолжить.',
+    authFeat1: 'День за днём — задачи на сегодня, без завалов',
+    retentionNote: 'Завершённые заметки попадают в «Удалённые» через 30 дней, а корзина очищается через 5 — приложение для сегодняшнего дня, а не архив. Серия и календарь сохраняются.',
     authFeat2: 'Жесты свайпа — завершай или удаляй одним движением',
     authFeat3: 'Streak — немного мотивации каждый день',
     authFeat4: 'Теги, подзаметки и быстрый поиск',
@@ -1962,6 +1973,10 @@ const STRINGS = {
     onboardStep3: 'У любой заметки могут быть подзаметки — для подзадач и деталей.',
     onboardStep4: 'Свайп вправо — быстрое завершение, влево — удаление, всегда можно отменить.',
     onboardStepCtx: 'Нажми и удерживай заметку (не двигая), чтобы открыть быстрое меню — Редактировать, Добавить подзаметку, Поделиться, Добавить напоминание, Удалить.',
+    onboardStepLook: 'In the profile above you choose how notes look — soft colours, neon or transparent.',
+    onboardStepCleanup: 'Completed notes tidy themselves away after 30 days, and the trash clears after 5 — the list stays about today. Your streak and calendar are kept.',
+    onboardStepLook: 'В профиле выше выбираешь, как выглядят заметки — мягкие цвета, неон или прозрачные.',
+    onboardStepCleanup: 'Завершённые заметки убираются сами через 30 дней, корзина очищается через 5 — список остаётся про сегодня. Серия и календарь сохраняются.',
     onboardStep5: 'Готово! Напиши свою первую настоящую заметку здесь.',
     onboardNext: 'Далее', onboardBack: 'Назад', onboardGotIt: 'Понятно', onboardSkip: 'Пропустить обучение',
     verifyBannerText: 'Проверьте почту и подтвердите email — ссылка была отправлена при регистрации.',
@@ -1989,8 +2004,9 @@ const STRINGS = {
     confirmImport: 'Die Wiederherstellung ersetzt deine aktuellen Notizen durch die aus der Datei. Fortfahren?',
     importSuccess: 'Notizen erfolgreich wiederhergestellt.', importError: 'Datei konnte nicht gelesen werden — prüfe, ob es eine gültige Backup-Datei ist.',
     authMotto: 'Merke dir, was zählt.',
-    authSubtitle: 'Deine Notizen, in der Cloud synchronisiert — melde dich an, um fortzufahren.',
-    authFeat1: 'Cloud-Synchronisierung — auf jedem Gerät',
+    authSubtitle: 'Die Aufgaben von heute, geordnet und erledigt — melde dich an, um fortzufahren.',
+    authFeat1: 'Tag für Tag — die Aufgaben von heute, ohne Stau',
+    retentionNote: 'Erledigte Notizen wandern nach 30 Tagen in „Gelöscht“, der Papierkorb leert sich nach 5 — die App ist für heute, kein Archiv. Serie und Kalender bleiben erhalten.',
     authFeat2: 'Wischgesten — in einer Bewegung erledigen oder löschen',
     authFeat3: 'Streak — etwas tägliche Motivation',
     authFeat4: 'Tags, Unternotizen und schnelle Suche',
@@ -2058,6 +2074,8 @@ const STRINGS = {
     onboardStep3: 'Jede Notiz kann Unternotizen haben — für Teilaufgaben und Details.',
     onboardStep4: 'Wische nach rechts, um sofort zu erledigen, nach links zum Löschen — du kannst es immer rückgängig machen.',
     onboardStepCtx: 'Halte eine Notiz gedrückt (ohne zu bewegen), um ein Schnellmenü zu öffnen — Bearbeiten, Unternotiz hinzufügen, Teilen, Erinnerung hinzufügen, Löschen.',
+    onboardStepLook: 'Im Profil oben wählst du, wie Notizen aussehen — sanfte Farben, Neon oder transparent.',
+    onboardStepCleanup: 'Erledigte Notizen räumen sich nach 30 Tagen selbst weg, der Papierkorb nach 5 — die Liste bleibt beim Heute. Serie und Kalender bleiben erhalten.',
     onboardStep5: 'Fertig! Schreib hier unten deine erste echte Notiz.',
     onboardNext: 'Weiter', onboardBack: 'Zurück', onboardGotIt: 'Verstanden', onboardSkip: 'Einführung überspringen',
     verifyBannerText: 'Bitte bestätige deine E-Mail-Adresse — der Link wurde bei der Registrierung gesendet.',
@@ -2085,8 +2103,9 @@ const STRINGS = {
     confirmImport: 'Restaurar reemplazará tus notas actuales con las del archivo. ¿Continuar?',
     importSuccess: 'Notas restauradas correctamente.', importError: 'No se pudo leer el archivo — comprueba que sea un archivo de copia de seguridad válido.',
     authMotto: 'Recuerda lo que importa.',
-    authSubtitle: 'Tus notas, sincronizadas en la nube — inicia sesión para continuar.',
-    authFeat1: 'Sincronización en la nube — en cualquier dispositivo',
+    authSubtitle: 'Las tareas de hoy, ordenadas y hechas — inicia sesión para continuar.',
+    authFeat1: 'Día a día — las tareas de hoy, sin acumularse',
+    retentionNote: 'Las notas completadas pasan a «Eliminadas» tras 30 días y la papelera se vacía tras 5 — la app es para hoy, no un archivo. Tu racha y el calendario se conservan.',
     authFeat2: 'Gestos de deslizar — completa o elimina con un solo movimiento',
     authFeat3: 'Racha — un poco de motivación diaria',
     authFeat4: 'Etiquetas, subnotas y búsqueda rápida',
@@ -2154,6 +2173,8 @@ const STRINGS = {
     onboardStep3: 'Cualquier nota puede tener subnotas — para subtareas y detalles.',
     onboardStep4: 'Desliza a la derecha para completar al instante, a la izquierda para eliminar — siempre puedes deshacerlo.',
     onboardStepCtx: 'Mantén pulsada una nota (sin moverla) para abrir un menú rápido — Editar, Añadir subnota, Compartir, Añadir recordatorio, Eliminar.',
+    onboardStepLook: 'En el perfil de arriba eliges cómo se ven las notas — colores suaves, neón o transparentes.',
+    onboardStepCleanup: 'Las notas completadas se archivan solas tras 30 días y la papelera se vacía tras 5 — la lista sigue siendo de hoy. Tu racha y el calendario se conservan.',
     onboardStep5: '¡Listo! Escribe tu primera nota real aquí abajo.',
     onboardNext: 'Siguiente', onboardBack: 'Atrás', onboardGotIt: 'Entendido', onboardSkip: 'Saltar introducción',
     verifyBannerText: 'Revisa tu correo y confirma tu email — el enlace se envió al registrarte.',
@@ -2623,6 +2644,7 @@ function renderProfileMenu(){
     <button type="button" class="action" data-action="calendar">${ICONS.calendar}${L(s.calendarBtn)}</button>
     <button type="button" class="action" data-action="export">${ICONS.download}${L(s.exportBackup)}</button>
     <button type="button" class="action" data-action="import">${ICONS.upload}${L(s.importBackup)}</button>
+    <p class="profile-hint">${s.retentionNote}</p>
   `;
   // "Статистика" — само за административния акаунт (isSatoriUser(), виж по-горе),
   // не се вижда от никой друг потребител на приложението.
@@ -3441,7 +3463,7 @@ function finishOnboarding(docRef, demoId){
 // (демо swipe, демо long-press меню). Организирано като цикъл с индекс, за
 // да работи "Назад" без да преизпълнява неповторими действия (напр. да не
 // се добавя втора подбележка, ако потребителят се върне и пак тръгне напред).
-const ONBOARD_TOTAL_STEPS = 6;
+const ONBOARD_TOTAL_STEPS = 8;
 async function runOnboardingTour(docRef){
   const s = t();
   await wait(500);
@@ -3477,6 +3499,15 @@ async function runOnboardingTour(docRef){
       targetEl = document.querySelector(`.note[data-swipe-key="${demoId}"]`);
       showOnboardCtxDemo(targetEl);
     }else if(stepIndex === 5){
+      // Новото във вида — сочим профилния бутон, защото там се превключва.
+      textKey = 'onboardStepLook';
+      targetEl = document.getElementById('userChip');
+    }else if(stepIndex === 6){
+      // Самопочистването — казва се изрично още в обучението, за да не е
+      // изненада после, че приключените изчезват (виж archiveOldCompleted()).
+      textKey = 'onboardStepCleanup';
+      targetEl = noteEl;
+    }else if(stepIndex === 7){
       textKey = 'onboardStep5';
       targetEl = document.getElementById('noteInput');
     }
@@ -3484,7 +3515,9 @@ async function runOnboardingTour(docRef){
     // "Голяма" цел (без уголемяване при проблясване, само сянка) за стъпките,
     // където targetEl е цяла карта/поле, а не малък детайл (дот/таг/текст) —
     // виж коментара над pulseHighlight() защо уголемяването е рисковано там.
-    const bigTarget = stepIndex >= 3;
+    // Профилният бутон (стъпка 5) е малък детайл като дота/тага — там
+    // уголемяването е безопасно; останалите сочат цели карти/полета.
+    const bigTarget = stepIndex >= 3 && stepIndex !== 5;
     const result = await showOnboardTip(targetEl, textKey, stepIndex, ONBOARD_TOTAL_STEPS, bigTarget);
     if(stepIndex === 4) hideOnboardCtxDemo();
     if(result === 'skip') return finishOnboarding(docRef, demoId);
