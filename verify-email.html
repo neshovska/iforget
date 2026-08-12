@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>IForget — потвърждение на имейл</title>
+<title>iForget — потвърждение на имейл</title>
 <style>
   /* Самостоятелна страница за потвърждение на имейл, отворена от линка в
      писмото "Потвърди своя имейл" (виж sendBrandedEmailVerification в
@@ -38,7 +38,7 @@
 </head>
 <body>
 <div class="card" id="card">
-  <h1>IForget</h1>
+  <h1>iForget</h1>
   <div class="loading-text" id="loadingText">Потвърждавам имейла...</div>
 </div>
 
@@ -63,16 +63,16 @@ const card = document.getElementById('card');
 
 function renderError(msg){
   card.innerHTML = `
-    <h1>IForget</h1>
+    <h1>iForget</h1>
     <p style="color:var(--danger)">${msg}</p>
-    <a class="back-link" href="/">← Обратно към IForget</a>`;
+    <a class="back-link" href="/">← Обратно към iForget</a>`;
 }
 
 function renderSuccess(){
   card.innerHTML = `
-    <h1>IForget</h1>
+    <h1>iForget</h1>
     <div class="success-text">Имейлът е потвърден успешно!</div>
-    <a class="back-link" href="/">Обратно в IForget →</a>`;
+    <a class="back-link" href="/">Обратно в iForget →</a>`;
 }
 
 if(mode !== 'verifyEmail' || !oobCode){

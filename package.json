@@ -1,7 +1,7 @@
 {
   "name": "iforget-capacitor",
   "private": true,
-  "description": "Capacitor нативна обвивка за IForget (App Store/Google Play) — виж CLAUDE.md за пълния план. Не бърка с functions/package.json (отделен npm проект, Cloud Functions).",
+  "description": "Capacitor нативна обвивка за iForget (App Store/Google Play) — виж CLAUDE.md за пълния план. Не бърка с functions/package.json (отделен npm проект, Cloud Functions).",
   "scripts": {
     "sync-www": "node scripts/sync-www.js",
     "sync": "npm run sync-www && npx cap sync",

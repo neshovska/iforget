@@ -1,6 +1,6 @@
 {
-  "name": "IForget",
-  "short_name": "IForget",
+  "name": "iForget",
+  "short_name": "iForget",
   "description": "Помни това, което има значение.",
   "start_url": ".",
   "display": "standalone",

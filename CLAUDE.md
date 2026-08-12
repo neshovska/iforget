@@ -1,4 +1,4 @@
-# IForget
+# iForget
 
 Progressive Web App за бележки, изцяло на български. Живо на
 **https://iforget.eu** (и стар адрес `neshovska.github.io/iforget/`, който
@@ -169,6 +169,14 @@ Firestore документ `users/{uid}` също съдържа `tagOrder: stri
   двете, плюс `bigTarget` логиката (малките цели — дот/таг/текст/профилен
   бутон — понасят уголемяване при проблясване, целите карти не, виж
   коментара над `pulseHighlight()`).
+- **Изписване на името: `iForget`** (малко "i", главно "F") — навсякъде,
+  без изключение: интерфейс, заглавия, manifest, Capacitor конфигурация,
+  Android/iOS ресурси, имейлите от Cloud Functions, документация. Малкото
+  `iforget` в домейни/пакети/npm имена (`iforget.eu`, `iforget-capacitor`)
+  си остава както е. Преди беше `IForget` — сменено по изрична заявка.
+  **ВНИМАНИЕ:** имейлите (`functions/index.js` — възстановяване на парола,
+  потвърждение на имейл, `FROM_EMAIL`) се променят само след повторен
+  deploy на Cloud Functions; самата смяна в repo-то не стига.
 - **Позициониране на приложението (важно за копирайта)** — "ден за ден":
   комфорт при решаване и приключване на много ежедневни задачи, организация
   и удобство. НЕ е хранилище за много бележки и информация. По тази причина
@@ -179,6 +187,18 @@ Firestore документ `users/{uid}` също съдържа `tagOrder: stri
 - **Swipe жестове** — надясно = директно завършено, наляво = изтрито
   (soft delete) с 2.5 сек Undo тост + опит за haptic feedback
   (`navigator.vibrate` — не работи в Safari iOS, но безобидно другаде).
+  При изтриване картата НЕ отлита настрани и не изчезва веднага (така беше
+  преди) — връща се на място и остава видима като ПРОЗРАЧНА бележка
+  (`.note.ghost-deleted`: прозрачен фон, пунктирана рамка, зачеркнат текст,
+  `pointer-events:none`) точно докато тече Undo прозорецът. По заявка: да
+  личи коя бележка си отива и да има към какво да се върнеш.
+  Механиката: `deleteBySwipe()` хваща DOM елемента ПРЕДИ `softDelete()`
+  (след него бележката е в кошчето и следващият `render()` няма да я
+  нарисува), записва данните веднага, но ОТЛАГА `render()` с
+  `ghostTimeoutId`. `UNDO_MS` (2500) е обща константа за тоста и за
+  призрака — иначе едното свършва преди другото и или тостът предлага
+  "Отмени" за изчезнала бележка, или картата виси без видима причина.
+  Бутонът "Отмени" чисти `ghostTimeoutId` и рисува веднага.
 - **Long-press меню** (~480ms задържане без движение) — Редактирай /
   Добави подбележка / Цвят / Напомняне / Сподели / Изтрий. Постоянните
   бутони молив/кошче са премахнати от картите — редакция е през ДВОЕН
@@ -278,14 +298,14 @@ Firestore документ `users/{uid}` също съдържа `tagOrder: stri
   false)` логиката е премахната оттук, но самият избор "родителят, не
   подбележката" е запазен в `computeSearchResults()`), дори когато
   съвпадението идва от текста на подбележка.
-- **Streak брояч** — пламъче+число до заглавието "IForget", поредни дни с
+- **Streak брояч** — пламъче+число до заглавието "iForget", поредни дни с
   поне 1 завършена бележка (по `completedAt`, не `createdAt`), виж
   `computeStreak()`.
 - **Pull-to-refresh анимация** — чисто декоративна (искряща SVG иконка при
   дърпане надолу на върха на списъка), НЕ презарежда никакви данни.
 - **Home Screen quick-add** — `manifest.json` shortcut отваря приложението
   директно с фокус върху полето за нова бележка (`?quickadd=1`).
-- **"Сподели към IForget"** (Web Share Target, `share_target` в
+- **"Сподели към iForget"** (Web Share Target, `share_target` в
   `manifest.json` + `maybeHandleShareTarget()`) — текст/линк, споделен от
   друго приложение, попада предварително попълнен в полето за нова
   бележка (НЕ се записва автоматично). Работи само на Android/Chrome при
@@ -640,7 +660,7 @@ Firestore документ `users/{uid}` също съдържа `tagOrder: stri
   пълна поддръжка на manifest `shortcuts`.
 - `share_target` (Web Share Target) изобщо не се поддържа от iOS Safari за
   уеб приложения — само Android/Chrome. На iPhone/iPad ще проработи само
-  ако IForget стане native приложение в App Store.
+  ако iForget стане native приложение в App Store.
 - `:has()` CSS селектор (използван за разстоянието след група с
   подбележки) изисква Safari 15.4+/iOS 15.4+.
 - Няма build/test pipeline.
@@ -699,7 +719,7 @@ nodemailer**, защото имейлът е Resend (`noreply@iforget.eu`, са�
    (`reset-password.html` вече съществуваше в repo-то отпреди, приема
    точно тия параметри — не е пипана).
 3. Изпраща през `fetch('https://api.resend.com/emails', ...)` с `Authorization:
-   Bearer <RESEND_API_KEY secret>`, `from: 'IForget <noreply@iforget.eu>'`.
+   Bearer <RESEND_API_KEY secret>`, `from: 'iForget <noreply@iforget.eu>'`.
 4. **Винаги връща `{ok:true}`**, дори за несъществуващ имейл/throttled
    заявка (anti-enumeration — клиентът не може да различи "имейлът не
    съществува" от "успешно изпратено"). `index.html:handleForgotPassword()`
@@ -876,7 +896,7 @@ write: if false` — САМО `stripeWebhook` през Admin SDK пише тук
   major версия към момента на setup-а).
 - `capacitor.config.json` — `appId: "eu.iforget.app"` (reverse-domain на
   iforget.eu — bundle ID, **трудно сменяем след първо публикуване в
-  магазините**, тъй като слага акцент), `appName: "IForget"`,
+  магазините**, тъй като слага акцент), `appName: "iForget"`,
   `webDir: "www"`, `backgroundColor` съвпада с `manifest.json`-а,
   `server.androidScheme: "https"` (ВАЖНО — не default `file://`; Firebase
   Auth и други web API-та се държат различно/понякога чупят под `file://`
@@ -884,7 +904,7 @@ write: if false` — САМО `stripeWebhook` през Admin SDK пише тук
 - `scripts/sync-www.js` — копира runtime файловете (index.html,
   manifest.json, privacy/terms.html, икони, фонови снимки — НЕ
   reset-password.html, firebase.json, CLAUDE.md и т.н.) от repo root-а в
-  `www/` (git-игнориран, генериран, виж `.gitignore`). IForget няма build
+  `www/` (git-игнориран, генериран, виж `.gitignore`). iForget няма build
   стъпка (чист статичен сайт) — това е просто копиране, не транспилация.
 - `android/` и `ios/` — нативните проекти (Capacitor scaffold), **СЕ
   комитват** (стандартна Capacitor практика — нативния код/конфигурация
@@ -924,7 +944,7 @@ Linux sandbox, няма Xcode):**
 2. **Android**: отвори `android/` в Android Studio (`npm run open:android`
    след `npm install`) — трябва да работи "as is" за debug build.
    Истинска иконка/splash screen (сега е Capacitor default placeholder,
-   не IForget брандинг) — през Android Studio Asset Studio, или
+   не iForget брандинг) — през Android Studio Asset Studio, или
    `@capacitor/assets` CLI пакет (не инсталиран още, по избор).
 3. **iOS**: отвори `ios/App/App.xcodeproj` в Xcode (`npm run open:ios`)
    — Swift Package Manager ще resolve-не автоматично при отваряне (не е

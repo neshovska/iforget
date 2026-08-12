@@ -1,5 +1,5 @@
 // functions/index.js
-// IForget — Cloud Functions
+// iForget — Cloud Functions
 // Деплой: firebase deploy --only functions
 
 const {setGlobalOptions} = require("firebase-functions/v2");
@@ -23,14 +23,14 @@ const resendApiKey = defineSecret("RESEND_API_KEY");
 // Изпращащ адрес — noreply@iforget.eu, домейн верифициран в Resend
 // (SPF/DKIM/DMARC записи, виж CLAUDE.md). Само за изпращане — тази кутия
 // не приема отговори (Enable Receiving е изключено в Resend нарочно).
-const FROM_EMAIL = "IForget <noreply@iforget.eu>";
+const FROM_EMAIL = "iForget <noreply@iforget.eu>";
 
 // Stripe — тайни ключове, задават се веднъж (никога в кода/repo-то):
 //   firebase functions:secrets:set STRIPE_SECRET_KEY
 //   firebase functions:secrets:set STRIPE_WEBHOOK_SECRET
 const stripeSecretKey = defineSecret("STRIPE_SECRET_KEY");
 const stripeWebhookSecret = defineSecret("STRIPE_WEBHOOK_SECRET");
-// Price ID-та от Stripe Dashboard (Products → IForget Premium → Monthly/
+// Price ID-та от Stripe Dashboard (Products → iForget Premium → Monthly/
 // Yearly) — не са тайни сами по себе си (безполезни без secret key-я), но
 // не са hardcode-нати — задават се при deploy през defineString (Firebase
 // пита за стойност автоматично при първи deploy, ако default е празен).
@@ -146,11 +146,11 @@ exports.sendBrandedPasswordReset = onCall(
           body: JSON.stringify({
             from: FROM_EMAIL,
             to: email,
-            subject: "IForget — възстановяване на парола",
-            text: `Здравей,\n\nПолучихме заявка за нова парола за твоя IForget акаунт.\n\n` +
+            subject: "iForget — възстановяване на парола",
+            text: `Здравей,\n\nПолучихме заявка за нова парола за твоя iForget акаунт.\n\n` +
               `Натисни линка по-долу, за да зададеш нова парола:\n${brandedResetLink}\n\n` +
               `Ако не си заявявал/а това, просто игнорирай този имейл — паролата ти няма да се промени.\n\n` +
-              `— Екипът на IForget`,
+              `— Екипът на iForget`,
           }),
         });
         if (!res.ok) {
@@ -411,11 +411,11 @@ exports.sendBrandedEmailVerification = onCall(
           body: JSON.stringify({
             from: FROM_EMAIL,
             to: email,
-            subject: "IForget — потвърди своя имейл",
-            text: `Здравей,\n\nБлагодарим, че се регистрира в IForget!\n\n` +
+            subject: "iForget — потвърди своя имейл",
+            text: `Здравей,\n\nБлагодарим, че се регистрира в iForget!\n\n` +
               `Натисни линка по-долу, за да потвърдиш имейл адреса си:\n${brandedVerifyLink}\n\n` +
               `Ако не си създавал/а тоя акаунт, просто игнорирай този имейл.\n\n` +
-              `— Екипът на IForget`,
+              `— Екипът на iForget`,
           }),
         });
         if (!res.ok) {

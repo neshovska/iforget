@@ -15,14 +15,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="IForget">
+<meta name="apple-mobile-web-app-title" content="iForget">
 <meta name="description" content="Помни това, което има значение.">
 <meta name="theme-color" content="#141B2E">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>IForget</title>
+<title>iForget</title>
 <style>
   /* Шрифтова двойка, взета от GlowTrack за визуална консистентност между
      двете приложения: "Cormorant Garamond" (serif) за заглавие/акценти,
@@ -1077,6 +1077,23 @@
      renderCtxMenuColor()); дефинирането ѝ тук е единственият начин правило
      от клас да "надвие" inline стил, без !important. */
   html.neon-notes .ctx-menu .color-sw{--sw-active:var(--sw-neon);}
+  /* Бележка в изтриване — остава ВИДИМА като прозрачна карта, докато тече
+     Undo прозорецът (UNDO_MS), вместо да изчезне мигновено. По заявка:
+     да личи, че точно тази бележка си отива, и да има към какво да се
+     върнеш с "Отмени". Прозрачността е същият език като „Прозрачни
+     бележки“ (виж html.glass-notes), само по-силна, плюс пунктирана
+     рамка и зачеркнат текст — картата явно вече не е активна.
+     pointer-events:none — през тези 2.5 сек не бива да се тапва,
+     плъзга или задържа, защото в данните вече е в кошчето. */
+  .note.ghost-deleted{
+    background-color:transparent !important;
+    background-image:none !important;
+    border-style:dashed;border-color:var(--text-dim);
+    box-shadow:none !important;
+    opacity:.55;pointer-events:none;
+    transition:opacity .25s ease, background-color .25s ease;
+  }
+  .note.ghost-deleted .txt{text-decoration:line-through;}
   .note.swiping{transition:none;}
   .note-top{display:flex;justify-content:flex-start;align-items:center;gap:6px;}
   .note-main{display:flex;align-items:flex-start;gap:8px;flex-direction:row-reverse;}
@@ -1252,7 +1269,7 @@
 <div class="topbar">
   <div class="topbar-row">
     <div class="topbar-title-group">
-      <h1>IForget</h1>
+      <h1>iForget</h1>
       <span class="streak-badge" id="streakBadge" style="display:none"></span>
     </div>
     <div class="topbar-actions">
@@ -1308,7 +1325,7 @@
 <div class="auth-screen show" id="authScreen">
   <button type="button" id="authLangBtn" class="icon-btn auth-lang-btn" aria-label="Език">EN</button>
   <div class="auth-card">
-    <h1>IForget</h1>
+    <h1>iForget</h1>
     <p class="auth-motto" id="authMotto">Помни това, което има значение.</p>
     <ul class="auth-features" id="authFeatures">
       <li><span class="ico"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 20 6"></polyline><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"></path></svg></span><span id="authFeat1">Ден за ден — днешните задачи, без да се трупат</span></li>
@@ -1754,7 +1771,7 @@ const STRINGS = {
     ctxShare: 'Сподели', ctxCopy: 'Копирай', shareCopied: 'Копирано в клипборда.',
     ctxColor: 'Цвят', noteColorNone: 'Без цвят',
     ctxAddReminder: 'Добави напомняне', ctxEditReminder: 'Промени напомняне',
-    reminderInactiveHint: 'Напомнянията ще изпращат push нотификация, след като IForget излезе в App Store / Google Play. Засега датата само се запазва.',
+    reminderInactiveHint: 'Напомнянията ще изпращат push нотификация, след като iForget излезе в App Store / Google Play. Засега датата само се запазва.',
     reminderDateLabel: 'Дата', reminderTimeLabel: 'Час',
     reminderSaveBtn: 'Запази', reminderRemoveBtn: 'Премахни напомнянето',
     reminderRepeatLabel: 'Повторение', reminderRepeatNone: 'Веднъж',
@@ -1853,7 +1870,7 @@ const STRINGS = {
     ctxShare: 'Share', ctxCopy: 'Copy', shareCopied: 'Copied to clipboard.',
     ctxColor: 'Color', noteColorNone: 'No color',
     ctxAddReminder: 'Add reminder', ctxEditReminder: 'Edit reminder',
-    reminderInactiveHint: 'Reminders will send a push notification once IForget is available on the App Store / Google Play. For now the date is just saved.',
+    reminderInactiveHint: 'Reminders will send a push notification once iForget is available on the App Store / Google Play. For now the date is just saved.',
     reminderDateLabel: 'Date', reminderTimeLabel: 'Time',
     reminderSaveBtn: 'Save', reminderRemoveBtn: 'Remove reminder',
     reminderRepeatLabel: 'Repeat', reminderRepeatNone: 'Once',
@@ -1950,7 +1967,7 @@ const STRINGS = {
     ctxShare: 'Поделиться', ctxCopy: 'Копировать', shareCopied: 'Скопировано в буфер обмена.',
     ctxColor: 'Цвет', noteColorNone: 'Без цвета',
     ctxAddReminder: 'Добавить напоминание', ctxEditReminder: 'Изменить напоминание',
-    reminderInactiveHint: 'Напоминания будут отправлять push-уведомление, когда IForget появится в App Store / Google Play. Пока дата просто сохраняется.',
+    reminderInactiveHint: 'Напоминания будут отправлять push-уведомление, когда iForget появится в App Store / Google Play. Пока дата просто сохраняется.',
     reminderDateLabel: 'Дата', reminderTimeLabel: 'Время',
     reminderSaveBtn: 'Сохранить', reminderRemoveBtn: 'Удалить напоминание',
     reminderRepeatLabel: 'Повтор', reminderRepeatNone: 'Один раз',
@@ -2051,7 +2068,7 @@ const STRINGS = {
     ctxShare: 'Teilen', ctxCopy: 'Kopieren', shareCopied: 'In die Zwischenablage kopiert.',
     ctxColor: 'Farbe', noteColorNone: 'Keine Farbe',
     ctxAddReminder: 'Erinnerung hinzufügen', ctxEditReminder: 'Erinnerung ändern',
-    reminderInactiveHint: 'Erinnerungen senden eine Push-Benachrichtigung, sobald IForget im App Store / bei Google Play verfügbar ist. Vorerst wird nur das Datum gespeichert.',
+    reminderInactiveHint: 'Erinnerungen senden eine Push-Benachrichtigung, sobald iForget im App Store / bei Google Play verfügbar ist. Vorerst wird nur das Datum gespeichert.',
     reminderDateLabel: 'Datum', reminderTimeLabel: 'Uhrzeit',
     reminderSaveBtn: 'Speichern', reminderRemoveBtn: 'Erinnerung entfernen',
     reminderRepeatLabel: 'Wiederholung', reminderRepeatNone: 'Einmalig',
@@ -2150,7 +2167,7 @@ const STRINGS = {
     ctxShare: 'Compartir', ctxCopy: 'Copiar', shareCopied: 'Copiado al portapapeles.',
     ctxColor: 'Color', noteColorNone: 'Sin color',
     ctxAddReminder: 'Añadir recordatorio', ctxEditReminder: 'Editar recordatorio',
-    reminderInactiveHint: 'Los recordatorios enviarán una notificación push cuando IForget esté disponible en App Store / Google Play. Por ahora solo se guarda la fecha.',
+    reminderInactiveHint: 'Los recordatorios enviarán una notificación push cuando iForget esté disponible en App Store / Google Play. Por ahora solo se guarda la fecha.',
     reminderDateLabel: 'Fecha', reminderTimeLabel: 'Hora',
     reminderSaveBtn: 'Guardar', reminderRemoveBtn: 'Quitar recordatorio',
     reminderRepeatLabel: 'Repetición', reminderRepeatNone: 'Una vez',
@@ -2664,7 +2681,7 @@ function renderProfileMenu(){
   // Помощ — Поверителност/Общи условия по ситен шрифт (.small-link) по
   // изрична молба — по-малко визуално тегло от истинските действия.
   html += profileGroupBlock('help', ICONS.mail, s.profileGroupHelp, `
-    <a class="action" href="mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('IForget — обратна връзка')}">${ICONS.mail}${L(s.feedbackBtn)}</a>
+    <a class="action" href="mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('iForget — обратна връзка')}">${ICONS.mail}${L(s.feedbackBtn)}</a>
     <a class="action small-link" href="privacy.html" target="_blank" rel="noopener">${ICONS.shield}${L(s.privacyLink)}</a>
     <a class="action small-link" href="terms.html" target="_blank" rel="noopener">${ICONS.doc}${L(s.termsLink)}</a>
   `);
@@ -3550,7 +3567,7 @@ function maybeFocusQuickAdd(){
   history.replaceState(null, '', location.pathname);
 }
 
-// "Сподели към IForget" (Web Share Target — виж share_target в
+// "Сподели към iForget" (Web Share Target — виж share_target в
 // manifest.json). Работи само на Android/Chrome при инсталирано
 // приложение — iOS Safari няма поддръжка за тази функция при уеб
 // приложения. Текстът от споделянето само се ПОПЪЛВА в полето за нова
@@ -3902,10 +3919,30 @@ function markDoneBySwipe(noteId, subId){
 // пак безопасен начин; дори без Undo бележката пак стои в кошчето 5 дни.
 let undoRestoreFn = null;
 let undoTimeoutId = null;
+// Колко време бележката стои видима като прозрачна карта СЛЕД изтриване —
+// същата стойност и за Undo тоста, за да свършват едновременно (иначе
+// или тостът предлага "Отмени" за нещо, което вече е изчезнало, или
+// картата виси без видима причина).
+const UNDO_MS = 2500;
+let ghostTimeoutId = null;
 function deleteBySwipe(noteId, subId){
+  const key = subId ? noteId+'::'+subId : noteId;
+  // Хващаме елемента ПРЕДИ softDelete() — след него бележката вече е в
+  // кошчето и следващият render() няма да я нарисува.
+  const ghostEl = document.querySelector(`.note[data-swipe-key="${key}"]`);
   const restoreFn = softDelete(noteId, subId);
   if(!restoreFn) return;
-  save(); render();
+  save();
+  // Данните вече са записани, но НЕ пре-рисуваме веднага — оставяме
+  // съществуващия елемент на място като прозрачен, докато тече Undo.
+  if(ghostEl){
+    ghostEl.style.transform = '';
+    ghostEl.classList.add('ghost-deleted');
+    clearTimeout(ghostTimeoutId);
+    ghostTimeoutId = setTimeout(()=>{ ghostTimeoutId = null; render(); }, UNDO_MS);
+  }else{
+    render();
+  }
   showUndoToast(restoreFn);
 }
 
@@ -3915,7 +3952,7 @@ function showUndoToast(restoreFn){
   document.getElementById('undoToastText').textContent = t().deletedUndo;
   toast.classList.add('show');
   clearTimeout(undoTimeoutId);
-  undoTimeoutId = setTimeout(hideUndoToast, 2500);
+  undoTimeoutId = setTimeout(hideUndoToast, UNDO_MS);
 }
 function hideUndoToast(){
   document.getElementById('undoToast').classList.remove('show');
@@ -3994,8 +4031,11 @@ function attachSwipeHandlers(){
         setTimeout(()=>markDoneBySwipe(noteId, subId), 160);
       }else if(axis === 'x' && dx < -THRESH){
         triggerHaptic();
-        noteEl.style.transform = 'translateX(-130%)';
-        setTimeout(()=>deleteBySwipe(noteId, subId), 160);
+        // Картата се връща на място и остава видима като прозрачна (виж
+        // .note.ghost-deleted) — по-рано отлиташе наляво и изчезваше.
+        noteEl.style.transform = '';
+        bgDelete.style.opacity = 0;
+        deleteBySwipe(noteId, subId);
       }else{
         noteEl.style.transform = '';
         bgComplete.style.opacity = 0;
@@ -5301,6 +5341,10 @@ jumpBtn.addEventListener('click', ()=>scrollToBottom(true));
 document.getElementById('undoToastBtn').addEventListener('click', ()=>{
   if(undoRestoreFn) undoRestoreFn();
   hideUndoToast();
+  // Връщането е моментално — не чакаме призрачния таймер да изтече, иначе
+  // бележката би стояла зачеркната и прозрачна още секунди след "Отмени".
+  clearTimeout(ghostTimeoutId); ghostTimeoutId = null;
+  render();
 });
 
 // Декоративен pull-to-refresh — НЕ презарежда никакви данни (Firestore вече

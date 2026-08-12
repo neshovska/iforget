@@ -1,7 +1,7 @@
 // scripts/sync-www.js
 // Копира runtime-нужните статични файлове от repo root-а в www/ — точно
 // това е "webDir"-ът, който Capacitor вгражда във нативния апп при `cap
-// sync`/`cap copy`. IForget е чист статичен сайт (index.html + assets),
+// sync`/`cap copy`. iForget е чист статичен сайт (index.html + assets),
 // няма build стъпка (bundler/transpile) — този скрипт е просто копиране,
 // не истински build. Пуска се преди ВСЕКИ `npx cap sync` (виж "sync" npm
 // script-а в package.json) — гарантира, че нативната обвивка вижда
