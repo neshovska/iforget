@@ -398,6 +398,9 @@
     max-height:calc(100vh - 16px);overflow-y:auto;
   }
   .tag-picker.show{display:block;}
+  /* Езиковият списък показва само кодове (виж openLangPicker()), затова е
+     по-тесен от общия .tag-picker — иначе кутийката зее празна. */
+  #langPicker{min-width:92px;}
   /* #langPicker ползва .tag-picker класа (споделен стил), но освен от
      topbar-а (влизайки нормално в z-index:25 стека на основния апп) се
      отваря и от authLangBtn на .auth-screen (z-index:50) — реален бъг:
@@ -4428,7 +4431,10 @@ function closeTagPicker(){
 function openLangPicker(anchorEl){
   const picker = document.getElementById('langPicker');
   picker.innerHTML = LANG_ORDER.map(code =>
-    `<button data-lang="${code}">${LANG_NAMES[code]}${code===lang?ICONS.check:''}</button>`
+    // Само кодът (BG/EN/RU/DE/ES) — същото изписване като на самия бутон,
+    // за да личи откъде идва надписът му. Пълното име остава като
+    // aria-label: невидимо е, но екранен четец иначе би прочел само "БГ".
+    `<button data-lang="${code}" aria-label="${LANG_NAMES[code]}">${code.toUpperCase()}${code===lang?ICONS.check:''}</button>`
   ).join('');
   picker.classList.add('show'); // трябва да е видим ПРЕДИ да измерим offsetHeight
   const rect = anchorEl.getBoundingClientRect();
