@@ -1464,6 +1464,19 @@ const PROGRESS_FILTER = '__progress__';
 // loadLocalCache()/loadFromCloud()/saveTagOrder()).
 let tagOrder = [];
 const TAG_ORDER_KEY = 'tagOrder';
+// Дневно резюме на изчистените приключени бележки: { 'ГГГГ-ММ-ДД': {c,d} },
+// c = създадени през този ден, d = приключени през този ден. Пълни се в
+// purgeExpiredTrash() в момента, в който бележка напусне масива ЗАВИНАГИ, и
+// само за автоматично архивираните (виж autoArchived) — ръчно изтритите си
+// изчезват от статистиката както досега, защото потребителят ги е махнал
+// съзнателно.
+// Причината да съществува: календарът брои по ДЕНЯ НА СЪЗДАВАНЕ
+// (calendarNotesCountForKey()), а серията — по деня на ПРИКЛЮЧВАНЕ
+// (computeStreak()). Без резюмето изчистването би нулирало серията и би
+// опразнило старите дни в календара. Цената е нищожна: ~26 B на ден, тоест
+// под 10 KB за година, срещу стотици килобайти спестени бележки.
+let dayHistory = {};
+const DAY_HISTORY_KEY = 'dayHistory';
 // Вдига се точно преди да приключи успешно разместване на таг (виж
 // attachCatRowDrag()) — "поглъща" единствения последвал click на реда с
 // категории, за да не отвори филтъра по погрешка веднага след провлачване.
@@ -1483,10 +1496,21 @@ let lang = localStorage.getItem(LANG_KEY) || 'bg';
 const BUILTIN_TAGS = ['personal', 'work'];
 
 // "Изтрити" — резервиран таг за меко изтритите бележки (виж softDelete()) —
-// пазят се 10 дни, откриваеми от бутона с категориите горе, преди
+// пазят се 5 дни, откриваеми от бутона с категориите горе, преди
 // purgeExpiredTrash() да ги премахне окончателно.
 const DELETED_TAG = 'deleted';
-const TRASH_RETENTION_MS = 10 * 24 * 60 * 60 * 1000;
+const TRASH_RETENTION_MS = 5 * 24 * 60 * 60 * 1000;
+// Приключените бележки не се пазят вечно — приложението е за "ден за ден",
+// не архив (изрична продуктова позиция). Освен разчистване на изгледа, това
+// е и техническа необходимост: ЦЕЛИЯТ списък живее в ЕДИН документ във
+// Firestore (users/{uid}, поле notes) и там таванът е твърд — 1 MB. При
+// среден размер ~362 B на бележка това са ~2900 бележки; при 10 на ден
+// таванът се удря за под година, а щом се удари, записът в облака започва
+// да се проваля. Освен това при ВСЯКА промяна се презаписва целият
+// документ, тоест старите бележки оскъпяват всяко отмятане.
+// Приключените минават през кошчето (виж archiveOldCompleted()), за да са
+// възстановими още 5 дни, вместо да изчезват безвъзвратно.
+const DONE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
 // "Satori" — трети готов таг, но само за конкретния акаунт по-долу (лична
 // заявка), не се показва на никой друг потребител на приложението.
@@ -2219,6 +2243,10 @@ function dateStr(ts){ return new Date(ts).toISOString().slice(0,10); }
 // (просто не расте, докато не завършиш нещо днес).
 function computeStreak(){
   const days = new Set();
+  // Дните на вече изчистените приключени бележки идват от резюмето (виж
+  // dayHistory) — иначе серията би се нулирала точно когато чистенето
+  // настигне най-старите дни от нея.
+  Object.keys(dayHistory).forEach(k=>{ if(dayHistory[k].d > 0) days.add(k); });
   notes.forEach(n=>{
     if(n.status === 'done' && n.completedAt) days.add(dateStr(n.completedAt));
     (n.subs||[]).forEach(s=>{
@@ -2390,6 +2418,10 @@ function loadLocalCache(){
     const rawOrder = localStorage.getItem(TAG_ORDER_KEY);
     tagOrder = rawOrder ? JSON.parse(rawOrder) : [];
   }catch(e){ tagOrder = []; }
+  try{
+    const rawHist = localStorage.getItem(DAY_HISTORY_KEY);
+    dayHistory = rawHist ? JSON.parse(rawHist) : {};
+  }catch(e){ dayHistory = {}; }
 }
 
 function showAuthScreen(loading){
@@ -2879,7 +2911,9 @@ function localDateStr(ts){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 function calendarNotesCountForKey(key){
-  let cnt = 0;
+  // Стартира от резюмето на вече изчистените бележки (виж dayHistory), за да
+  // не опустяват миналите дни, щом чистенето ги настигне.
+  let cnt = dayHistory[key] ? dayHistory[key].c : 0;
   notes.forEach(n=>{ if(localDateStr(n.createdAt) === key) cnt++; });
   return cnt;
 }
@@ -3190,6 +3224,8 @@ function loadFromCloud(uid){
       docRef.set({ notes }, { merge:true }).catch(err=>console.error('initial cloud upload failed', err));
     }
     if(snap.exists && Array.isArray(snap.data().tagOrder)) tagOrder = snap.data().tagOrder;
+    if(snap.exists && snap.data().dayHistory) dayHistory = snap.data().dayHistory;
+    archiveOldCompleted();
     purgeExpiredTrash();
     render();
     hideAuthScreen();
@@ -3683,7 +3719,7 @@ function removeItem(noteId, subId){
 // Меко изтриване — вместо да трие бележка/подбележка завинаги, ѝ слага таг
 // "Изтрити" (DELETED_TAG) и запомня кога, за да се откри после от бутона с
 // категориите горе; purgeExpiredTrash() я премахва окончателно едва след
-// TRASH_RETENTION_MS (10 дни). Подбележка не може да носи собствен таг
+// TRASH_RETENTION_MS (5 дни). Подбележка не може да носи собствен таг
 // (само основните бележки имат tag-picker), затова при изтриване се
 // "изважда" от родителя си като самостоятелна бележка в кошчето — данните
 // не се губят, само вложеността ѝ под оригиналната бележка.
@@ -3748,8 +3784,66 @@ function softDelete(noteId, subId){
 function purgeExpiredTrash(){
   const cutoff = Date.now() - TRASH_RETENTION_MS;
   const before = notes.length;
-  notes = notes.filter(n => !(n.tag === DELETED_TAG && n.deletedAt && n.deletedAt < cutoff));
-  if(notes.length !== before) save();
+  const kept = [];
+  notes.forEach(n=>{
+    const expired = n.tag === DELETED_TAG && n.deletedAt && n.deletedAt < cutoff;
+    if(!expired){ kept.push(n); return; }
+    // Автоматично архивираните оставят следа в дневното резюме, за да не
+    // пропадат серията и календарът (виж dayHistory). Ръчно изтритите — не.
+    if(n.autoArchived) recordInHistory(n);
+  });
+  notes = kept;
+  if(notes.length !== before){ save(); saveDayHistory(); }
+}
+
+// Свива една бележка до два броя в dayHistory: +1 създадена на деня на
+// създаване, +1 приключена на деня на приключване (същото и за всяка
+// приключена подбележка, защото серията ги брои — виж computeStreak()).
+function recordInHistory(n){
+  const bump = (key, field) => {
+    if(!key) return;
+    if(!dayHistory[key]) dayHistory[key] = { c:0, d:0 };
+    dayHistory[key][field]++;
+  };
+  // Календарът брои само основните бележки, затова 'c' е само за тях.
+  bump(localDateStr(n.createdAt), 'c');
+  if(n.status === 'done' && n.completedAt) bump(localDateStr(n.completedAt), 'd');
+  (n.subs||[]).forEach(sub=>{
+    if(sub.status === 'done' && sub.completedAt) bump(localDateStr(sub.completedAt), 'd');
+  });
+}
+
+function saveDayHistory(){
+  try{ localStorage.setItem(DAY_HISTORY_KEY, JSON.stringify(dayHistory)); }
+  catch(e){ console.error('save dayHistory failed', e); }
+  if(currentUser){
+    db.collection('users').doc(currentUser.uid).set({ dayHistory }, { merge:true })
+      .catch(err=>console.error('cloud dayHistory save failed', err));
+  }
+}
+
+// Мести приключените отдавна бележки в кошчето (не ги трие направо — стоят
+// още TRASH_RETENTION_MS и могат да се върнат от "Изтрити"). Пази се текущият
+// календарен месец НЕЗАВИСИМО от давността, за да останат точни седмичната и
+// месечната статистика в "Твоят преглед" (тя брои по createdAt в текущия
+// период). Викана веднъж при зареждане, заедно с purgeExpiredTrash().
+function archiveOldCompleted(){
+  const cutoff = Date.now() - DONE_RETENTION_MS;
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  let changed = false;
+  notes.forEach(n=>{
+    if(n.tag === DELETED_TAG) return;               // вече в кошчето
+    if(n.archiveExempt) return;                     // изрично върната от потребителя
+    if(n.status !== 'done' || !n.completedAt) return;
+    if(n.completedAt >= cutoff) return;             // още е "прясна"
+    if(n.completedAt >= monthStart) return;         // текущият месец не се пипа
+    n.tag = DELETED_TAG;
+    n.deletedAt = Date.now();
+    n.autoArchived = true;
+    changed = true;
+  });
+  if(changed) save();
 }
 
 // Haptic feedback при swipe — navigator.vibrate() НЕ съществува в Safari на
@@ -3772,7 +3866,7 @@ function markDoneBySwipe(noteId, subId){
 
 // Swipe-наляво / "Изтрий" от long-press менюто: меко изтрива веднага (виж
 // softDelete()) и показва Undo тост за няколко секунди — по-бърз, но все
-// пак безопасен начин; дори без Undo бележката пак стои в кошчето 10 дни.
+// пак безопасен начин; дори без Undo бележката пак стои в кошчето 5 дни.
 let undoRestoreFn = null;
 let undoTimeoutId = null;
 function deleteBySwipe(noteId, subId){
@@ -3900,7 +3994,18 @@ function setNoteTag(noteId, tag){
   n.tag = tag || null;
   // Ръчна смяна на тага от кошчето (Изтрити → Личен/Работни/...) на практика
   // "възстановява" бележката — вече не бива да е кандидат за purgeExpiredTrash().
-  if(n.tag !== DELETED_TAG) delete n.deletedAt;
+  if(n.tag !== DELETED_TAG){
+    delete n.deletedAt;
+    // Ако е попаднала в кошчето от автоматичното архивиране (виж
+    // archiveOldCompleted()), изричното ѝ връщане е решение на потребителя —
+    // отбелязваме я като изключение, иначе следващото зареждане веднага би я
+    // архивирало пак (тя си остава приключена и стара) и връщането би
+    // изглеждало като че ли не работи.
+    if(n.autoArchived){
+      delete n.autoArchived;
+      n.archiveExempt = true;
+    }
+  }
   save(); render();
 }
 
@@ -5305,6 +5410,7 @@ loadPremiumConfig();
 // бъде презаписан от Firestore при потвърден вход (виж loadFromCloud()).
 showAuthScreen(true);
 loadLocalCache();
+archiveOldCompleted();
 purgeExpiredTrash();
 </script>
 </body>
