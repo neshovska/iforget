@@ -1025,6 +1025,52 @@
      Важи автоматично и за подбележките (.note[data-colored] съвпада с
      всеки .note, без значение дали е в .subs), без отделно правило. */
   html.glass-notes .note[data-colored]{background-image:linear-gradient(rgba(var(--nc),.25), rgba(var(--nc),.25));}
+
+  /* ── НЕОНОВ РЕЖИМ (превключвател в профила, виж NEON_NOTES_KEY/
+     applyNeonNotes()) ────────────────────────────────────────────────
+     Съзнателно НЕ пипа запазените данни: цветът на бележката си остава
+     същият (item.color), сменя се само рисуването. noteColorAttr() подава
+     ВИНАГИ и --nc-neon (ярък двойник от NEON_BY_COLOR), затова
+     превключването е чиста смяна на клас върху <html> — без нов render(),
+     всички оцветени бележки светват/угасват наведнъж.
+     Три слоя правят "неона": по-наситен тон, ярка рамка в същия цвят и
+     мек външен ореол. Ореолът е box-shadow (не filter:drop-shadow) —
+     filter създава нов stacking context и би счупил изскачането на
+     бележката над .ctx-backdrop при задържане (виж .note-wrap.ctx-active). */
+  html.neon-notes .note[data-colored]{
+    background-image:linear-gradient(rgba(var(--nc-neon),.16), rgba(var(--nc-neon),.16));
+    border-color:rgb(var(--nc-neon));
+    box-shadow:0 0 16px rgba(var(--nc-neon),.60), 0 0 3px rgba(var(--nc-neon),.9),
+               inset 0 0 16px rgba(var(--nc-neon),.22);
+  }
+  /* По-тъмна основа ПОД цветния слой — САМО плътен режим и САМО тъмна тема
+     (оттам тройното отрицание): върху синкавата --card дори наситен тон се
+     "издавя" и златното/теракотата излизаха маслинено и тухлено вместо
+     неоново. Върху почти черно същият тон чете чисто — така свети и
+     истинският неон. В прозрачен режим и в светлата тема основата си остава
+     тяхната собствена (иначе прозрачността се губи, а светлата тема
+     потъмнява) — те получават неона само от рамката и ореола. */
+  html.neon-notes:not(.glass-notes):not([data-theme="light"]) .note[data-colored]{
+    background-color:#0E1015;
+  }
+  /* В прозрачен режим тонът пада (както и при меките цветове), но рамката и
+     ореолът остават — те носят неоновия ефект, когато фонът прозира. */
+  html.neon-notes.glass-notes .note[data-colored]{
+    background-image:linear-gradient(rgba(var(--nc-neon),.18), rgba(var(--nc-neon),.18));
+  }
+  /* Светла тема — по-сдържано по изрична заявка: върху кремавия фон ореолът
+     се губи и изглежда мръсно, затова тук ефектът се носи от по-плътната
+     рамка и малко по-наситен тон, с едва загатнат ореол. */
+  html.neon-notes[data-theme="light"] .note[data-colored]{
+    background-image:linear-gradient(rgba(var(--nc-neon),.22), rgba(var(--nc-neon),.22));
+    border-color:rgba(var(--nc-neon),.95);
+    box-shadow:0 0 5px rgba(var(--nc-neon),.22);
+  }
+  /* Кръгчетата в палитрата светят заедно с бележките — избираш това, което
+     реално ще видиш. Inline фонът чете var(--sw-active, var(--sw)) (виж
+     renderCtxMenuColor()); дефинирането ѝ тук е единственият начин правило
+     от клас да "надвие" inline стил, без !important. */
+  html.neon-notes .ctx-menu .color-sw{--sw-active:var(--sw-neon);}
   .note.swiping{transition:none;}
   .note-top{display:flex;justify-content:flex-start;align-items:center;gap:6px;}
   .note-main{display:flex;align-items:flex-start;gap:8px;flex-direction:row-reverse;}
@@ -1373,6 +1419,32 @@ let glassNotes = localStorage.getItem(GLASS_NOTES_KEY) === '1';
 function applyGlassNotes(){
   document.documentElement.classList.toggle('glass-notes', glassNotes);
 }
+// Неонов режим за цветовете на бележките — превключвател в профила, до
+// прозрачните бележки. НЕ променя запазените данни: цветът на бележката си
+// остава същият от PROFILE_COLORS (item.color), сменя се само НАЧИНЪТ на
+// рисуване. Затова превключването светва/угасва всички вече оцветени
+// бележки наведнъж и връщането назад е без загуба.
+// Ярките двойници (виж NEON_BY_COLOR) се подават успоредно с основния цвят
+// като inline --nc-neon в noteColorAttr(); CSS-ът (html.neon-notes .note[
+// data-colored]) решава кой от двата да ползва. Изчисляване "в движение"
+// (filter:saturate/brightness) беше отхвърлено — прилага се върху целия
+// елемент, включително текста, и го прави нечетим.
+const NEON_NOTES_KEY = 'neonNotes';
+let neonNotes = localStorage.getItem(NEON_NOTES_KEY) === '1';
+function applyNeonNotes(){
+  document.documentElement.classList.toggle('neon-notes', neonNotes);
+}
+// Ръчно подбрани неонови съответствия на шестте меки цвята (PROFILE_COLORS),
+// в същия ред/смисъл: синьо → електриково, розово → магента, зелено →
+// киселинно мента, лилаво → виолетово, златно → кехлибар, теракота → оранж.
+const NEON_BY_COLOR = {
+  '#6E8FBF': '#0FA8FF',
+  '#C97BA0': '#FF3D9E',
+  '#5C9C8E': '#00E7A5',
+  '#9884C9': '#B14BFF',
+  '#C6A052': '#FFC61A',
+  '#C06F5F': '#FF5C33',
+};
 let notes = [];
 let editingKey = null;
 let addingSubFor = null;
@@ -1563,6 +1635,8 @@ const ICONS = {
   shield: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6l-8-4z"></path></svg>',
   doc: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>',
   droplet: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5s7 7.6 7 12.5a7 7 0 0 1-14 0c0-4.9 7-12.5 7-12.5z"></path></svg>',
+  // Светкавица — за неоновия режим (виж NEON_NOTES_KEY/applyNeonNotes()).
+  zap: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 4 14 11 14 10 22 20 10 13 10 13 2"></polygon></svg>',
   share: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"></line><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line></svg>',
   copy: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="14" height="14" rx="2"></rect><path d="M4 16a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2"></path></svg>',
   bell: '<svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>',
@@ -1612,6 +1686,7 @@ const STRINGS = {
     confirmLogout: 'Да излезеш ли от акаунта?', profileAria: 'Профил',
     profileColorDefault: 'По подразбиране', leftHandedMode: 'Режим за лявата ръка',
     glassNotesToggle: 'Прозрачни бележки',
+    neonNotesToggle: 'Неонови цветове',
     profileGroupView: 'Изглед', profileGroupData: 'Данни', profileGroupAccount: 'Акаунт', profileGroupHelp: 'Помощ',
     premiumUpgradeBtn: 'Ъпгрейд до Premium', premiumChoosePlan: 'Избери план',
     premiumMonthly: 'Месечно — 2.99€/месец', premiumYearly: 'Годишно — 19.99€/година (-44%)',
@@ -1707,6 +1782,7 @@ const STRINGS = {
     confirmLogout: 'Sign out of your account?', profileAria: 'Profile',
     profileColorDefault: 'Default', leftHandedMode: 'Left-handed mode',
     glassNotesToggle: 'Transparent notes',
+    neonNotesToggle: 'Neon colours',
     profileGroupView: 'View', profileGroupData: 'Data', profileGroupAccount: 'Account', profileGroupHelp: 'Help',
     premiumUpgradeBtn: 'Upgrade to Premium', premiumChoosePlan: 'Choose a plan',
     premiumMonthly: 'Monthly — €2.99/month', premiumYearly: 'Yearly — €19.99/year (-44%)',
@@ -1802,6 +1878,7 @@ const STRINGS = {
     confirmLogout: 'Выйти из аккаунта?', profileAria: 'Профиль',
     profileColorDefault: 'По умолчанию', leftHandedMode: 'Режим для левшей',
     glassNotesToggle: 'Прозрачные заметки',
+    neonNotesToggle: 'Неоновые цвета',
     profileGroupView: 'Вид', profileGroupData: 'Данные', profileGroupAccount: 'Аккаунт', profileGroupHelp: 'Помощь',
     premiumUpgradeBtn: 'Перейти на Premium', premiumChoosePlan: 'Выбери план',
     premiumMonthly: 'Ежемесячно — 2.99€/месяц', premiumYearly: 'Ежегодно — 19.99€/год (-44%)',
@@ -1897,6 +1974,7 @@ const STRINGS = {
     confirmLogout: 'Vom Konto abmelden?', profileAria: 'Profil',
     profileColorDefault: 'Standard', leftHandedMode: 'Linkshänder-Modus',
     glassNotesToggle: 'Transparente Notizen',
+    neonNotesToggle: 'Neonfarben',
     profileGroupView: 'Ansicht', profileGroupData: 'Daten', profileGroupAccount: 'Konto', profileGroupHelp: 'Hilfe',
     premiumUpgradeBtn: 'Auf Premium upgraden', premiumChoosePlan: 'Plan wählen',
     premiumMonthly: 'Monatlich — 2,99€/Monat', premiumYearly: 'Jährlich — 19,99€/Jahr (-44%)',
@@ -1992,6 +2070,7 @@ const STRINGS = {
     confirmLogout: '¿Cerrar sesión de la cuenta?', profileAria: 'Perfil',
     profileColorDefault: 'Predeterminado', leftHandedMode: 'Modo para zurdos',
     glassNotesToggle: 'Notas transparentes',
+    neonNotesToggle: 'Colores neón',
     profileGroupView: 'Vista', profileGroupData: 'Datos', profileGroupAccount: 'Cuenta', profileGroupHelp: 'Ayuda',
     premiumUpgradeBtn: 'Actualizar a Premium', premiumChoosePlan: 'Elige un plan',
     premiumMonthly: 'Mensual — 2,99€/mes', premiumYearly: 'Anual — 19,99€/año (-44%)',
@@ -2503,6 +2582,7 @@ function renderProfileMenu(){
 
   html += profileGroupBlock('view', ICONS.droplet, s.profileGroupView, `
     <button type="button" class="action" data-action="toggle-glass-notes">${ICONS.droplet}${L(s.glassNotesToggle)}${glassNotes ? ICONS.check : ''}</button>
+    <button type="button" class="action" data-action="toggle-neon-notes">${ICONS.zap}${L(s.neonNotesToggle)}${neonNotes ? ICONS.check : ''}</button>
     <button type="button" class="action" data-action="toggle-left-handed">${ICONS.flip}${L(s.leftHandedMode)}${leftHanded ? ICONS.check : ''}</button>
   `);
 
@@ -2574,6 +2654,13 @@ function renderProfileMenu(){
     glassNotes = !glassNotes;
     localStorage.setItem(GLASS_NOTES_KEY, glassNotes ? '1' : '0');
     applyGlassNotes();
+    renderProfileMenu();
+  });
+  panel.querySelector('[data-action="toggle-neon-notes"]').addEventListener('mousedown', e=>{
+    e.preventDefault(); e.stopPropagation();
+    neonNotes = !neonNotes;
+    localStorage.setItem(NEON_NOTES_KEY, neonNotes ? '1' : '0');
+    applyNeonNotes();
     renderProfileMenu();
   });
   panel.querySelector('[data-action="toggle-left-handed"]').addEventListener('mousedown', e=>{
@@ -4188,9 +4275,16 @@ function renderCtxMenuColor(noteId, subId){
   menu.innerHTML = `
     <button type="button" class="reminder-back" data-ctx="color-back">${ICONS.arrowLeft}${s.onboardBack}</button>
     <div class="reminder-head">${ICONS.droplet}${s.ctxColor}</div>
-    <div class="color-row">` + PROFILE_COLORS.map(c =>
-      `<button type="button" class="color-sw${c===current?' active':''}${c===''?' default-sw':''}" data-color="${c}" style="${c?`background:${c}`:''}" aria-label="${c || s.noteColorNone}"></button>`
-    ).join('') + `</div>`;
+    <div class="color-row">` + PROFILE_COLORS.map(c => {
+      // Кръгчетата показват реалния резултат — в неонов режим самите те
+      // светят. Inline фонът чете var(--sw-active), която CSS дефинира само
+      // при html.neon-notes (виж .ctx-menu .color-sw там); иначе се пада на
+      // основния --sw. Нужно е точно така: inline background винаги бие
+      // правило от клас, затова превключването минава през променлива.
+      const neon = c ? (NEON_BY_COLOR[c.toUpperCase()] || c) : '';
+      const style = c ? `--sw:${c};--sw-neon:${neon};background:var(--sw-active,var(--sw))` : '';
+      return `<button type="button" class="color-sw${c===current?' active':''}${c===''?' default-sw':''}" data-color="${c}" style="${style}" aria-label="${c || s.noteColorNone}"></button>`;
+    }).join('') + `</div>`;
 
   menu.querySelector('[data-ctx="color-back"]').addEventListener('mousedown', e=>{
     e.preventDefault();
@@ -4339,7 +4433,12 @@ function hexToRgb(hex){
 function noteColorAttr(item){
   if(!item.color) return '';
   const rgb = hexToRgb(item.color);
-  return rgb ? ` data-colored style="--nc:${rgb};"` : '';
+  if(!rgb) return '';
+  // --nc-neon се подава ВИНАГИ, не само в неонов режим — така превключването
+  // на режима е чисто CSS смяна на класа върху <html>, без нов render().
+  // Fallback към собствения цвят, ако някога се появи цвят извън картата.
+  const neon = hexToRgb(NEON_BY_COLOR[item.color.toUpperCase()] || item.color) || rgb;
+  return ` data-colored style="--nc:${rgb};--nc-neon:${neon};"`;
 }
 function itemRow(item, noteId, isSub){
   const key = isSub ? noteId+'::'+item.id : item.id;
@@ -5196,6 +5295,7 @@ applyTheme();
 applyAccentColor();
 applyLeftHanded();
 applyGlassNotes();
+applyNeonNotes();
 applyStaticText();
 requestPersistentStorage();
 loadPremiumConfig();
