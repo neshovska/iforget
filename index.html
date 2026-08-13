@@ -1468,6 +1468,13 @@
 
 <button class="jump-btn" id="jumpBtn"><svg class="ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg><span id="jumpLabel">Най-нови</span></button>
 
+<!-- Известие за напомняне, докато приложението е отворено (виж
+     fireReminder()). В свалените приложения известието идва от самата
+     операционна система и този елемент не се ползва. -->
+<div class="undo-toast" id="reminderToast" style="display:none;">
+  <span id="reminderToastText"></span>
+  <button type="button" id="reminderToastBtn">OK</button>
+</div>
 <div class="undo-toast" id="undoToast">
   <span id="undoToastText"></span>
   <button type="button" id="undoToastBtn">Отмени</button>
@@ -4789,8 +4796,9 @@ function renderCtxMenuReminder(noteId, subId){
       if(!isNaN(dt.getTime())) item.reminderAt = dt.getTime();
     }
     item.reminderRepeat = selectedRepeat === 'none' ? null : selectedRepeat;
+    ensureNotificationPermission();
     closeCtxMenu();
-    save(); render();
+    save(); render(); syncNativeReminders();
   });
   const removeBtn = menu.querySelector('[data-ctx="reminder-remove"]');
   if(removeBtn){
@@ -4799,9 +4807,185 @@ function renderCtxMenuReminder(noteId, subId){
       item.reminderAt = null;
       item.reminderRepeat = null;
       closeCtxMenu();
-      save(); render();
+      save(); render(); syncNativeReminders();
     });
   }
+}
+
+// ─────────── НАПОМНЯНИЯ: реално задействане ───────────
+// Дълго време бутонът "Добави напомняне" САМО записваше дата и я показваше
+// в календара — нищо не звънеше. Тук е механизмът, който го поправя.
+// ДВА РАЗЛИЧНИ ПЪТЯ, съзнателно:
+//  • свалено приложение (Capacitor) — известието се насрочва в САМАТА
+//    операционна система, значи звъни и при затворено приложение, офлайн,
+//    без сървър и без разход. Това е истинското решение.
+//  • браузър — операционната система не пази нищо; можем да звъннем само
+//    докато страницата е отворена. По-слабо, но по-честно от пълно мълчание.
+// Изпратени от сървър известия (push) НЕ се ползват умишлено: за напомняне,
+// зададено от самия потребител, сървърът е излишен и струва пари.
+const REMINDER_FIRED_KEY = 'remindersFired';
+const REMINDER_CHECK_MS = 30000;      // проверка на всеки 30 сек, докато е отворено
+const REMINDER_GRACE_MS = 12 * 3600000; // не звъним за случки, по-стари от 12 часа
+let remindersFired = {};
+try{ remindersFired = JSON.parse(localStorage.getItem(REMINDER_FIRED_KEY) || '{}'); }catch(e){ remindersFired = {}; }
+
+// Последното "падане" на напомнянето към даден момент (или null). Ползва
+// същите правила за повторение като календара (виж reminderOccursOnDate()).
+function lastReminderOccurrence(item, now){
+  if(!item.reminderAt || item.reminderAt > now) return null;
+  const rep = item.reminderRepeat;
+  if(!rep) return item.reminderAt;
+  const DAY = 86400000;
+  const step = rep === 'weekly' ? 7*DAY : DAY;
+  // колко цели периода са минали от първоначалната дата
+  const passed = Math.floor((now - item.reminderAt) / step);
+  return item.reminderAt + passed * step;
+}
+
+// Всички бележки и подбележки с напомняне, които още са актуални.
+// Приключените и изтритите се пропускат — напомняне за свършена задача е
+// само дразнене.
+function remindableItems(){
+  const out = [];
+  notes.forEach(n=>{
+    if(n.tag === DELETED_TAG) return;
+    if(n.reminderAt && n.status !== 'done') out.push({ key:n.id, item:n });
+    (n.subs||[]).forEach(sub=>{
+      if(sub.reminderAt && sub.status !== 'done') out.push({ key:n.id+'::'+sub.id, item:sub });
+    });
+  });
+  return out;
+}
+
+function pruneFired(){
+  const cutoff = Date.now() - 30*86400000;
+  let changed = false;
+  Object.keys(remindersFired).forEach(k=>{
+    const ts = Number(k.split('@')[1]);
+    if(!ts || ts < cutoff){ delete remindersFired[k]; changed = true; }
+  });
+  if(changed) localStorage.setItem(REMINDER_FIRED_KEY, JSON.stringify(remindersFired));
+}
+
+function showReminderToast(text){
+  const toast = document.getElementById('reminderToast');
+  if(!toast) return;
+  document.getElementById('reminderToastText').textContent = text;
+  toast.style.display = 'flex';
+}
+document.addEventListener('DOMContentLoaded', ()=>{
+  const btn = document.getElementById('reminderToastBtn');
+  if(btn) btn.addEventListener('click', ()=>{ document.getElementById('reminderToast').style.display = 'none'; });
+});
+
+function fireReminder(text){
+  // Системно известие, ако потребителят е дал разрешение; иначе лента в
+  // приложението. И двете, когато е възможно — при отворено приложение
+  // системното понякога се показва тихо.
+  try{
+    if(typeof Notification !== 'undefined' && Notification.permission === 'granted'){
+      new Notification('iForget', { body: text, tag: 'iforget-reminder' });
+    }
+  }catch(e){ /* някои браузъри забраняват Notification извън service worker */ }
+  showReminderToast(text);
+  triggerHaptic();
+}
+
+// Проверка "сега" — вика се на всеки REMINDER_CHECK_MS и при връщане към
+// приложението (таймерите замръзват, докато разделът е скрит).
+function checkRemindersNow(){
+  const now = Date.now();
+  let changed = false;
+  remindableItems().forEach(({key, item})=>{
+    const occ = lastReminderOccurrence(item, now);
+    if(!occ) return;
+    if(now - occ > REMINDER_GRACE_MS) return;   // прекалено стара случка
+    const mark = key + '@' + occ;
+    if(remindersFired[mark]) return;
+    remindersFired[mark] = 1; changed = true;
+    fireReminder(item.text || '');
+  });
+  if(changed) localStorage.setItem(REMINDER_FIRED_KEY, JSON.stringify(remindersFired));
+}
+
+// Разрешението се иска при ЗАДАВАНЕ на напомняне, не при отваряне на
+// приложението — иначе човек отхвърля прозорче, чието предназначение още
+// не разбира, и после напомнянията мълчат завинаги.
+function ensureNotificationPermission(){
+  try{
+    if(typeof Notification === 'undefined') return;
+    if(Notification.permission === 'default') Notification.requestPermission();
+  }catch(e){ /* без значение — остава лентата в приложението */ }
+}
+
+// ── СВАЛЕНОТО ПРИЛОЖЕНИЕ: известията се насрочват в операционната система
+// Работят при затворено приложение, офлайн, без сървър и без разход — това
+// е причината да НЕ ползваме push. Кодът е инертен в браузър (плъгинът го
+// няма), затова спокойно стои в същия файл.
+// НЕПРОВЕРЕНО НА УСТРОЙСТВО: писано е без възможност за реален iOS/Android
+// build в средата, където е разработвано. Първото пускане на телефон трябва
+// да се изтества нарочно.
+function nativeNotifications(){
+  const cap = window.Capacitor;
+  if(!cap || !cap.isNativePlatform || !cap.isNativePlatform()) return null;
+  return (cap.Plugins && cap.Plugins.LocalNotifications) || null;
+}
+// Стабилен числов идентификатор от текстов ключ — плъгинът иска число, а
+// ключовете ни са низове. Едно и също напомняне трябва да дава един и същ
+// номер, за да може да се отменя.
+function reminderNumericId(key, occ){
+  let h = 0;
+  const src = key + '@' + occ;
+  for(let i = 0; i < src.length; i++){ h = (h * 31 + src.charCodeAt(i)) | 0; }
+  return Math.abs(h) % 2000000000;
+}
+// Следващото падане СЛЕД даден момент (за насрочване напред).
+function nextReminderOccurrence(item, after){
+  if(!item.reminderAt) return null;
+  if(item.reminderAt > after) return item.reminderAt;
+  if(!item.reminderRepeat) return null;
+  const DAY = 86400000;
+  const step = item.reminderRepeat === 'weekly' ? 7*DAY : DAY;
+  const passed = Math.floor((after - item.reminderAt) / step) + 1;
+  return item.reminderAt + passed * step;
+}
+// Пресъздава целия списък с насрочени известия. Умишлено "изтрий всичко и
+// насрочи наново" вместо следене на разлики — списъкът е малък, а всяко
+// разминаване между наши и системни известия е много по-скъпо за дебъгване.
+// ВНИМАНИЕ: iOS позволява най-много 64 чакащи известия на приложение, затова
+// насрочваме първите 50 и оставяме резерв.
+let nativeScheduledIds = [];
+async function syncNativeReminders(){
+  const LN = nativeNotifications();
+  if(!LN) return;
+  try{
+    const perm = await LN.checkPermissions();
+    if(perm.display !== 'granted'){
+      const asked = await LN.requestPermissions();
+      if(asked.display !== 'granted') return;
+    }
+    if(nativeScheduledIds.length){
+      await LN.cancel({ notifications: nativeScheduledIds.map(id=>({ id })) });
+      nativeScheduledIds = [];
+    }
+    const now = Date.now();
+    const upcoming = [];
+    remindableItems().forEach(({key, item})=>{
+      const occ = nextReminderOccurrence(item, now);
+      if(occ) upcoming.push({ key, occ, text: item.text || '' });
+    });
+    upcoming.sort((a,b)=>a.occ-b.occ);
+    const batch = upcoming.slice(0, 50).map(u=>({
+      id: reminderNumericId(u.key, u.occ),
+      title: 'iForget',
+      body: u.text,
+      schedule: { at: new Date(u.occ) },
+    }));
+    if(batch.length){
+      await LN.schedule({ notifications: batch });
+      nativeScheduledIds = batch.map(b=>b.id);
+    }
+  }catch(err){ console.error('native reminders sync failed', err); }
 }
 
 // Форма за избор на цвят — заменя списъка с бутони в СЪЩИЯ #ctxMenu (воалът/
@@ -5855,6 +6039,14 @@ applyGlassNotes();
 applyNeonNotes();
 applySchoolTheme();
 applyCleanLook();
+// Напомняния: проверка на всеки половин минута, докато приложението е
+// отворено, плюс веднага при връщане към него (таймерите замръзват, докато
+// разделът е скрит, значи иначе пропускаме случките от това време).
+pruneFired();
+checkRemindersNow();
+setInterval(checkRemindersNow, REMINDER_CHECK_MS);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) checkRemindersNow(); });
+syncNativeReminders();
 applyStaticText();
 requestPersistentStorage();
 loadPremiumConfig();
