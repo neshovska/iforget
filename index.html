@@ -1959,6 +1959,8 @@ const STRINGS = {
     expandAria: 'Разгъни', collapseAria: 'Свий',
     deletedUndo: 'Бележката е изтрита.', undoBtn: 'Отмени', deleteAria: 'Изтрий',
     ctxEdit: 'Редактирай', ctxDelete: 'Изтрий', ctxAddSub: 'Добави подбележка',
+    // Показва се само върху приключена бележка (виж renderCtxMenuMain()).
+    ctxReopen: 'Върни в предишното',
     ctxShare: 'Сподели', ctxCopy: 'Копирай', shareCopied: 'Копирано в клипборда.',
     ctxColor: 'Цвят', noteColorNone: 'Без цвят',
     ctxAddReminder: 'Добави напомняне', ctxEditReminder: 'Промени напомняне',
@@ -2066,6 +2068,7 @@ const STRINGS = {
     expandAria: 'Expand', collapseAria: 'Collapse',
     deletedUndo: 'Note deleted.', undoBtn: 'Undo', deleteAria: 'Delete',
     ctxEdit: 'Edit', ctxDelete: 'Delete', ctxAddSub: 'Add sub-note',
+    ctxReopen: 'Back to previous',
     ctxShare: 'Share', ctxCopy: 'Copy', shareCopied: 'Copied to clipboard.',
     ctxColor: 'Color', noteColorNone: 'No color',
     ctxAddReminder: 'Add reminder', ctxEditReminder: 'Edit reminder',
@@ -2171,6 +2174,7 @@ const STRINGS = {
     expandAria: 'Развернуть', collapseAria: 'Свернуть',
     deletedUndo: 'Заметка удалена.', undoBtn: 'Отменить', deleteAria: 'Удалить',
     ctxEdit: 'Редактировать', ctxDelete: 'Удалить', ctxAddSub: 'Добавить подзаметку',
+    ctxReopen: 'Вернуть в прежнее',
     ctxShare: 'Поделиться', ctxCopy: 'Копировать', shareCopied: 'Скопировано в буфер обмена.',
     ctxColor: 'Цвет', noteColorNone: 'Без цвета',
     ctxAddReminder: 'Добавить напоминание', ctxEditReminder: 'Изменить напоминание',
@@ -2280,6 +2284,7 @@ const STRINGS = {
     expandAria: 'Ausklappen', collapseAria: 'Einklappen',
     deletedUndo: 'Notiz gelöscht.', undoBtn: 'Rückgängig', deleteAria: 'Löschen',
     ctxEdit: 'Bearbeiten', ctxDelete: 'Löschen', ctxAddSub: 'Unternotiz hinzufügen',
+    ctxReopen: 'Zurück zum vorherigen',
     ctxShare: 'Teilen', ctxCopy: 'Kopieren', shareCopied: 'In die Zwischenablage kopiert.',
     ctxColor: 'Farbe', noteColorNone: 'Keine Farbe',
     ctxAddReminder: 'Erinnerung hinzufügen', ctxEditReminder: 'Erinnerung ändern',
@@ -2387,6 +2392,7 @@ const STRINGS = {
     expandAria: 'Expandir', collapseAria: 'Contraer',
     deletedUndo: 'Nota eliminada.', undoBtn: 'Deshacer', deleteAria: 'Eliminar',
     ctxEdit: 'Editar', ctxDelete: 'Eliminar', ctxAddSub: 'Añadir subnota',
+    ctxReopen: 'Volver al anterior',
     ctxShare: 'Compartir', ctxCopy: 'Copiar', shareCopied: 'Copiado al portapapeles.',
     ctxColor: 'Color', noteColorNone: 'Sin color',
     ctxAddReminder: 'Añadir recordatorio', ctxEditReminder: 'Editar recordatorio',
@@ -4362,8 +4368,33 @@ function triggerHaptic(){
 function markDoneBySwipe(noteId, subId){
   const target = subId ? findSub(noteId, subId) : findNote(noteId);
   if(!target) return;
+  // Запомняме откъде идва, за да може да се върне точно там, а не просто
+  // "активна" (виж reopenItem()). Пази се само ако още не е приключена —
+  // иначе повторно плъзгане върху вече приключена би презаписало
+  // истинското предишно състояние със самото 'done'.
+  if(target.status !== 'done') target.prevStatus = target.status || 'open';
   target.status = 'done';
   target.completedAt = Date.now();
+  save(); render();
+  scrollToNote(subId ? noteId+'::'+subId : noteId);
+}
+
+// Връща приключена бележка в състоянието, от което е приключена — активна
+// или "в прогрес" (виж prevStatus, записан в markDoneBySwipe()). Бележки,
+// приключени преди тази функция да съществува, нямат prevStatus и се връщат
+// като активни: по-безопасното от двете предположения, защото "активна" е
+// нормалното начално състояние, а "в прогрес" твърди нещо, което не знаем.
+function reopenItem(noteId, subId){
+  const target = subId ? findSub(noteId, subId) : findNote(noteId);
+  if(!target || target.status !== 'done') return;
+  target.status = target.prevStatus === 'progress' ? 'progress' : 'open';
+  delete target.prevStatus;
+  // completedAt ЗАДЪЛЖИТЕЛНО отпада: по него archiveOldCompleted() решава
+  // кога бележката да отиде в кошчето, а календарът и серията броят по него
+  // приключените за деня (виж recordInHistory()/computeStreak()). Остане ли,
+  // върнатата бележка пак ще бъде архивирана след 30 дни и ще продължи да се
+  // брои като приключена, макар да е активна.
+  delete target.completedAt;
   save(); render();
   scrollToNote(subId ? noteId+'::'+subId : noteId);
 }
@@ -4768,7 +4799,16 @@ function closeCtxMenu(){
 function renderCtxMenuMain(noteId, subId){
   const s = t();
   const item = subId ? findSub(noteId, subId) : findNote(noteId);
-  let html = `<button data-ctx="edit">${ICONS.pencil}${s.ctxEdit}</button>`;
+  let html = '';
+  // "Върни" — само за приключени и само извън кошчето. В кошчето връщането
+  // значи друго (обратно от "Изтрити", виж филтъра с категориите) и двете
+  // едно до друго само биха объркали кое какво прави.
+  const parentNote = findNote(noteId);
+  const inTrash = parentNote && parentNote.tag === DELETED_TAG;
+  if(item && item.status === 'done' && !inTrash){
+    html += `<button data-ctx="reopen">${ICONS.replay}${s.ctxReopen}</button>`;
+  }
+  html += `<button data-ctx="edit">${ICONS.pencil}${s.ctxEdit}</button>`;
   if(!subId){
     html += `<button data-ctx="addsub">${ICONS.plus}${s.ctxAddSub}</button>`;
   }
@@ -4810,6 +4850,8 @@ function renderCtxMenuMain(noteId, subId){
         shareItem(noteId2, subId2);
       }else if(action === 'copy'){
         copyItemText(noteId2, subId2);
+      }else if(action === 'reopen'){
+        reopenItem(noteId2, subId2);
       }else if(action === 'delete'){
         deleteBySwipe(noteId2, subId2);
       }
