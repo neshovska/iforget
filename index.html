@@ -1959,8 +1959,9 @@ const STRINGS = {
     expandAria: 'Разгъни', collapseAria: 'Свий',
     deletedUndo: 'Бележката е изтрита.', undoBtn: 'Отмени', deleteAria: 'Изтрий',
     ctxEdit: 'Редактирай', ctxDelete: 'Изтрий', ctxAddSub: 'Добави подбележка',
-    // Показва се само върху приключена бележка (виж renderCtxMenuMain()).
-    ctxReopen: 'Върни в предишното',
+    // Показват се само върху приключена бележка (виж renderCtxMenuMain());
+    // кой от двата — според prevStatus, за да казва къде точно отива.
+    ctxReopenProgress: 'Върни в прогрес', ctxReopenActive: 'Върни в активни',
     ctxShare: 'Сподели', ctxCopy: 'Копирай', shareCopied: 'Копирано в клипборда.',
     ctxColor: 'Цвят', noteColorNone: 'Без цвят',
     ctxAddReminder: 'Добави напомняне', ctxEditReminder: 'Промени напомняне',
@@ -2068,7 +2069,7 @@ const STRINGS = {
     expandAria: 'Expand', collapseAria: 'Collapse',
     deletedUndo: 'Note deleted.', undoBtn: 'Undo', deleteAria: 'Delete',
     ctxEdit: 'Edit', ctxDelete: 'Delete', ctxAddSub: 'Add sub-note',
-    ctxReopen: 'Back to previous',
+    ctxReopenProgress: 'Back to in progress', ctxReopenActive: 'Back to active',
     ctxShare: 'Share', ctxCopy: 'Copy', shareCopied: 'Copied to clipboard.',
     ctxColor: 'Color', noteColorNone: 'No color',
     ctxAddReminder: 'Add reminder', ctxEditReminder: 'Edit reminder',
@@ -2174,7 +2175,7 @@ const STRINGS = {
     expandAria: 'Развернуть', collapseAria: 'Свернуть',
     deletedUndo: 'Заметка удалена.', undoBtn: 'Отменить', deleteAria: 'Удалить',
     ctxEdit: 'Редактировать', ctxDelete: 'Удалить', ctxAddSub: 'Добавить подзаметку',
-    ctxReopen: 'Вернуть в прежнее',
+    ctxReopenProgress: 'Вернуть в процесс', ctxReopenActive: 'Вернуть в активные',
     ctxShare: 'Поделиться', ctxCopy: 'Копировать', shareCopied: 'Скопировано в буфер обмена.',
     ctxColor: 'Цвет', noteColorNone: 'Без цвета',
     ctxAddReminder: 'Добавить напоминание', ctxEditReminder: 'Изменить напоминание',
@@ -2284,7 +2285,7 @@ const STRINGS = {
     expandAria: 'Ausklappen', collapseAria: 'Einklappen',
     deletedUndo: 'Notiz gelöscht.', undoBtn: 'Rückgängig', deleteAria: 'Löschen',
     ctxEdit: 'Bearbeiten', ctxDelete: 'Löschen', ctxAddSub: 'Unternotiz hinzufügen',
-    ctxReopen: 'Zurück zum vorherigen',
+    ctxReopenProgress: 'Zurück zu In Bearbeitung', ctxReopenActive: 'Zurück zu Aktiv',
     ctxShare: 'Teilen', ctxCopy: 'Kopieren', shareCopied: 'In die Zwischenablage kopiert.',
     ctxColor: 'Farbe', noteColorNone: 'Keine Farbe',
     ctxAddReminder: 'Erinnerung hinzufügen', ctxEditReminder: 'Erinnerung ändern',
@@ -2392,7 +2393,7 @@ const STRINGS = {
     expandAria: 'Expandir', collapseAria: 'Contraer',
     deletedUndo: 'Nota eliminada.', undoBtn: 'Deshacer', deleteAria: 'Eliminar',
     ctxEdit: 'Editar', ctxDelete: 'Eliminar', ctxAddSub: 'Añadir subnota',
-    ctxReopen: 'Volver al anterior',
+    ctxReopenProgress: 'Volver a en curso', ctxReopenActive: 'Volver a activas',
     ctxShare: 'Compartir', ctxCopy: 'Copiar', shareCopied: 'Copiado al portapapeles.',
     ctxColor: 'Color', noteColorNone: 'Sin color',
     ctxAddReminder: 'Añadir recordatorio', ctxEditReminder: 'Editar recordatorio',
@@ -4201,7 +4202,13 @@ function cancelSub(){
 // completed статусът е изцяло "територия" на swipe-а.
 function cycleStatus(noteId, subId){
   const target = subId ? findSub(noteId, subId) : findNote(noteId);
-  if(!target || target.status === 'done') return;
+  if(!target) return;
+  // Приключена: кръгчето я връща там, откъдето е приключена (виж
+  // reopenItem() и prevStatus). Дотогава беше мъртъв бутон — натискаш и
+  // нищо не се случва, което изглежда като счупено, а не като забрана.
+  // Приключването си остава само през swipe надясно, тоест кръгчето може
+  // да ИЗВАДИ от "приключено", но никога да сложи там.
+  if(target.status === 'done'){ reopenItem(noteId, subId); return; }
   target.status = target.status === 'open' ? 'progress' : 'open';
   save(); render();
   // Смяната на статус премества бележката в друга секция (Приключени/
@@ -4806,7 +4813,10 @@ function renderCtxMenuMain(noteId, subId){
   const parentNote = findNote(noteId);
   const inTrash = parentNote && parentNote.tag === DELETED_TAG;
   if(item && item.status === 'done' && !inTrash){
-    html += `<button data-ctx="reopen">${ICONS.replay}${s.ctxReopen}</button>`;
+    // Надписът казва КЪДЕ отива бележката, не просто "назад" — иначе
+    // потребителят не знае в кое от двете състояния ще я намери после.
+    const label = item.prevStatus === 'progress' ? s.ctxReopenProgress : s.ctxReopenActive;
+    html += `<button data-ctx="reopen">${ICONS.replay}${label}</button>`;
   }
   html += `<button data-ctx="edit">${ICONS.pencil}${s.ctxEdit}</button>`;
   if(!subId){
