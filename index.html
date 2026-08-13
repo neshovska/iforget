@@ -793,10 +793,20 @@
   .profile-panel .review-panel{display:flex;flex-direction:column;gap:2px;padding:2px;}
   /* Обяснителен ред в профила (в момента: срокът, след който приключените
      бележки се прибират — виж archiveOldCompleted()). Данни, които изчезват
-     сами, трябва да са казани на потребителя, а не само в кода. */
+     сами, трябва да са казани на потребителя, а не само в кода.
+     Нарочно ситен и компактен (по изрична молба) — предупреждението трябва
+     да се ЧЕТЕ, но да не тежи колкото истинските действия над него.
+     Иконката (ICONS.alert) е в flex ред, за да се увива текстът подравнен
+     ДО нея, а не под нея; align-items:flex-start я държи на първия ред.
+     БЕЗ отстъп вляво (за разлика от бутоните в групата, които са на 22px):
+     пробван беше и подравнен вариант, но тесният ред увива текста на 5
+     реда вместо 4 — компактността е по-важна от колонката, защото това е
+     обяснение, не действие. */
   .profile-panel .profile-hint{
-    margin:8px 2px 2px;font-size:11.5px;line-height:1.45;color:var(--text-dim);
+    display:flex;align-items:flex-start;gap:5px;
+    margin:6px 2px 2px;font-size:10px;line-height:1.35;color:var(--text-dim);
   }
+  .profile-panel .profile-hint .ic{margin-top:1px;opacity:.75;}
   .profile-panel .review-sub{font-size:11.5px;color:var(--text-dim);line-height:1.5;margin-bottom:10px;}
   .profile-panel .review-block{margin-bottom:14px;}
   .profile-panel .review-block-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px;gap:8px;}
@@ -1827,7 +1837,11 @@ const ICONS = {
   // Малка катинарче иконка — за заключени Premium опции (виж .color-sw.locked
   // в renderProfileMenu()). Умишлено без fill (плътен контур), за да е добре
   // видима върху цветен фон на самото swatch копче.
-  lock: '<svg class="ic" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>'
+  lock: '<svg class="ic" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>',
+  // Удивителен знак в кръгче — бележката за изтичащите бележки в група
+  // "Данни" (виж .profile-hint). По-дребен от останалите (11px) и с
+  // по-дебел щрих, за да остане четлив на тоя размер.
+  alert: '<svg class="ic" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 7.5v5.5"></path><path d="M12 16.5h.01"></path></svg>'
 };
 
 // Текстове за двата езика — БГ (по подразбиране) и EN. t() връща обекта за
@@ -2836,7 +2850,7 @@ function renderProfileMenu(){
     <button type="button" class="action" data-action="calendar">${ICONS.calendar}${L(s.calendarBtn)}</button>
     <button type="button" class="action" data-action="export">${ICONS.download}${L(s.exportBackup)}</button>
     <button type="button" class="action" data-action="import">${ICONS.upload}${L(s.importBackup)}</button>
-    <p class="profile-hint">${s.retentionNote}</p>
+    <p class="profile-hint">${ICONS.alert}<span>${s.retentionNote}</span></p>
   `;
   // "Статистика" — само за административния акаунт (isSatoriUser(), виж по-горе),
   // не се вижда от никой друг потребител на приложението.
