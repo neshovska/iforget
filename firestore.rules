@@ -27,6 +27,24 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Обратна връзка от приложението (виж renderFeedbackForm() в index.html).
+    // Всеки ВЛЯЗЪЛ потребител може само да СЪЗДАДЕ съобщение — не може да
+    // чете чуждите, нито да редактира или трие своето. Чете само админският
+    // акаунт (renderFeedbackInbox()).
+    // uid се проверява срещу request.auth.uid, за да не може някой да праща
+    // съобщения от чуждо име; дължината е ограничена, за да не се пълни
+    // базата с огромни записи.
+    match /feedback/{docId} {
+      allow create: if request.auth != null
+                     && request.resource.data.uid == request.auth.uid
+                     && request.resource.data.text is string
+                     && request.resource.data.text.size() > 0
+                     && request.resource.data.text.size() <= 2000;
+      allow read: if request.auth != null
+                   && request.auth.token.email == 'neshovska@yahoo.com';
+      allow update, delete: if false;
+    }
+
     // Premium инфраструктура (виж CLAUDE.md за пълния план) — ПОДГОТВЕНА,
     // но неактивна, докато config/premium.enabled не стане true.
 
