@@ -5204,8 +5204,20 @@ function copyItemText(noteId, subId){
 // Резервно копие на бележките — вече Firestore е основното трайно
 // съхранение (виж save()/loadFromCloud()), но локален файл е полезен за
 // ръчна миграция между акаунти или пълна офлайн застраховка.
+// Резервното копие пази И реда на категориите, И историята по дни (серията/
+// календара) — не само бележките. Дотогава изнасяше гол масив от бележки и
+// при възстановяване потребителят си връщаше бележките, но губеше серията,
+// въпреки че приложението изрично обещава "Серията и календарът се запазват".
+// Форматът е обект с version; старите файлове (гол масив) продължават да се
+// внасят — виж importNotesFromFile().
 function exportNotes(){
-  const data = JSON.stringify(notes, null, 2);
+  const data = JSON.stringify({
+    version: 2,
+    exportedAt: Date.now(),
+    notes,
+    tagOrder,
+    dayHistory,
+  }, null, 2);
   const blob = new Blob([data], {type: 'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -5216,34 +5228,103 @@ function exportNotes(){
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+// Привежда бележка от архивен файл към очаквания вид. Файлът може да е
+// ръчно редактиран, отрязан при сваляне или изнесен от друга програма —
+// каквото и да дойде, след тази функция типовете са верни. БЕЗ нея една
+// бележка с липсващ text чупи render() завинаги: данните се записват
+// ПРЕДИ рисуването, значи повреденото отива и в облака и приложението
+// остава празен екран при всяко следващо отваряне.
+// Връща null за неща, които изобщо не приличат на бележка — те се изхвърлят,
+// вместо да развалят целия внос.
+function sanitizeImportedNote(raw, isSub){
+  if(!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const str = v => (v === null || v === undefined) ? '' : String(v);
+  const num = v => (typeof v === 'number' && isFinite(v)) ? v : null;
+  const prefix = isSub ? 's' : 'n';
+  const out = {
+    id: str(raw.id) || prefix+Date.now()+Math.random().toString(36).slice(2,6),
+    text: str(raw.text),
+    createdAt: num(raw.createdAt) || Date.now(),
+    status: ['open','progress','done'].includes(raw.status) ? raw.status : 'open',
+    color: raw.color == null ? null : str(raw.color),
+    reminderAt: num(raw.reminderAt),
+    reminderRepeat: ['daily','weekly'].includes(raw.reminderRepeat) ? raw.reminderRepeat : null,
+  };
+  // Полета, които съществуват само понякога — добавят се само ако са смислени,
+  // за да не се появят като null там, където кодът проверява за наличие.
+  if(num(raw.completedAt) !== null) out.completedAt = num(raw.completedAt);
+  if(['open','progress'].includes(raw.prevStatus)) out.prevStatus = raw.prevStatus;
+  if(!isSub){
+    out.tag = raw.tag == null ? null : str(raw.tag);
+    out.subs = Array.isArray(raw.subs)
+      ? raw.subs.map(sub => sanitizeImportedNote(sub, true)).filter(Boolean)
+      : [];
+    if(num(raw.deletedAt) !== null) out.deletedAt = num(raw.deletedAt);
+    if(raw.archiveExempt) out.archiveExempt = true;
+  }
+  return out;
+}
+
 function importNotesFromFile(file){
   const reader = new FileReader();
   reader.onload = e => {
     try{
       const parsed = JSON.parse(e.target.result);
-      if(!Array.isArray(parsed)) throw new Error('invalid backup');
+      // Два формата: гол масив (стари файлове, само бележки) и обект с
+      // notes/tagOrder/dayHistory (от version 2 нататък). Старите ПРОДЪЛЖАВАТ
+      // да работят — иначе всяко вече свалено копие става безполезно.
+      const rawNotes = Array.isArray(parsed) ? parsed
+                     : (parsed && Array.isArray(parsed.notes)) ? parsed.notes
+                     : null;
+      if(!rawNotes) throw new Error('invalid backup');
+      const clean = rawNotes.map(n => sanitizeImportedNote(n, false)).filter(Boolean);
+      // Файл, в който НИЩО не прилича на бележка, е сгрешен файл, а не празен
+      // архив — по-честно е да откажем, отколкото да изтрием всичко и да
+      // наречем това "успех".
+      if(rawNotes.length && !clean.length) throw new Error('nothing usable');
       if(!window.confirm(t().confirmImport)) return;
-      notes = parsed;
-      notes.forEach(n=>{
-        if(!n.subs) n.subs = [];
-        if(n.tag===undefined) n.tag = null;
-        if(n.reminderAt===undefined) n.reminderAt = null;
-        if(n.color===undefined) n.color = null;
-        if(n.reminderRepeat===undefined) n.reminderRepeat = null;
-        n.subs.forEach(s=>{ if(s.reminderAt===undefined) s.reminderAt = null; if(s.color===undefined) s.color = null; if(s.reminderRepeat===undefined) s.reminderRepeat = null; });
-      });
+      notes = clean;
+      // Редът на категориите и историята по дни идват само от новия формат.
+      // При стар файл се ПАЗЯТ сегашните — по-добре от това да ги изтрием,
+      // защото файлът просто не носи такива данни, не казва "нямам такива".
+      if(!Array.isArray(parsed)){
+        if(Array.isArray(parsed.tagOrder)){
+          tagOrder = parsed.tagOrder.filter(x => typeof x === 'string');
+          saveTagOrder();
+        }
+        if(parsed.dayHistory && typeof parsed.dayHistory === 'object' && !Array.isArray(parsed.dayHistory)){
+          const hist = {};
+          Object.entries(parsed.dayHistory).forEach(([day, v])=>{
+            if(!v || typeof v !== 'object') return;
+            const c = typeof v.c === 'number' && isFinite(v.c) ? v.c : 0;
+            const d = typeof v.d === 'number' && isFinite(v.d) ? v.d : 0;
+            if(c || d) hist[day] = { c, d };
+          });
+          dayHistory = hist;
+          saveDayHistory();
+        }
+      }
       save(); render();
       closeProfilePanel();
       window.alert(t().importSuccess);
     }catch(err){
+      console.error('import failed', err);
       window.alert(t().importError);
     }
   };
   reader.readAsText(file);
 }
 
+// Приема НАРОЧНО и нестрингови стойности. Повреден архивен файл (виж
+// importNotesFromFile()) може да донесе text: null / число / липсващо
+// изобщо, а хвърлена грешка тук чупи ЦЕЛИЯ render() — приложението остава
+// празен екран, при това СЛЕД като данните вече са записани и в облака,
+// значи и презареждането не помага. По-добре празен текст на един ред,
+// отколкото мъртво приложение. Това е предпазната мрежа; истинската
+// проверка е при внасянето (sanitizeImportedNote()).
 function escapeHtml(s){
-  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  if(s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 // Категория/таг на бележка: 'personal' и 'work' са вградени (превеждат се
