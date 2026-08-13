@@ -724,16 +724,6 @@
   .profile-panel .group-content.open{opacity:1;}
   .profile-panel .group-content .action{padding-left:22px;font-size:12.5px;}
   .profile-panel .group-content hr{margin:4px 0 4px 22px;width:calc(100% - 22px);}
-  /* Адресът за обратна връзка, изписан като видим текст ПОД бутона (виж
-     renderProfileMenu() — mailto: не отваря пощенски клиент навсякъде,
-     затова адресът трябва да се вижда и да може да се маркира/копира).
-     Отстъпът вляво повтаря точно този на етикета на бутон в група:
-     padding-left(22px) + иконка(14px) + gap(8px) = 44px — така адресът
-     застава под думите "Обратна връзка", а не залепен за левия ръб. */
-  .profile-panel .support-email{
-    margin:0 2px 6px 0;padding-left:44px;font-size:11.5px;line-height:1.45;
-    color:var(--text-dim);-webkit-user-select:text;user-select:text;
-  }
   /* По ситен шрифт за "Поверителност"/"Общи условия" в групата Помощ —
      по-малко визуално тегло от истинските действия (обратна връзка и т.н.),
      още по-дребен от преди (10px) по изрична молба. Текстът (.action-label)
@@ -2866,10 +2856,15 @@ function renderProfileMenu(){
 
   // Помощ — Поверителност/Общи условия по ситен шрифт (.small-link) по
   // изрична молба — по-малко визуално тегло от истинските действия.
+  // Обратната връзка е САМИЯТ имейл адрес (с иконка плик), не надпис
+  // "Обратна връзка" — по изрична молба. Двойна полза: `mailto:` не отваря
+  // пощенски клиент на всяка машина, а така адресът поне се ЧЕТЕ и може да
+  // се препише ръчно. Преводът (s.feedbackBtn) остава като aria-label —
+  // адресът е еднакъв на всички езици, но екранните четци трябва да кажат
+  // за какво служи.
   html += profileGroupBlock('help', ICONS.mail, s.profileGroupHelp, `
     <button type="button" class="action" data-action="replay-tutorial">${ICONS.replay}${L(s.replayTutorial)}</button>
-    <a class="action" href="mailto:${SUPPORT_EMAIL}">${ICONS.mail}${L(s.feedbackBtn)}</a>
-    <p class="support-email">${SUPPORT_EMAIL}</p>
+    <a class="action" href="mailto:${SUPPORT_EMAIL}" aria-label="${s.feedbackBtn}">${ICONS.mail}${L(SUPPORT_EMAIL)}</a>
     <a class="action small-link" href="privacy.html" target="_blank" rel="noopener">${ICONS.shield}${L(s.privacyLink)}</a>
     <a class="action small-link" href="terms.html" target="_blank" rel="noopener">${ICONS.doc}${L(s.termsLink)}</a>
   `);
