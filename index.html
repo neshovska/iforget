@@ -1660,17 +1660,15 @@ const DONE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 // заявка), не се показва на никой друг потребител на приложението.
 const SATORI_TAG = 'satori';
 const SATORI_EMAIL = 'neshovska@yahoo.com';
-// Имейл за бутона "Обратна връзка" в профила (виж renderProfileMenu()).
-// ДЪРЖИ СЕ ОТДЕЛНО от SATORI_EMAIL съзнателно, макар сега да съвпадат:
-// SATORI_EMAIL е АДМИН акаунтът — точно той има право да чете документите
-// на всички потребители (виж firestore.rules). Да го рекламираме и като
-// адрес за писане значи да покажем публично кой акаунт си струва да бъде
-// атакуван. Обратната връзка е за външни хора; админът не бива да е.
-// TODO: смени на истинска пощенска кутия на домейна (support@iforget.eu),
-// щом тя започне да ПОЛУЧАВА поща — Resend само изпраща, приемането иска
-// MX запис (пренасочване от регистратора или Cloudflare Email Routing).
-// Дотогава остава личният адрес, защото празна кутия е по-лошо от лична.
-const SUPPORT_EMAIL = SATORI_EMAIL;
+// Имейл за "Обратна връзка" в профила (виж renderProfileMenu()) — mailto:
+// директно към истинска пощенска кутия на домейна, хоствана в Zoho Mail
+// (MX/SPF/DKIM записите са проверени и живи). ДЪРЖИ СЕ ОТДЕЛНО от
+// SATORI_EMAIL съзнателно: SATORI_EMAIL е АДМИН акаунтът — точно той има
+// право да чете документите на всички потребители (виж firestore.rules).
+// Да го рекламираме и като адрес за писане значи да покажем публично кой
+// акаунт си струва да бъде атакуван. Обратната връзка е за външни хора;
+// админът не бива да е.
+const SUPPORT_EMAIL = 'info@iforget.eu';
 function isSatoriUser(){
   return !!(currentUser && currentUser.email && currentUser.email.toLowerCase() === SATORI_EMAIL);
 }
@@ -1869,12 +1867,6 @@ const STRINGS = {
     glassNotesToggle: 'Прозрачни бележки',
     neonNotesToggle: 'Неонови цветове',
     schoolThemeToggle: 'Ученическа визия',
-    feedbackIntro: 'Пиши ни какво мислим — четем всичко.',
-    feedbackPlaceholder: 'Какво ти харесва, какво липсва, какво не работи?',
-    feedbackSend: 'Изпрати',
-    feedbackSent: 'Благодарим! Съобщението стигна до нас.',
-    feedbackError: 'Съобщението не тръгна. Опитай пак след малко.',
-    feedbackEmpty: 'Напиши нещо, преди да изпратиш.',
     feedbackInbox: 'Получени съобщения',
     feedbackInboxEmpty: 'Няма получени съобщения.',
     cleanLookLabel: 'Чиста визия — без фон',
@@ -1979,12 +1971,6 @@ const STRINGS = {
     glassNotesToggle: 'Transparent notes',
     neonNotesToggle: 'Neon colours',
     schoolThemeToggle: 'School look',
-    feedbackIntro: 'Tell us what you think — we read everything.',
-    feedbackPlaceholder: 'What do you like, what is missing, what does not work?',
-    feedbackSend: 'Send',
-    feedbackSent: 'Thank you! Your message reached us.',
-    feedbackError: 'The message did not go through. Try again in a moment.',
-    feedbackEmpty: 'Write something before sending.',
     feedbackInbox: 'Received messages',
     feedbackInboxEmpty: 'No messages yet.',
     cleanLookLabel: 'Clean look — no background',
@@ -2087,12 +2073,6 @@ const STRINGS = {
     glassNotesToggle: 'Прозрачные заметки',
     neonNotesToggle: 'Неоновые цвета',
     schoolThemeToggle: 'Школьный вид',
-    feedbackIntro: 'Напиши, что думаешь — мы читаем всё.',
-    feedbackPlaceholder: 'Что нравится, чего не хватает, что не работает?',
-    feedbackSend: 'Отправить',
-    feedbackSent: 'Спасибо! Сообщение дошло до нас.',
-    feedbackError: 'Сообщение не отправилось. Попробуй ещё раз чуть позже.',
-    feedbackEmpty: 'Напиши что-нибудь перед отправкой.',
     feedbackInbox: 'Полученные сообщения',
     feedbackInboxEmpty: 'Пока нет сообщений.',
     cleanLookLabel: 'Чистый вид — без фона',
@@ -2199,12 +2179,6 @@ const STRINGS = {
     glassNotesToggle: 'Transparente Notizen',
     neonNotesToggle: 'Neonfarben',
     schoolThemeToggle: 'Schul-Look',
-    feedbackIntro: 'Schreib uns, was du denkst — wir lesen alles.',
-    feedbackPlaceholder: 'Was gefällt dir, was fehlt, was funktioniert nicht?',
-    feedbackSend: 'Senden',
-    feedbackSent: 'Danke! Deine Nachricht ist angekommen.',
-    feedbackError: 'Die Nachricht ging nicht raus. Versuch es gleich noch einmal.',
-    feedbackEmpty: 'Schreib etwas, bevor du sendest.',
     feedbackInbox: 'Erhaltene Nachrichten',
     feedbackInboxEmpty: 'Noch keine Nachrichten.',
     cleanLookLabel: 'Klarer Look — ohne Hintergrund',
@@ -2309,12 +2283,6 @@ const STRINGS = {
     glassNotesToggle: 'Notas transparentes',
     neonNotesToggle: 'Colores neón',
     schoolThemeToggle: 'Estilo escolar',
-    feedbackIntro: 'Cuéntanos qué piensas — lo leemos todo.',
-    feedbackPlaceholder: '¿Qué te gusta, qué falta, qué no funciona?',
-    feedbackSend: 'Enviar',
-    feedbackSent: '¡Gracias! Tu mensaje nos llegó.',
-    feedbackError: 'El mensaje no se envió. Inténtalo de nuevo en un momento.',
-    feedbackEmpty: 'Escribe algo antes de enviar.',
     feedbackInbox: 'Mensajes recibidos',
     feedbackInboxEmpty: 'Aún no hay mensajes.',
     cleanLookLabel: 'Estilo limpio — sin fondo',
@@ -2890,7 +2858,8 @@ function renderProfileMenu(){
   // изрична молба — по-малко визуално тегло от истинските действия.
   html += profileGroupBlock('help', ICONS.mail, s.profileGroupHelp, `
     <button type="button" class="action" data-action="replay-tutorial">${ICONS.replay}${L(s.replayTutorial)}</button>
-    <button type="button" class="action" data-action="feedback">${ICONS.mail}${L(s.feedbackBtn)}</button>
+    <a class="action" href="mailto:${SUPPORT_EMAIL}">${ICONS.mail}${L(s.feedbackBtn)}</a>
+    <p class="profile-hint" style="margin:0 2px 6px; -webkit-user-select:text; user-select:text;">${SUPPORT_EMAIL}</p>
     <a class="action small-link" href="privacy.html" target="_blank" rel="noopener">${ICONS.shield}${L(s.privacyLink)}</a>
     <a class="action small-link" href="terms.html" target="_blank" rel="noopener">${ICONS.doc}${L(s.termsLink)}</a>
   `);
@@ -3010,9 +2979,6 @@ function renderProfileMenu(){
   panel.querySelector('[data-action="calendar"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); calendarRefDate = new Date(); renderCalendarView(); });
   panel.querySelector('[data-action="export"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); exportNotes(); closeProfilePanel(); });
   panel.querySelector('[data-action="import"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); document.getElementById('importFileInput').click(); });
-  panel.querySelector('[data-action="feedback"]').addEventListener('mousedown', e=>{
-    e.preventDefault(); e.stopPropagation(); renderFeedbackForm();
-  });
   const inboxBtn = panel.querySelector('[data-action="feedback-inbox"]');
   if(inboxBtn) inboxBtn.addEventListener('mousedown', e=>{
     e.preventDefault(); e.stopPropagation(); renderFeedbackInbox();
@@ -3437,58 +3403,10 @@ function fmtDateTime(ts){
 }
 
 // Обратна връзка ВЪТРЕ в приложението, вместо mailto — по изрична заявка.
-// Профилът се вижда само след вход, значи авторът е известен: имейлът и uid
-// се записват автоматично и потребителят не пише кой е.
-// ВАЖНО: записът минава през firestore.rules (колекция feedback) — докато
-// правилата не са качени, create се отхвърля и формата показва грешка.
-function renderFeedbackForm(){
-  const s = t();
-  const panel = document.getElementById('profilePanel');
-  panel.innerHTML = `
-    <div class="sub-form">
-      <div class="profile-hint" style="margin:0 2px 2px;">${s.feedbackIntro}</div>
-      <textarea id="fbText" maxlength="2000" placeholder="${s.feedbackPlaceholder}"></textarea>
-      <div class="form-msg" id="fbMsg"></div>
-      <div class="sub-form-actions">
-        <button type="button" class="secondary" data-action="fb-cancel">${s.cancelAria}</button>
-        <button type="button" class="primary" data-action="fb-send">${s.feedbackSend}</button>
-      </div>
-    </div>`;
-  const msg = panel.querySelector('#fbMsg');
-  const area = panel.querySelector('#fbText');
-  setTimeout(()=>area.focus(), 0);
-  panel.querySelector('[data-action="fb-cancel"]').addEventListener('mousedown', e=>{
-    e.preventDefault(); e.stopPropagation(); renderProfileMenu();
-  });
-  panel.querySelector('[data-action="fb-send"]').addEventListener('mousedown', e=>{
-    e.preventDefault(); e.stopPropagation();
-    const text = area.value.trim();
-    msg.className = 'form-msg';
-    if(!text){ msg.className = 'form-msg error'; msg.textContent = s.feedbackEmpty; return; }
-    if(!currentUser){ msg.className = 'form-msg error'; msg.textContent = s.feedbackError; return; }
-    const btn = panel.querySelector('[data-action="fb-send"]');
-    btn.disabled = true;
-    db.collection('feedback').add({
-      uid: currentUser.uid,
-      email: currentUser.email || '',
-      text,
-      lang,
-      createdAt: Date.now(),
-    }).then(()=>{
-      msg.className = 'form-msg success';
-      msg.textContent = s.feedbackSent;
-      area.value = '';
-      setTimeout(()=>{ if(document.getElementById('fbMsg')) renderProfileMenu(); }, 1600);
-    }).catch(err=>{
-      console.error('feedback save failed', err);
-      msg.className = 'form-msg error';
-      msg.textContent = s.feedbackError;
-      btn.disabled = false;
-    });
-  });
-}
-
-// Получените съобщения — само за админския акаунт (виж isSatoriUser() и
+// Получените съобщения — история от периода, в който имаше вътрешна форма
+// за обратна връзка (виж git история); сега бутонът праща direct mailto
+// към SUPPORT_EMAIL, но старите записи в Firestore остават четими тук,
+// само за админския акаунт (виж isSatoriUser() и
 // правилото за четене на колекцията feedback във firestore.rules).
 function renderFeedbackInbox(){
   const s = t();
@@ -6058,6 +5976,24 @@ showAuthScreen(true);
 loadLocalCache();
 archiveOldCompleted();
 purgeExpiredTrash();
+
+// Service worker — прави приложението достъпно офлайн: кешира "обвивката"
+// (index.html + иконки/снимки + самите Firebase SDK скриптове, виж sw.js)
+// така, че страницата да се отваря дори без връзка. Данните вече оцеляват
+// офлайн отделно, през localStorage кеша по-горе (save()/loadLocalCache())
+// — SW-то решава само дали ИЗОБЩО ще се зареди страницата, не синхрони-
+// зацията. Прескача се в нативните апове (Capacitor) — те стартират от
+// локални файлове наготово, SW е излишен там и WebView поддръжката е
+// неравномерна.
+if('serviceWorker' in navigator){
+  const cap = window.Capacitor;
+  const isNativeApp = !!(cap && cap.isNativePlatform && cap.isNativePlatform());
+  if(!isNativeApp){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('sw.js').catch(err=>console.warn('SW регистрация неуспешна', err));
+    });
+  }
+}
 </script>
 </body>
 </html>
