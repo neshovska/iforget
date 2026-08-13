@@ -281,6 +281,16 @@
     color:var(--gold);background:rgba(var(--gold-rgb),.14);
     padding:2px 7px 2px 6px;border-radius:20px;line-height:1;
   }
+  /* Значка "не е синхронизирано" до заглавието — виж updateSyncBadge().
+     Нарочно приглушена (не червена/тревожна): това НЕ е грешка, а нормално
+     състояние без мрежа; данните са запазени локално и ще тръгнат сами.
+     Целта е да се забележи, ако остане дълго, не да плаши. */
+  .sync-badge{
+    display:inline-flex;align-items:center;justify-content:center;
+    color:var(--text-dim);background:rgba(var(--text-dim-rgb),.14);
+    width:20px;height:20px;border-radius:50%;line-height:1;cursor:pointer;
+  }
+  .sync-badge:active{background:rgba(var(--text-dim-rgb),.26);}
   /* Бутоните за език/тема/търсене са ясно видими "чипове" с фон и рамка,
      не просто тих текст — за да се забелязват веднага в топбара. */
   .topbar-actions{display:flex;align-items:center;gap:6px;}
@@ -1380,6 +1390,11 @@
     <div class="topbar-title-group">
       <h1>iForget</h1>
       <span class="streak-badge" id="streakBadge" style="display:none"></span>
+      <!-- Показва се САМО когато има промени, които още не са стигнали до
+           облака (виж updateSyncBadge()) — иначе стои скрит и не отнема
+           място. Без него провалът е напълно тих: бележката си стои на
+           екрана и потребителят я мисли за запазена. -->
+      <span class="sync-badge" id="syncBadge" style="display:none" role="button" tabindex="0"></span>
     </div>
     <div class="topbar-actions">
       <button id="langBtn" class="icon-btn" aria-label="Език">EN</button>
@@ -1752,6 +1767,23 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+// Офлайн опашка на Firestore (IndexedDB). БЕЗ нея записът, направен без
+// мрежа, живее само в паметта на страницата — затвори ли се приложението
+// преди връзката да се върне, промяната изчезва от облака ЗАВИНАГИ. Тогава
+// при следващото отваряне loadFromCloud() дърпа по-старото от сървъра и
+// презаписва локалния кеш, тоест бележката просто изчезва пред очите на
+// потребителя. Рискът стана реален, откакто sw.js позволява приложението
+// да се ОТВАРЯ офлайн (виж sw.js) — дотогава без мрежа нямаше и екран.
+// С включена опашка записите лежат на диска и тръгват сами при мрежа.
+// Викa се ПРЕДИ първата операция с Firestore — иначе се игнорира.
+// synchronizeTabs:true — при два отворени раздела иначе вторият гърми с
+// 'failed-precondition' и остава изцяло без опашка.
+db.enablePersistence({ synchronizeTabs: true }).catch(err=>{
+  // Не е фатално: 'failed-precondition' (твърде стар браузър/конфликт
+  // между раздели) и 'unimplemented' (без IndexedDB, напр. Safari в
+  // частен режим) значат само, че се работи както преди — без опашка.
+  console.warn('Firestore офлайн опашка не е включена:', err && err.code);
+});
 // europe-west1 — трябва да съвпада ТОЧНО с региона на Cloud Functions
 // (виж setGlobalOptions() в functions/index.js), иначе compat SDK по
 // подразбиране търси функцията в us-central1 и хвърля "not-found" грешка.
@@ -1839,6 +1871,9 @@ const ICONS = {
   // в renderProfileMenu()). Умишлено без fill (плътен контур), за да е добре
   // видима върху цветен фон на самото swatch копче.
   lock: '<svg class="ic" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>',
+  // Облак с наклонена черта — значката "не е синхронизирано" (виж
+  // updateSyncBadge()). 11px, за да пасне на дребната значка.
+  cloudOff: '<svg class="ic" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.2 18H6a4 4 0 0 1-.9-7.9A6 6 0 0 1 15 6.6"></path><path d="M18 10a4 4 0 0 1 .5 8"></path><line x1="3" y1="3" x2="21" y2="21"></line></svg>',
   // Удивителен знак в кръгче — бележката за изтичащите бележки в група
   // "Данни" (виж .profile-hint). По-дребен от останалите (11px) и с
   // по-дебел щрих, за да остане четлив на тоя размер.
@@ -1873,6 +1908,11 @@ const STRINGS = {
     authBeats: 'Запиши. Направи. Приключи.',
     authFeat1: 'Твоите бележки',
     retentionNote: 'Приключените бележки отиват в „Изтрити“ след 30 дни, а кошчето се чисти след 5 — приложението е за днешния ден, не за архив. Серията и календарът се запазват.',
+    // Значка "не е синхронизирано" (updateSyncBadge()) + предупреждение при
+    // близък таван на документа (checkDocSize()).
+    syncPending: 'не е синхронизирано',
+    syncPendingHint: 'Промените са запазени на устройството и ще отидат в облака сами, щом има мрежа.',
+    storageAlmostFull: 'Бележките ти станаха много. Запази резервно копие и разчисти приключените, за да не спре синхронизацията.',
     authFeat2: 'Твоят прогрес',
     authFeat3: 'Твоят контрол',
     authSignature: 'iForget — помни това, което има значение.',
@@ -1977,6 +2017,9 @@ const STRINGS = {
     authBeats: 'Write it. Do it. Done.',
     authFeat1: 'Your notes',
     retentionNote: 'Completed notes move to “Deleted” after 30 days, and the trash clears after 5 — this app is for today, not an archive. Your streak and calendar are kept.',
+    syncPending: 'not synced',
+    syncPendingHint: 'Your changes are saved on this device and will reach the cloud on their own once you are online.',
+    storageAlmostFull: 'You have a lot of notes now. Save a backup and clear out completed ones so syncing does not stop.',
     authFeat2: 'Your progress',
     authFeat3: 'Your control',
     authSignature: 'iForget — remember what matters.',
@@ -2079,6 +2122,9 @@ const STRINGS = {
     authBeats: 'Запиши. Сделай. Заверши.',
     authFeat1: 'Твои заметки',
     retentionNote: 'Завершённые заметки уходят в «Удалённые» через 30 дней, корзина — через 5. Приложение для сегодня, не архив. Серия и календарь сохраняются.',
+    syncPending: 'не синхронизировано',
+    syncPendingHint: 'Изменения сохранены на устройстве и уйдут в облако сами, как только появится сеть.',
+    storageAlmostFull: 'Заметок стало очень много. Сохрани резервную копию и почисти завершённые, чтобы синхронизация не остановилась.',
     authFeat2: 'Твой прогресс',
     authFeat3: 'Твой контроль',
     authSignature: 'iForget — помни то, что важно.',
@@ -2185,6 +2231,9 @@ const STRINGS = {
     authBeats: 'Notiere. Erledige. Hake ab.',
     authFeat1: 'Deine Notizen',
     retentionNote: 'Erledigte Notizen wandern nach 30 Tagen in „Gelöscht“, der Papierkorb leert sich nach 5 — die App ist für heute, kein Archiv. Serie und Kalender bleiben erhalten.',
+    syncPending: 'nicht synchronisiert',
+    syncPendingHint: 'Deine Änderungen sind auf dem Gerät gespeichert und gehen von selbst in die Cloud, sobald du online bist.',
+    storageAlmostFull: 'Du hast inzwischen sehr viele Notizen. Sichere eine Kopie und räume Erledigtes auf, damit die Synchronisierung nicht stoppt.',
     authFeat2: 'Dein Fortschritt',
     authFeat3: 'Deine Kontrolle',
     authSignature: 'iForget — erinnere dich an das, was zählt.',
@@ -2289,6 +2338,9 @@ const STRINGS = {
     authBeats: 'Anótalo. Hazlo. Listo.',
     authFeat1: 'Tus notas',
     retentionNote: 'Las notas completadas pasan a «Eliminadas» tras 30 días y la papelera se vacía tras 5 — la app es para hoy, no un archivo. Tu racha y el calendario se conservan.',
+    syncPending: 'sin sincronizar',
+    syncPendingHint: 'Tus cambios están guardados en el dispositivo y llegarán a la nube solos en cuanto tengas conexión.',
+    storageAlmostFull: 'Ya tienes muchas notas. Guarda una copia de seguridad y limpia las completadas para que no se detenga la sincronización.',
     authFeat2: 'Tu progreso',
     authFeat3: 'Tu control',
     authSignature: 'iForget — recuerda lo que importa.',
@@ -2538,6 +2590,13 @@ function applyTheme(){
 function applyStaticText(){
   const s = t();
   document.documentElement.setAttribute('lang', lang);
+  // Значката за синхронизация носи текст — при смяна на езика трябва да се
+  // пренапише, ако точно в момента се вижда (иначе остава на стария език).
+  const syncEl = document.getElementById('syncBadge');
+  if(syncEl && syncEl.style.display !== 'none'){
+    syncEl.title = s.syncPendingHint;
+    syncEl.setAttribute('aria-label', s.syncPending);
+  }
   document.getElementById('searchBtn').setAttribute('aria-label', s.searchAria);
   document.getElementById('searchInput').setAttribute('placeholder', s.searchPlaceholder);
   document.getElementById('noteInput').setAttribute('placeholder', s.notePlaceholder);
@@ -3917,6 +3976,9 @@ auth.onAuthStateChanged(user=>{
     render();
     showAuthScreen(false);
   }
+  // Значката е за облака на КОНКРЕТЕН акаунт — при изход трябва да си отиде,
+  // иначе виси над екрана за вход без никакъв смисъл.
+  updateSyncBadge();
 });
 
 // Молим браузъра да третира данните ни като "persistent" — намалява шанса
@@ -3984,15 +4046,94 @@ function updateTopbarHeight(){
   if(tb) document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight + 'px');
 }
 
+// ═══ Състояние на синхронизацията ═══
+// Всички бележки живеят в ЕДИН документ users/{uid}, поле notes. Записът в
+// облака не бива да блокира интерфейса, но и не бива да се проваля тихо —
+// затова броим неприключилите записи и ги показваме в topbar-а.
+// ВАЖНО: с включена офлайн опашка (виж enablePersistence() по-горе) обещанието
+// от set() се изпълнява чак когато СЪРВЪРЪТ потвърди. Значи "висящ запис" =
+// "още не е в облака", което е точно каквото значката трябва да казва.
+let pendingCloudWrites = 0;
+let cloudWriteFailed = false;
+let syncBadgeTimer = null;
+
+// Обикновеният запис отнема части от секундата — ако значката се показваше
+// веднага, щеше да мига при всяка промяна. Показва се само ако записът се е
+// заклещил за повече от 2.5 сек (реално: няма мрежа или има проблем).
+function updateSyncBadge(){
+  const el = document.getElementById('syncBadge');
+  if(!el) return;
+  const unsynced = !!currentUser && (pendingCloudWrites > 0 || cloudWriteFailed);
+  if(!unsynced){
+    if(syncBadgeTimer){ clearTimeout(syncBadgeTimer); syncBadgeTimer = null; }
+    el.style.display = 'none';
+    return;
+  }
+  if(el.style.display !== 'none' || syncBadgeTimer) return;
+  syncBadgeTimer = setTimeout(()=>{
+    syncBadgeTimer = null;
+    if(!(pendingCloudWrites > 0 || cloudWriteFailed)) return;
+    const s = t();
+    // САМО иконка, без текст: изписано "не е синхронизирано" се увива на два
+    // реда на телефон и избутва бутоните (търсене/профил) извън екрана.
+    // Значението идва при докосване — виж слушателя по-долу.
+    el.innerHTML = ICONS.cloudOff;
+    el.title = s.syncPendingHint;
+    el.setAttribute('aria-label', s.syncPending);
+    el.style.display = 'inline-flex';
+    updateTopbarHeight();
+  }, 2500);
+}
+
+// Обвивка около всеки запис в облака — брои висящите и пази последната
+// грешка. Връща същото обещание, за да не пречи на извикващия.
+function trackCloudWrite(promise, label){
+  pendingCloudWrites++;
+  updateSyncBadge();
+  return promise.then(()=>{
+    cloudWriteFailed = false;
+  }).catch(err=>{
+    console.error(label + ' failed', err);
+    cloudWriteFailed = true;
+  }).then(()=>{
+    pendingCloudWrites--;
+    updateSyncBadge();
+  });
+}
+
+// Firestore не приема документ над 1 MiB. Всички бележки са в ЕДИН документ,
+// значи много активен потребител може след време да опре в тавана — и тогава
+// записите започват да се провалят, пак тихо. Предупреждаваме ПРЕДИ това, при
+// 700 KB, докато има спокойно време да се изнесе резервно копие и да се
+// разчисти. Веднъж на сесия, за да не досажда.
+const DOC_SIZE_WARN_BYTES = 700 * 1024;
+let sizeWarningShown = false;
+function checkDocSize(json){
+  if(sizeWarningShown) return;
+  // Кирилицата е 2 байта в UTF-8 — дължината в знаци подценява размера
+  // почти двойно, затова се мери реалният брой байтове.
+  const bytes = new TextEncoder().encode(json).length;
+  if(bytes < DOC_SIZE_WARN_BYTES) return;
+  sizeWarningShown = true;
+  showReminderToast(t().storageAlmostFull);
+}
+
 function save(){
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(notes)); }
+  let json = null;
+  try{
+    json = JSON.stringify(notes);
+    localStorage.setItem(STORAGE_KEY, json);
+  }
   catch(e){ console.error('save failed', e); }
+  if(json) checkDocSize(json);
   // Локалният кеш горе е instant (UI никога не чака мрежата); записът в
   // Firestore е "fire and forget" — грешка тук не блокира интерфейса,
   // localStorage служи и като офлайн буфер.
   if(currentUser){
-    db.collection('users').doc(currentUser.uid).set({ notes }, { merge:true })
-      .catch(err=>console.error('cloud save failed', err));
+    trackCloudWrite(
+      db.collection('users').doc(currentUser.uid).set({ notes }, { merge:true }),
+      'cloud save'
+    );
   }
 }
 
@@ -4004,8 +4145,10 @@ function saveTagOrder(){
   try{ localStorage.setItem(TAG_ORDER_KEY, JSON.stringify(tagOrder)); }
   catch(e){ console.error('save tagOrder failed', e); }
   if(currentUser){
-    db.collection('users').doc(currentUser.uid).set({ tagOrder }, { merge:true })
-      .catch(err=>console.error('cloud save tagOrder failed', err));
+    trackCloudWrite(
+      db.collection('users').doc(currentUser.uid).set({ tagOrder }, { merge:true }),
+      'cloud save tagOrder'
+    );
   }
 }
 
@@ -4176,8 +4319,10 @@ function saveDayHistory(){
   try{ localStorage.setItem(DAY_HISTORY_KEY, JSON.stringify(dayHistory)); }
   catch(e){ console.error('save dayHistory failed', e); }
   if(currentUser){
-    db.collection('users').doc(currentUser.uid).set({ dayHistory }, { merge:true })
-      .catch(err=>console.error('cloud dayHistory save failed', err));
+    trackCloudWrite(
+      db.collection('users').doc(currentUser.uid).set({ dayHistory }, { merge:true }),
+      'cloud dayHistory save'
+    );
   }
 }
 
@@ -5789,6 +5934,18 @@ document.addEventListener('mousedown', e=>{
     closeLangPicker();
   }
 });
+
+// Значката е само иконка (виж updateSyncBadge() за причината) — обяснението
+// идва при докосване. На телефон няма hover, значи title= не се вижда никога;
+// тостът е единственият начин смисълът да стигне до потребителя.
+(function(){
+  const badge = document.getElementById('syncBadge');
+  const explain = ()=> showReminderToast(t().syncPendingHint);
+  badge.addEventListener('click', explain);
+  badge.addEventListener('keydown', e=>{
+    if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); explain(); }
+  });
+})();
 
 document.getElementById('themeBtn').addEventListener('click', ()=>{
   // Ученическата визия покрива палитрата на светлата тема — ако е включена,
