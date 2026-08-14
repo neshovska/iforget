@@ -3204,7 +3204,13 @@ function renderDeleteAccountForm(){
     }).then(()=>{
       return currentUser.delete();
     }).then(()=>{
+      // Дотогава чистеше само STORAGE_KEY (бележките) — редът с
+      // категориите и дневната история (серия/календар) оставаха на
+      // устройството след "изтрий завинаги". На споделен/публичен
+      // компютър това е реален остатък от изтрит акаунт.
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(TAG_ORDER_KEY);
+      localStorage.removeItem(DAY_HISTORY_KEY);
       // auth.onAuthStateChanged() поема оттук нататък (показва екрана за вход).
     }).catch(err=>{
       console.error('delete account failed', err);
@@ -4038,6 +4044,7 @@ function maybeHandleShareTarget(){
 // Единственото място, което следи дали има вход — показва/скрива екрана за
 // вход и стартира зареждането от облака при успешна сесия.
 auth.onAuthStateChanged(user=>{
+  authResolved = true;
   currentUser = user;
   updateUserChip(user);
   updateVerifyBanner();
@@ -6495,6 +6502,27 @@ showAuthScreen(true);
 loadLocalCache();
 archiveOldCompleted();
 purgeExpiredTrash();
+
+// auth.onAuthStateChanged() по принцип е бърз и надежден (чете локална
+// сесия, независимо от мрежата), но НЯМА гаранция, че ще се извика ИЗОБЩО
+// — повредена локална база на браузъра (IndexedDB), частен режим с
+// изключено съхранение и подобни редки случаи биха оставили тоя callback
+// да не гръмне никога. Без fallback потребителят щеше да зависне на
+// "зареждане" екрана завинаги (същия клас бъг като липсващия таймаут в
+// loadFromCloud() по-долу — виж CLOUD_LOAD_TIMEOUT_MS/коментара там). Ако
+// не се задейства в AUTH_CHECK_TIMEOUT_MS, показваме направо формата за
+// вход — по-добре потребителят да натисне "Вход" ръчно, отколкото никога
+// да не стигне до приложението. Ако onAuthStateChanged все пак гръмне
+// по-късно (просто бавно, не изобщо мъртво), нормалният поток продължава
+// си — няма риск от загуба на данни тук (за разлика от loadFromCloud()),
+// само формата за вход евентуално просветва за миг преди тихия вход.
+const AUTH_CHECK_TIMEOUT_MS = 5000;
+let authResolved = false;
+setTimeout(()=>{
+  if(authResolved) return;
+  console.warn('auth.onAuthStateChanged не отговори навреме — показвам формата за вход');
+  showAuthScreen(false);
+}, AUTH_CHECK_TIMEOUT_MS);
 
 // Service worker — прави приложението достъпно офлайн: кешира "обвивката"
 // (index.html + иконки/снимки + самите Firebase SDK скриптове, виж sw.js)
