@@ -5,6 +5,11 @@
 const {setGlobalOptions} = require("firebase-functions/v2");
 const {onCall, onRequest, HttpsError} = require("firebase-functions/v2/https");
 const {defineSecret, defineString} = require("firebase-functions/params");
+// v1 API нарочно, само за cleanupDeletedUser по-долу — auth.user().onDelete()
+// (trigger при изтрит Firebase Auth акаунт) го няма в v2 все още, само в v1.
+// Смесването на v1/v2 в един и същ functions/index.js е официално поддържано
+// от Firebase (различни export-и, не конфликтуват).
+const functionsV1 = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 admin.initializeApp();
 
@@ -433,3 +438,64 @@ exports.sendBrandedEmailVerification = onCall(
       return {ok: true};
     },
 );
+
+// ═══════════════════════════════════════════════════════════
+// ПОЧИСТВАНЕ СЛЕД ИЗТРИВАНЕ НА АКАУНТ
+//
+// Клиентът (index.html, renderDeleteAccountForm()) вече трие users/{uid}
+// сам, преди да извика currentUser.delete(). Но firestore.rules изрично
+// забраняват на клиента да пипа entitlements/{uid} (allow write: if false —
+// пише се САМО от stripeWebhook по-горе) и записите му във feedback
+// (allow update, delete: if false) — значи тия остават "сираци", вързани
+// за uid, който вече не съществува никъде. Firebase НЕ преизползва
+// изтрити uid-та: нов акаунт, дори със същия имейл, получава напълно нов
+// uid и никога не може да достигне старите документи — пазенето им не
+// помага при "случайно изтрих акаунта", само остава като GDPR "право на
+// изтриване" пропуск. Само Admin SDK (тук) може да ги изчисти — заобикаля
+// rules по дизайн.
+//
+// Платеният статус НЕ се губи безвъзвратно за реален потребител — Stripe
+// пази записа за плащането независимо от Firestore; ръчно възстановяване
+// при истинска грешка минава през Stripe dashboard (търсене по имейл), не
+// през тоя документ.
+//
+// БЕЗ .region("europe-west1") нарочно — auth.user().onDelete() (v1
+// trigger) исторически поддържа само us-central1; изричен region тук би
+// могъл да гръмне при deploy. Ако при deploy излезе грешка за региона,
+// това е първото място за проверка.
+// ═══════════════════════════════════════════════════════════
+exports.cleanupDeletedUser = functionsV1.auth.user().onDelete(async (user) => {
+  const uid = user.uid;
+  const tasks = [];
+
+  // users/{uid} — вече изтрит от клиента при нормален flow, но повторно
+  // delete() на несъществуващ документ е тих no-op, не грешка — безплатна
+  // защита в повече, ако клиентската стъпка някога пропадне/бъде пропусната.
+  tasks.push(
+      db.collection("users").doc(uid).delete()
+          .catch((e) => console.error(`cleanup: users/${uid} delete failed`, e)),
+  );
+
+  // entitlements/{uid} — блокирано за клиента, може да се трие само оттук.
+  tasks.push(
+      db.collection("entitlements").doc(uid).delete()
+          .catch((e) => console.error(`cleanup: entitlements/${uid} delete failed`, e)),
+  );
+
+  // feedback, писан от тоя uid — блокирано за клиента, може да се трие
+  // само оттук. Съобщенията са малко на брой per потребител (текст, писан
+  // ръчно от профила), обикновен batch стига.
+  tasks.push(
+      db.collection("feedback").where("uid", "==", uid).get()
+          .then((snap) => {
+            if (snap.empty) return null;
+            const batch = db.batch();
+            snap.forEach((doc) => batch.delete(doc.ref));
+            return batch.commit();
+          })
+          .catch((e) => console.error(`cleanup: feedback за uid=${uid} delete failed`, e)),
+  );
+
+  await Promise.all(tasks);
+  console.log(`cleanup: почистени данни за изтрит акаунт uid=${uid}.`);
+});
