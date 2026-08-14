@@ -3617,9 +3617,53 @@ function updateUserChip(user){
 // целият масив в един документ, достатъчно за личен списък с бележки).
 // Ако документът още не съществува (първи вход) и вече имаме нещо в
 // локалния кеш, го качваме автоматично в облака.
+// Firestore SDK-ът НЯМА вграден таймаут за .get() — офлайн (или просто
+// бавна мрежа) можеше да остави тоя Promise да виси дълго, преди да падне
+// обратно на локалния Firestore кеш (или изобщо да не падне, ако
+// устройството никога досега не е сваляло документа успешно). Дотогава
+// екранът за вход стоеше — виж .auth-screen{position:fixed;inset:0;
+// z-index:50} — покрива ЦЯЛОТО приложение, включително полето за писане,
+// докато hideAuthScreen() не се извика. Резултат: реален докладван бъг —
+// "тествах офлайн, направих бележка, не се запази" — най-вероятно
+// потребителят изобщо не е успял да ВЪВЕДЕ бележката, защото екранът за
+// зареждане никога не е изчезнал, не че записът се е провалил тихо.
+const CLOUD_LOAD_TIMEOUT_MS = 3000;
+
 function loadFromCloud(uid){
   const docRef = db.collection('users').doc(uid);
+  // Ако Firestore не отговори навреме, продължаваме с това, което вече
+  // имаме от loadLocalCache() (тръгна ПРЕДИ тая функция, виж накрая на
+  // скрипта) — достатъчно добро, за да пусне потребителя да работи веднага;
+  // localStorage поема писането оттам нататък (виж save()).
+  let settled = false;
+  const fallbackTimer = setTimeout(()=>{
+    if(settled) return;
+    settled = true;
+    console.warn('Firestore не отговори навреме — продължавам с локалния кеш (вероятно офлайн)');
+    archiveOldCompleted();
+    purgeExpiredTrash();
+    render();
+    hideAuthScreen();
+    maybeFocusQuickAdd();
+    maybeHandleShareTarget();
+    // Качваме локалното в облака (fire-and-forget) — ако мрежата всъщност
+    // Я НЯМА, това просто се провали тихо и офлайн опашката
+    // (enablePersistence()) ще го изпрати сама щом се върне връзката; ако
+    // това е първо отваряне на устройството, гарантира, че документът не
+    // остава съвсем празен.
+    if(notes.length) docRef.set({ notes, tagOrder, dayHistory }, { merge:true }).catch(err=>console.error('offline fallback upload failed', err));
+  }, CLOUD_LOAD_TIMEOUT_MS);
+
   docRef.get().then(snap=>{
+    clearTimeout(fallbackTimer);
+    // Ако fallbackTimer вече е задействал (settled===true), приложението
+    // вече работи с локалния кеш и потребителят може междувременно да е
+    // добавил/променил нещо — прилагането на тоя (закъснял) резултат тук
+    // би могло да презапише точно тия промени. По-безопасно е просто да
+    // го пропуснем; save() и без друго праща ЦЕЛИЯ notes масив при
+    // следваща промяна, значи облакът ще се изравни сам.
+    if(settled) return;
+    settled = true;
     // Съвсем нов акаунт: няма още документ в Firestore И няма локални
     // бележки (свеж браузър/устройство) — единственият сигурен признак, че
     // това е първи вход изобщо, виж runOnboardingTour().
@@ -3649,6 +3693,9 @@ function loadFromCloud(uid){
     touchLastSeen(docRef);
     if(isNewUser) runOnboardingTour(docRef);
   }).catch(err=>{
+    clearTimeout(fallbackTimer);
+    if(settled) return;
+    settled = true;
     console.error('cloud load failed', err);
     render();
     hideAuthScreen();
