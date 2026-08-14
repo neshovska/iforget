@@ -4270,15 +4270,27 @@ function softDelete(noteId, subId){
     }
     n.subs.splice(idx, 1);
     const trashed = {
+      // Копира ЦЕЛИЯ вид на подбележката (не само id/text/status/createdAt)
+      // — иначе цвят/напомняне/предишен статус се губеха тихо при
+      // възстановяване от кошчето (restoreFromTrash() по-долу), макар
+      // Undo-затворената restore() ТУК долу да е наред (пази ОРИГИНАЛНИЯ
+      // sub обект директно, не тоя опростен клонинг).
       id: sub.id, text: sub.text, status: sub.status, createdAt: sub.createdAt,
+      color: sub.color || null, reminderAt: sub.reminderAt || null, reminderRepeat: sub.reminderRepeat || null,
       subs: [], tag: DELETED_TAG, deletedAt: now,
       // Постоянна следа за restoreFromTrash() (виж по-долу) — за разлика от
-      // restore() затворената функция тук долу, remainderParentId ПРЕЖИВЯВА
+      // restore() затворената функция тук долу, restoreParentId ПРЕЖИВЯВА
       // затварянето на Undo тоста/презареждане на страницата, значи
       // потребителят може да възстанови подбележката от бутон в самото
       // кошче по-късно, не само в първите няколко секунди след изтриване.
+      // restoreIndex пази точната позиция сред подбележките на родителя —
+      // без нея restoreFromTrash() можеше само да добавя в КРАЯ, а не "както
+      // е била" (реален оплак).
       restoreParentId: noteId,
+      restoreIndex: idx,
     };
+    if(sub.completedAt !== undefined) trashed.completedAt = sub.completedAt;
+    if(sub.prevStatus !== undefined) trashed.prevStatus = sub.prevStatus;
     notes.push(trashed);
     return function restore(){
       const ix = notes.findIndex(x=>x.id===trashed.id);
@@ -4436,6 +4448,8 @@ function reopenItem(noteId, subId){
 // Бележки, изтрити преди тази функция да съществува, нямат prevTag/
 // restoreParentId — падат към "самостоятелна бележка без таг", по-безопасно
 // от двете предположения (виж аналогичната логика в reopenItem()).
+// Подбележка се връща на СЪЩАТА позиция сред подбележките на родителя
+// (restoreIndex), не в края — "както е била", по изрична заявка.
 function restoreFromTrash(noteId){
   const n = findNote(noteId);
   if(!n || n.tag !== DELETED_TAG) return;
@@ -4451,7 +4465,12 @@ function restoreFromTrash(noteId){
       };
       if(n.completedAt !== undefined) sub.completedAt = n.completedAt;
       if(n.prevStatus !== undefined) sub.prevStatus = n.prevStatus;
-      parent.subs.push(sub);
+      // restoreIndex — там, където беше сред подбележките на родителя (не
+      // в края) — "както е била", по изрична заявка. Ограничено до текущата
+      // дължина: междувременно родителят може да е получил/загубил други
+      // подбележки, значи оригиналният индекс може вече да не е валиден.
+      const at = typeof n.restoreIndex === 'number' ? Math.min(n.restoreIndex, parent.subs.length) : parent.subs.length;
+      parent.subs.splice(at, 0, sub);
       save(); render();
       return;
     }
@@ -5367,11 +5386,13 @@ function sanitizeImportedNote(raw, isSub){
       : [];
     if(num(raw.deletedAt) !== null) out.deletedAt = num(raw.deletedAt);
     if(raw.archiveExempt) out.archiveExempt = true;
-    // prevTag/restoreParentId — постоянната следа за restoreFromTrash()
-    // (виж softDelete()); без тях бележка в кошчето от възстановен архив
-    // губи възможността да се възстанови другаде освен като таг null.
+    // prevTag/restoreParentId/restoreIndex — постоянната следа за
+    // restoreFromTrash() (виж softDelete()); без тях бележка в кошчето от
+    // възстановен архив губи възможността да се възстанови другаде освен
+    // като таг null / в края на подбележките, вместо "както е била".
     if(raw.prevTag != null) out.prevTag = str(raw.prevTag);
     if(raw.restoreParentId != null) out.restoreParentId = str(raw.restoreParentId);
+    if(num(raw.restoreIndex) !== null) out.restoreIndex = num(raw.restoreIndex);
   }
   return out;
 }
