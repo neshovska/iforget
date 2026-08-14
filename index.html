@@ -449,7 +449,13 @@
      менюто вече седи над .ctx-backdrop (самото то замъглено), значи
      размазването се вижда прозиращо през менюто без допълнителен разход. */
   .ctx-menu{
-    display:none;position:fixed;z-index:26;
+    /* z-index:27 — СТРОГО над .note-wrap.ctx-active (26, виж по-долу).
+       Бележката трябва да остане ВИЗУАЛНО зад менюто (сега прозрачно),
+       докато се скролва — при равен z-index по-късният в HTML документа
+       печели (тук е бележката, notesInner е след ctxMenu в markup-а),
+       значи тя щеше да застане НАД менюто при застъпване и да открадне
+       кликовете от бутоните му. */
+    display:none;position:fixed;z-index:27;
     background-color:rgba(var(--card-rgb),.72);border:1px solid var(--border);
     border-radius:12px;padding:6px;min-width:180px;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 10px 30px rgba(0,0,0,.35);
