@@ -441,10 +441,18 @@
   /* Контекстно меню при задържане (long-press) върху бележка — Редактирай /
      Добави подбележка / Сподели / Изтрий, вместо отделни постоянно видими
      иконки. Позициониран ПОД (или НАД, ако няма място) бележката — виж
-     openCtxMenu() — умишлено не върху центъра ѝ, за да не я скрива. */
+     openCtxMenu() — умишлено не върху центъра ѝ, за да не я скрива.
+     Винаги прозрачно (не зависи от превключвателя "Прозрачни бележки",
+     GLASS_NOTES_KEY) — същата формула като html.glass-notes .note по-долу
+     (rgba на --card + тънък светъл inset ръб отгоре за "стъклен" вид), но
+     тук е постоянно, по изрична заявка. БЕЗ собствен backdrop-filter blur:
+     менюто вече седи над .ctx-backdrop (самото то замъглено), значи
+     размазването се вижда прозиращо през менюто без допълнителен разход. */
   .ctx-menu{
-    display:none;position:fixed;z-index:26;background:var(--card);border:1px solid var(--border);
-    border-radius:12px;padding:6px;box-shadow:0 10px 30px rgba(0,0,0,.35);min-width:180px;
+    display:none;position:fixed;z-index:26;
+    background-color:rgba(var(--card-rgb),.72);border:1px solid var(--border);
+    border-radius:12px;padding:6px;min-width:180px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.12), 0 10px 30px rgba(0,0,0,.35);
   }
   .ctx-menu.show{display:block;}
   .ctx-menu button{
@@ -6077,7 +6085,13 @@ document.addEventListener('mousedown', e=>{
     closeTagPicker();
   }
   const ctxMenu = document.getElementById('ctxMenu');
-  if(ctxMenu.classList.contains('show') && !ctxMenu.contains(e.target)){
+  // Допир върху самата "изпъкнала" бележка (ctxActiveWrap) НЕ затваря
+  // менюто — иначе всеки опит да се скролне бележката (за да се видят
+  // подбележките ѝ, ако е по-висока от екрана) веднага го затваряше,
+  // преди жестът изобщо да завърши. Менюто е position:fixed, значи си
+  // остава на екрана, докато бележката се скролва под него.
+  const onActiveNote = ctxActiveWrap && ctxActiveWrap.contains(e.target);
+  if(ctxMenu.classList.contains('show') && !ctxMenu.contains(e.target) && !onActiveNote){
     closeCtxMenu();
   }
   const profPanel = document.getElementById('profilePanel');
