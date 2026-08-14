@@ -454,10 +454,7 @@
   .ctx-menu button.danger{color:var(--danger);}
   /* Формата "Напомняне" (виж renderCtxMenuReminder()) — заменя списъка с
      бутони НА МЯСТОТО (същият #ctxMenu, воалът и "изпъкналата" бележка си
-     остават), докато потребителят избере дата/час. Функцията е видима
-     отсега, но е обозначена като все още неактивна (виж reminderInactiveHint)
-     — реалните push нотификации изискват приложението да е в App Store/
-     Google Play (натив обвивка), не работят от чист PWA. */
+     остават), докато потребителят избере дата/час. */
   .ctx-menu .reminder-head{display:flex;align-items:center;gap:8px;padding:4px 6px 8px;font-size:13px;font-weight:700;color:var(--text);}
   .ctx-menu .reminder-fields{display:flex;gap:6px;padding:0 4px 8px;}
   .ctx-menu .reminder-fields input{
@@ -482,9 +479,6 @@
   }
   .ctx-menu .reminder-repeat-row button.active{
     background:rgba(var(--accent-rgb),.14);border-color:var(--accent-dim);color:var(--accent);
-  }
-  .ctx-menu .reminder-hint{
-    font-size:11px;line-height:1.5;color:var(--text-dim);padding:0 6px 10px;
   }
   .ctx-menu .reminder-actions{display:flex;flex-direction:column;gap:4px;padding:0 2px;}
   .ctx-menu .reminder-actions button{
@@ -1656,6 +1650,7 @@ let tagPickerAnchor = null; // елементът, спрямо който е п
 let expandedNotes = new Set(); // ключове (item.id или noteId::subId) на ръчно разгънати дълги бележки
 let ctxMenuNote = null; // {noteId, subId} на бележката с отворено long-press меню
 let ctxActiveWrap = null; // .note-wrap елементът, който в момента "изпъква" (виж openCtxMenu/closeCtxMenu)
+let ctxAnchorRect = null; // позицията му при отваряне, за преизчисляване при смяна на изгледа (виж positionCtxMenu())
 // Ръчно засичане на "двоен тап" за отваряне на редакция (виж attachHandlers()
 // по-долу) — не разчитаме на нативния dblclick, ненадежден на тъч устройства.
 let lastEditTapKey = null;
@@ -1965,7 +1960,6 @@ const STRINGS = {
     ctxShare: 'Сподели', ctxCopy: 'Копирай', shareCopied: 'Копирано в клипборда.',
     ctxColor: 'Цвят', noteColorNone: 'Без цвят',
     ctxAddReminder: 'Добави напомняне', ctxEditReminder: 'Промени напомняне',
-    reminderInactiveHint: 'Напомнянията ще изпращат push нотификация, след като iForget излезе в App Store / Google Play. Засега датата само се запазва.',
     reminderDateLabel: 'Дата', reminderTimeLabel: 'Час',
     reminderSaveBtn: 'Запази', reminderRemoveBtn: 'Премахни напомнянето',
     reminderRepeatLabel: 'Повторение', reminderRepeatNone: 'Веднъж',
@@ -2073,7 +2067,6 @@ const STRINGS = {
     ctxShare: 'Share', ctxCopy: 'Copy', shareCopied: 'Copied to clipboard.',
     ctxColor: 'Color', noteColorNone: 'No color',
     ctxAddReminder: 'Add reminder', ctxEditReminder: 'Edit reminder',
-    reminderInactiveHint: 'Reminders will send a push notification once iForget is available on the App Store / Google Play. For now the date is just saved.',
     reminderDateLabel: 'Date', reminderTimeLabel: 'Time',
     reminderSaveBtn: 'Save', reminderRemoveBtn: 'Remove reminder',
     reminderRepeatLabel: 'Repeat', reminderRepeatNone: 'Once',
@@ -2179,7 +2172,6 @@ const STRINGS = {
     ctxShare: 'Поделиться', ctxCopy: 'Копировать', shareCopied: 'Скопировано в буфер обмена.',
     ctxColor: 'Цвет', noteColorNone: 'Без цвета',
     ctxAddReminder: 'Добавить напоминание', ctxEditReminder: 'Изменить напоминание',
-    reminderInactiveHint: 'Напоминания будут отправлять push-уведомление, когда iForget появится в App Store / Google Play. Пока дата просто сохраняется.',
     reminderDateLabel: 'Дата', reminderTimeLabel: 'Время',
     reminderSaveBtn: 'Сохранить', reminderRemoveBtn: 'Удалить напоминание',
     reminderRepeatLabel: 'Повтор', reminderRepeatNone: 'Один раз',
@@ -2289,7 +2281,6 @@ const STRINGS = {
     ctxShare: 'Teilen', ctxCopy: 'Kopieren', shareCopied: 'In die Zwischenablage kopiert.',
     ctxColor: 'Farbe', noteColorNone: 'Keine Farbe',
     ctxAddReminder: 'Erinnerung hinzufügen', ctxEditReminder: 'Erinnerung ändern',
-    reminderInactiveHint: 'Erinnerungen senden eine Push-Benachrichtigung, sobald iForget im App Store / bei Google Play verfügbar ist. Vorerst wird nur das Datum gespeichert.',
     reminderDateLabel: 'Datum', reminderTimeLabel: 'Uhrzeit',
     reminderSaveBtn: 'Speichern', reminderRemoveBtn: 'Erinnerung entfernen',
     reminderRepeatLabel: 'Wiederholung', reminderRepeatNone: 'Einmalig',
@@ -2397,7 +2388,6 @@ const STRINGS = {
     ctxShare: 'Compartir', ctxCopy: 'Copiar', shareCopied: 'Copiado al portapapeles.',
     ctxColor: 'Color', noteColorNone: 'Sin color',
     ctxAddReminder: 'Añadir recordatorio', ctxEditReminder: 'Editar recordatorio',
-    reminderInactiveHint: 'Los recordatorios enviarán una notificación push cuando iForget esté disponible en App Store / Google Play. Por ahora solo se guarda la fecha.',
     reminderDateLabel: 'Fecha', reminderTimeLabel: 'Hora',
     reminderSaveBtn: 'Guardar', reminderRemoveBtn: 'Quitar recordatorio',
     reminderRepeatLabel: 'Repetición', reminderRepeatNone: 'Una vez',
@@ -4765,29 +4755,58 @@ function setLang(code){
 function openCtxMenu(noteId, subId, anchorEl){
   ctxMenuNote = {noteId, subId};
   const wrapEl = anchorEl.closest('.note-wrap') || anchorEl;
-  const menu = document.getElementById('ctxMenu');
   renderCtxMenuMain(noteId, subId);
 
   // Измерваме позицията на бележката ПРЕДИ да добавим .ctx-active (която
   // пуска transform:scale с преход) — достатъчно точно за позициониране на
-  // менюто, а и е детерминирано (без да чакаме анимацията).
-  const rect = wrapEl.getBoundingClientRect();
+  // менюто, а и е детерминирано (без да чакаме анимацията). Пазим я в
+  // ctxAnchorRect — бележката не мърда, докато менюто е отворено, значи
+  // същият правоъгълник важи и по-късно, при смяна на изгледа вътре в
+  // менюто (виж positionCtxMenu()).
+  ctxAnchorRect = wrapEl.getBoundingClientRect();
 
   document.getElementById('ctxBackdrop').classList.add('show');
   wrapEl.classList.add('ctx-active');
   ctxActiveWrap = wrapEl;
 
-  menu.classList.add('show');
+  document.getElementById('ctxMenu').classList.add('show');
+  positionCtxMenu();
+}
+
+// Пресмята позицията на #ctxMenu спрямо запазения ctxAnchorRect. Извиква
+// се и при първо отваряне (openCtxMenu()), и след ВСЯКА смяна на изгледа
+// вътре в менюто (главно ⇄ напомняне ⇄ цвят, виж съответните render*
+// функции) — изгледите имат различна височина (формата за напомняне е
+// доста по-висока от простия списък с бутони заради полетата за дата/час
+// и чиповете за повторение), а менюто е position:fixed без ограничение на
+// височината. БЕЗ преизчисляване позицията оставаше залепена за височината
+// на ПЪРВОНАЧАЛНИЯ изглед — бутонът "Запази" изтичаше извън/зад долния
+// край на екрана при по-високите изгледи (реален оплак от потребител).
+function positionCtxMenu(){
+  if(!ctxAnchorRect) return;
+  const menu = document.getElementById('ctxMenu');
+  const rect = ctxAnchorRect;
   const menuW = menu.offsetWidth;
   const menuH = menu.offsetHeight;
   const gap = 10;
+  // Долна граница = горният ръб на bottomBar (лентата "Нова бележка..."),
+  // не window.innerHeight — менюто е position:fixed спрямо целия viewport
+  // и не "знае" само от височината си, че долните ~70-90px вече са заети
+  // от лентата. Без това менюто можеше да се позиционира технически "вътре
+  // във viewport-а", но бутонът "Запази" пак да опре в лентата отдолу.
+  // Скрита лента (editing-hide) няма реална височина, значи не пречи.
+  const bottomBar = document.getElementById('bottomBar');
+  const bottomBarTop = (bottomBar && bottomBar.offsetHeight > 0)
+    ? bottomBar.getBoundingClientRect().top
+    : window.innerHeight;
+  const maxBottom = Math.min(bottomBarTop, window.innerHeight) - 8;
   let top;
-  if(rect.bottom + gap + menuH <= window.innerHeight - 8){
+  if(rect.bottom + gap + menuH <= maxBottom){
     top = rect.bottom + gap; // под бележката — предпочитан вариант
   }else if(rect.top - gap - menuH >= 8){
     top = rect.top - gap - menuH; // няма място долу → над бележката
   }else{
-    top = Math.max(8, Math.min(rect.bottom + gap, window.innerHeight - menuH - 8));
+    top = Math.max(8, Math.min(rect.bottom + gap, maxBottom - menuH));
   }
   menu.style.top = top + 'px';
   menu.style.left = edgeAlignedLeft(rect, menuW) + 'px';
@@ -4797,6 +4816,7 @@ function closeCtxMenu(){
   document.getElementById('ctxBackdrop').classList.remove('show');
   if(ctxActiveWrap) ctxActiveWrap.classList.remove('ctx-active');
   ctxActiveWrap = null;
+  ctxAnchorRect = null;
   ctxMenuNote = null;
 }
 
@@ -4839,10 +4859,12 @@ function renderCtxMenuMain(noteId, subId){
       const noteId2 = ctxMenuNote.noteId, subId2 = ctxMenuNote.subId;
       if(action === 'reminder'){
         renderCtxMenuReminder(noteId2, subId2); // остава отворено — само сменя изгледа
+        positionCtxMenu(); // новият изглед е с друга височина (виж positionCtxMenu())
         return;
       }
       if(action === 'color'){
         renderCtxMenuColor(noteId2, subId2); // остава отворено — само сменя изгледа
+        positionCtxMenu();
         return;
       }
       closeCtxMenu();
@@ -4874,10 +4896,9 @@ function dateInputValue(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-$
 function timeInputValue(d){ return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
 
 // Форма за дата/час/повторение на напомнянето — заменя списъка с бутони в
-// СЪЩИЯ #ctxMenu (воалът/изпъкването остават). Функцията е видима отсега,
-// но умишлено обозначена като все още неактивна (реални push нотификации
-// изискват приложението да е в App Store/Google Play — чист PWA не може).
-// Само пази датата (+повторението) в бележката, за да е готово за после.
+// СЪЩИЯ #ctxMenu (воалът/изпъкването остават). Реално звъни — виж
+// раздела "НАПОМНЯНИЯ: реално задействане" по-долу (native известие в
+// свалените апове, in-app тост в браузъра).
 // Повторението (reminderRepeat: null|'daily'|'weekly') се пази в локална
 // selectedRepeat променлива, докато формата е отворена (само класове се
 // местят при тап върху чиповете, без да пресъздаваме менюто) и се записва
@@ -4905,7 +4926,6 @@ function renderCtxMenuReminder(noteId, subId){
     <div class="reminder-repeat-row">` + repeatOptions.map(o =>
       `<button type="button" data-repeat="${o.val}" class="${o.val === selectedRepeat ? 'active' : ''}">${o.label}</button>`
     ).join('') + `</div>
-    <div class="reminder-hint">${s.reminderInactiveHint}</div>
     <div class="reminder-actions">
       <button type="button" class="primary" data-ctx="reminder-save">${s.reminderSaveBtn}</button>
       ${item.reminderAt ? `<button type="button" class="danger" data-ctx="reminder-remove">${s.reminderRemoveBtn}</button>` : ''}
@@ -4921,6 +4941,7 @@ function renderCtxMenuReminder(noteId, subId){
   menu.querySelector('[data-ctx="reminder-back"]').addEventListener('mousedown', e=>{
     e.preventDefault();
     renderCtxMenuMain(noteId, subId);
+    positionCtxMenu();
   });
   menu.querySelector('[data-ctx="reminder-save"]').addEventListener('mousedown', e=>{
     e.preventDefault();
@@ -5153,6 +5174,7 @@ function renderCtxMenuColor(noteId, subId){
   menu.querySelector('[data-ctx="color-back"]').addEventListener('mousedown', e=>{
     e.preventDefault();
     renderCtxMenuMain(noteId, subId);
+    positionCtxMenu();
   });
   menu.querySelectorAll('.color-sw').forEach(b=>{
     b.addEventListener('mousedown', e=>{
