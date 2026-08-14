@@ -1198,19 +1198,40 @@ cap open android" преди sync гърмеше с "Could not read script
 се отваря IDE — `npm run sync` самостоятелно.
 После обичайният native build/archive/upload flow във всеки IDE.
 
+**Икони/splash screen — ГОТОВИ, генерирани от `@capacitor/assets`.**
+Дотогава `android/`/`ios/` имаха стандартния Capacitor placeholder
+(сивото "лого"), не iForget брандинг — реален блокер за качване в
+магазините (Apple/Google отхвърлят placeholder икони).
+Източник: `assets/logo.png` — самият златен ginkgo лист от `icon-512.png`,
+изрязан без черния квадрат (прозрачен фон, up-scale-нат на 1024×1024),
+за да могат Android adaptive icons и iOS да си сложат ФОНА сами (плътен
+цвят `#0A0A0C`, същият като `capacitor.config.json`/тъмната тема) — иначе
+черен квадрат върху черен квадрат дава грозен ръб при закръглените маски
+на различните launcher-и.
+Генерирано с (вече в `devDependencies`, скрипт `npm run icons`):
+```
+npx @capacitor/assets generate --ios --android \
+  --iconBackgroundColor '#0A0A0C' --iconBackgroundColorDark '#0A0A0C' \
+  --splashBackgroundColor '#0A0A0C' --splashBackgroundColorDark '#0A0A0C'
+```
+**Пусни `npm run icons` пак**, ако дизайнът на лога се смени — презаписва
+всички размери и за двете платформи от `assets/logo.png` наново.
+**Странична бележка:** генерирането пренаписа `AndroidManifest.xml`
+(само форматиране — интервали/нов ред, без смислена промяна) и
+`ios/App/App.xcodeproj/project.pbxproj` (`LastSwiftUpdateCheck`/
+`LastUpgradeCheck`: `0920` → `920`, изгубена водеща нула при plist
+round-trip през инструмента) — безобидно, но ако Xcode се държи странно
+след `git pull`, това е първото място за проверка.
+
 **Остава (изисква Mac/Android Studio, не мога аз да го направя тук —
 Linux sandbox, няма Xcode):**
 1. `git pull` на repo-то на компютъра ѝ, `npm install` в root-а (не в
    `functions/` — различен проект).
 2. **Android**: отвори `android/` в Android Studio (`npm run open:android`
    след `npm install`) — трябва да работи "as is" за debug build.
-   Истинска иконка/splash screen (сега е Capacitor default placeholder,
-   не iForget брандинг) — през Android Studio Asset Studio, или
-   `@capacitor/assets` CLI пакет (не инсталиран още, по избор).
 3. **iOS**: отвори `ios/App/App.xcodeproj` в Xcode (`npm run open:ios`)
    — Swift Package Manager ще resolve-не автоматично при отваряне (не е
-   нужен ръчен `pod install` при тоя setup). Иконка/splash — аналогично,
-   през Xcode Asset Catalog.
+   нужен ръчен `pod install` при тоя setup).
 4. Developer акаунти (все още не са регистрирани, доколкото знам):
    Apple Developer Program ($99/година), Google Play Console ($25
    еднократно) — нужни за реално подписване/качване в магазините.
