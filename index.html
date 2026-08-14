@@ -5572,10 +5572,23 @@ function itemRow(item, noteId, isSub){
   </div>`;
 }
 
+// Ред на подбележките — по изрична заявка: активните (без статус) най-
+// близо до основната бележка, "в прогрес" след тях, завършените — най-
+// долу. САМО визуално подреждане (не пипа note.subs масива/save() не се
+// вика) — Array#sort е стабилно от ES2019, значи подбележки със същия
+// статус пазят предишния си взаимен ред (обикновено реда на добавяне).
+const SUB_STATUS_RANK = { open: 0, progress: 1, done: 2 };
+function sortedSubs(note){
+  if(!note.subs || !note.subs.length) return note.subs || [];
+  return [...note.subs].sort((a, b) =>
+    (SUB_STATUS_RANK[a.status || 'open'] || 0) - (SUB_STATUS_RANK[b.status || 'open'] || 0)
+  );
+}
+
 function subsBlock(note){
   let html = '';
   if(note.subs && note.subs.length){
-    html += `<div class="subs">${note.subs.map(s=>itemRow(s, note.id, true)).join('')}</div>`;
+    html += `<div class="subs">${sortedSubs(note).map(s=>itemRow(s, note.id, true)).join('')}</div>`;
   }
   // Бутонът "+ подбележка" вече стои горе в .meta реда (до тага) — тук
   // остава само активното поле за въвеждане, докато трае добавянето.
