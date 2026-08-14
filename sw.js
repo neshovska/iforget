@@ -13,7 +13,11 @@
 // дълготрайни streaming връзки и Firestore SDK-то си има собствена offline
 // опашка/retry; SW-намеса там носи само риск, без полза.
 
-const CACHE_VERSION = 'v1';
+// v2: index.html вече се тегли с {cache:'no-cache'} (виж fetch handler-а
+// по-долу) — вдигнато нарочно, за да се изхвърли всеки стар кеширан
+// index.html, който по-старата версия на тоя файл може вече да е записала
+// (потенциално остарял заради липсата на no-cache преди).
+const CACHE_VERSION = 'v2';
 const CACHE_NAME = 'iforget-shell-' + CACHE_VERSION;
 
 const PRECACHE_URLS = [
@@ -78,9 +82,16 @@ self.addEventListener('fetch', event => {
     // index.html: мрежата първа — приложението се обновява при всеки push,
     // не искаме потребител да заседне на стара версия, докато е онлайн.
     // Кешът е само fallback, когато няма връзка изобщо.
+    // {cache:'no-cache'} е ЗАДЪЛЖИТЕЛНО тук — без него fetch() минава
+    // първо през СОБСТВЕНИЯ HTTP кеш на браузъра (различен от caches API-то
+    // тук долу), който може тихо да върне стара версия дори когато SW-то
+    // мисли, че тегли "най-новото" (реален риск: потребител вижда стара
+    // версия дори онлайн, докато не презареди достатъчно пъти да изтече
+    // браузърният кеш). 'no-cache' форсира сървъра да потвърди свежест
+    // (ETag/Last-Modified), не да пропусне мрежата.
     event.respondWith((async () => {
       try{
-        const fresh = await fetch(req);
+        const fresh = await fetch(req, { cache: 'no-cache' });
         const cache = await caches.open(CACHE_NAME);
         cache.put('index.html', fresh.clone());
         return fresh;
