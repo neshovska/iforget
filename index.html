@@ -494,6 +494,20 @@
     flex:1;font-size:11px;font-weight:700;text-transform:uppercase;
     letter-spacing:.3px;color:var(--text-dim);
   }
+  /* Формат-подсказка (напр. "дд.мм.гггг"/"чч:мм") до самия надпис ДАТА/ЧАС
+     — по изрична заявка: самите надписи казват КАКВО се въвежда, но не и
+     В КАКЪВ РЕД (ден/месец/година?), а полето под тях е родно
+     type="date"/"time" копче, не текстово поле — placeholder="" не сработва
+     надеждно там (виж коментара при .reminder-field-labels по-горе за
+     същата причина), затова форматът е истински видим текст тук, не
+     placeholder атрибут. Нормален текст (не uppercase/bold като самия
+     надпис) и по-бледо (var(--text-dim) вече е приложен на родителя,
+     .6 opacity тук го смекчава допълнително) — за да остане ясно кое е
+     заглавието и кое е само пример за формат. */
+  .ctx-menu .reminder-field-labels span i{
+    font-style:normal;font-weight:400;text-transform:none;letter-spacing:0;
+    opacity:.65;margin-left:4px;white-space:nowrap;
+  }
   .ctx-menu .reminder-fields{display:flex;gap:6px;padding:4px 4px 8px;}
   .ctx-menu .reminder-fields input{
     -webkit-appearance:none;appearance:none;flex:1;min-width:0;background:var(--card-2);
@@ -971,7 +985,11 @@
     display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);
   }
   .profile-panel .reminder-preview-label{
-    font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;
+    /* По изрична заявка — 9px вместо 10.5px: dayLabel() връща "Днес -
+       дд.мм.гггг", а uppercase+letter-spacing го разширяваше видимо близо
+       до ръба на панела (254px). По-дребен шрифт, не съкратен текст —
+       датата остава пълна и четлива. */
+    font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.2px;
     color:var(--text-dim);margin-bottom:6px;
   }
   .profile-panel .reminder-preview-item{
@@ -2121,6 +2139,7 @@ const STRINGS = {
     ctxColor: 'Цвят', noteColorNone: 'Без цвят',
     ctxAddReminder: 'Добави напомняне', ctxEditReminder: 'Промени напомняне',
     reminderDateLabel: 'Дата', reminderTimeLabel: 'Час',
+    reminderDateFormatHint: 'дд.мм.гггг', reminderTimeFormatHint: 'чч:мм',
     reminderSaveBtn: 'Запази', reminderRemoveBtn: 'Премахни напомнянето',
     reminderRepeatLabel: 'Повторение', reminderRepeatNone: 'Веднъж',
     reminderRepeatDaily: 'Всеки ден', reminderRepeatWeekly: 'Всяка седмица',
@@ -2237,6 +2256,7 @@ const STRINGS = {
     ctxColor: 'Color', noteColorNone: 'No color',
     ctxAddReminder: 'Add reminder', ctxEditReminder: 'Edit reminder',
     reminderDateLabel: 'Date', reminderTimeLabel: 'Time',
+    reminderDateFormatHint: 'mm/dd/yyyy', reminderTimeFormatHint: 'hh:mm',
     reminderSaveBtn: 'Save', reminderRemoveBtn: 'Remove reminder',
     reminderRepeatLabel: 'Repeat', reminderRepeatNone: 'Once',
     reminderRepeatDaily: 'Every day', reminderRepeatWeekly: 'Every week',
@@ -2351,6 +2371,7 @@ const STRINGS = {
     ctxColor: 'Цвет', noteColorNone: 'Без цвета',
     ctxAddReminder: 'Добавить напоминание', ctxEditReminder: 'Изменить напоминание',
     reminderDateLabel: 'Дата', reminderTimeLabel: 'Время',
+    reminderDateFormatHint: 'дд.мм.гггг', reminderTimeFormatHint: 'чч:мм',
     reminderSaveBtn: 'Сохранить', reminderRemoveBtn: 'Удалить напоминание',
     reminderRepeatLabel: 'Повтор', reminderRepeatNone: 'Один раз',
     reminderRepeatDaily: 'Каждый день', reminderRepeatWeekly: 'Каждую неделю',
@@ -2469,6 +2490,7 @@ const STRINGS = {
     ctxColor: 'Farbe', noteColorNone: 'Keine Farbe',
     ctxAddReminder: 'Erinnerung hinzufügen', ctxEditReminder: 'Erinnerung ändern',
     reminderDateLabel: 'Datum', reminderTimeLabel: 'Uhrzeit',
+    reminderDateFormatHint: 'tt.mm.jjjj', reminderTimeFormatHint: 'hh:mm',
     reminderSaveBtn: 'Speichern', reminderRemoveBtn: 'Erinnerung entfernen',
     reminderRepeatLabel: 'Wiederholung', reminderRepeatNone: 'Einmalig',
     reminderRepeatDaily: 'Täglich', reminderRepeatWeekly: 'Wöchentlich',
@@ -2585,6 +2607,7 @@ const STRINGS = {
     ctxColor: 'Color', noteColorNone: 'Sin color',
     ctxAddReminder: 'Añadir recordatorio', ctxEditReminder: 'Editar recordatorio',
     reminderDateLabel: 'Fecha', reminderTimeLabel: 'Hora',
+    reminderDateFormatHint: 'dd/mm/aaaa', reminderTimeFormatHint: 'hh:mm',
     reminderSaveBtn: 'Guardar', reminderRemoveBtn: 'Quitar recordatorio',
     reminderRepeatLabel: 'Repetición', reminderRepeatNone: 'Una vez',
     reminderRepeatDaily: 'Cada día', reminderRepeatWeekly: 'Cada semana',
@@ -5737,7 +5760,7 @@ function renderCtxMenuReminder(noteId, subId){
   menu.innerHTML = `
     <button type="button" class="reminder-back" data-ctx="reminder-back">${ICONS.arrowLeft}${s.onboardBack}</button>
     <div class="reminder-head">${ICONS.bell}${item.reminderAt ? s.ctxEditReminder : s.ctxAddReminder}</div>
-    <div class="reminder-field-labels"><span>${s.reminderDateLabel}</span><span>${s.reminderTimeLabel}</span></div>
+    <div class="reminder-field-labels"><span>${s.reminderDateLabel}<i>${s.reminderDateFormatHint}</i></span><span>${s.reminderTimeLabel}<i>${s.reminderTimeFormatHint}</i></span></div>
     <div class="reminder-fields">
       <input type="date" id="reminderDateInput" aria-label="${s.reminderDateLabel}" value="${existing ? dateInputValue(existing) : ''}">
       <input type="time" id="reminderTimeInput" aria-label="${s.reminderTimeLabel}" value="${existing ? timeInputValue(existing) : ''}">
