@@ -2077,7 +2077,7 @@ const STRINGS = {
     confirmDelete: 'Да изтрия ли тази бележка?',
     dayNames: ['Неделя','Понеделник','Вторник','Сряда','Четвъртък','Петък','Събота'],
     monthNames: ['Януари','Февруари','Март','Април','Май','Юни','Юли','Август','Септември','Октомври','Ноември','Декември'],
-    langToggle: 'EN', themeAria: 'Тема', langAria: 'Език',
+    themeAria: 'Тема', langAria: 'Език',
     categoriesAria: 'Категории', catAll: 'Всички',
     tagPersonal: 'Лични', tagWork: 'Работни', addTag: '+ таг', noTag: 'Без таг',
     newTagPlaceholder: 'Нов таг...', noNotesForTag: 'Няма бележки в тази категория',
@@ -2198,7 +2198,7 @@ const STRINGS = {
     confirmDelete: 'Delete this note?',
     dayNames: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
     monthNames: ['January','February','March','April','May','June','July','August','September','October','November','December'],
-    langToggle: 'BG', themeAria: 'Theme', langAria: 'Language',
+    themeAria: 'Theme', langAria: 'Language',
     categoriesAria: 'Categories', catAll: 'All',
     tagPersonal: 'Personal', tagWork: 'Work', addTag: '+ tag', noTag: 'No tag',
     newTagPlaceholder: 'New tag...', noNotesForTag: 'No notes in this category',
@@ -2294,6 +2294,8 @@ const STRINGS = {
     onboardStep3: 'Any note can have sub-notes — for sub-tasks and details.',
     onboardStep4: 'Swipe right to complete instantly, left to delete — the deleted note stays transparent for a few seconds so you can undo.',
     onboardStepCtx: 'Press and hold a note (without moving) to open a quick menu — Edit, Add sub-note, Colour, Reminder, Share, Copy, Delete.',
+    onboardStepLook: 'In the profile above you choose how notes look — soft colours, neon or transparent.',
+    onboardStepCleanup: 'Completed notes tidy themselves away after 30 days, and the trash clears after 5 — the list stays about today. Your streak and calendar are kept.',
     onboardStep5: "That's it! Write your first real note down here.",
     onboardNext: 'Next', onboardBack: 'Back', onboardGotIt: 'Got it', onboardSkip: 'Skip tutorial',
     verifyBannerText: 'Check your inbox and confirm your email — the link was sent when you signed up.',
@@ -2408,8 +2410,6 @@ const STRINGS = {
     onboardStep3: 'У любой заметки могут быть подзаметки — для подзадач и деталей.',
     onboardStep4: 'Свайп вправо — быстрое завершение, влево — удаление: заметка остаётся прозрачной несколько секунд, чтобы можно было отменить.',
     onboardStepCtx: 'Нажми и удерживай заметку (не двигая), чтобы открыть быстрое меню — Редактировать, Добавить подзаметку, Цвет, Напоминание, Поделиться, Копировать, Удалить.',
-    onboardStepLook: 'In the profile above you choose how notes look — soft colours, neon or transparent.',
-    onboardStepCleanup: 'Completed notes tidy themselves away after 30 days, and the trash clears after 5 — the list stays about today. Your streak and calendar are kept.',
     onboardStepLook: 'В профиле выше выбираешь, как выглядят заметки — мягкие цвета, неон или прозрачные.',
     onboardStepCleanup: 'Завершённые заметки убираются сами через 30 дней, корзина очищается через 5 — список остаётся про сегодня. Серия и календарь сохраняются.',
     onboardStep5: 'Готово! Напиши свою первую настоящую заметку здесь.',
@@ -2930,7 +2930,14 @@ function loadLocalCache(){
     const rawCycle = localStorage.getItem(CYCLE_DATA_KEY);
     cycleData = rawCycle ? JSON.parse(rawCycle) : { periods: [], cycleLength: 28 };
     if(!Array.isArray(cycleData.periods)) cycleData.periods = [];
-    if(typeof cycleData.cycleLength !== 'number') cycleData.cycleLength = 28;
+    // Не само typeof — 0/отрицателна/NaN/Infinity стойност тук би направила
+    // безкраен цикъл в phaseForDate() (обратната проекция while(ls > d) ls -=
+    // cycleLen НИКОГА не би стигнала до d при неположителна/безкрайна крачка).
+    // computeCycleLength() никога не връща такова, но данни, стигнали дотук
+    // директно (ръчно редактиран localStorage, повреден документ), може.
+    if(typeof cycleData.cycleLength !== 'number' || !isFinite(cycleData.cycleLength) || cycleData.cycleLength <= 0){
+      cycleData.cycleLength = 28;
+    }
   }catch(e){ cycleData = { periods: [], cycleLength: 28 }; }
   try{
     const rawOverlay = localStorage.getItem(CYCLE_OVERLAY_KEY);
@@ -3885,7 +3892,13 @@ function phaseForDate(key, data){
   for(const p of sorted){ if(parseDateKey(p) <= d) lastStart = p; }
   if(!lastStart){
     let ls = parseDateKey(sorted[0]);
-    while(ls > d) ls.setDate(ls.getDate() - cycleLen);
+    // Пазач срещу безкраен цикъл — cycleLen тук ВИНАГИ е положителен на
+    // практика (единственият извикващ подава глобалния cycleData, вече
+    // проверен при зареждане, виж loadLocalCache()/loadFromCloud()), но
+    // пазачът е евтин и предпазва и бъдещ код, който би подал невалидни
+    // данни директно.
+    let guard = 0;
+    while(ls > d && guard++ < 5000) ls.setDate(ls.getDate() - cycleLen);
     lastStart = localDateStr(ls.getTime());
   }
   const dayOfCycle = Math.floor((d - parseDateKey(lastStart)) / 86400000) % cycleLen + 1;
@@ -4328,7 +4341,9 @@ function loadFromCloud(uid){
       const cd = snap.data().cycleData;
       cycleData = {
         periods: Array.isArray(cd.periods) ? cd.periods : [],
-        cycleLength: typeof cd.cycleLength === 'number' ? cd.cycleLength : 28,
+        // Виж коментара в loadLocalCache() — 0/отрицателна/NaN/Infinity тук
+        // би причинила безкраен цикъл в phaseForDate().
+        cycleLength: (typeof cd.cycleLength === 'number' && isFinite(cd.cycleLength) && cd.cycleLength > 0) ? cd.cycleLength : 28,
       };
     }
     archiveOldCompleted();
