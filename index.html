@@ -945,6 +945,39 @@
   .profile-panel .calendar-legend .dot{width:8px;height:8px;border-radius:50%;}
   .profile-panel .calendar-legend .dot.past{background:var(--text-dim);}
   .profile-panel .calendar-legend .dot.future{background:var(--gold);}
+  /* Избран ден (клик върху клетка) — злато вместо акцентния цвят на "днес",
+     за да не се бъркат двете състояния, когато избраният ден Е днес (тогава
+     .today печели визуално, вижда се само рамката на today). Виж
+     selectCalendarDay()/calendarSelectedKey в скрипта. */
+  .profile-panel .week-day.selected{border-color:var(--gold);background:rgba(var(--gold-rgb),.12);}
+  .profile-panel .month-cell.selected{border-color:var(--gold);background:rgba(var(--gold-rgb),.12);}
+  /* Мини-привю на напомнянията за избрания ден — под легендата, отваря се
+     само ако денят има поне едно напомняне (виж renderReminderPreview()).
+     "Ситен шрифт" по изрична заявка на потребителя. */
+  .profile-panel .reminder-preview{
+    display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);
+  }
+  .profile-panel .reminder-preview-label{
+    font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;
+    color:var(--text-dim);margin-bottom:6px;
+  }
+  .profile-panel .reminder-preview-item{
+    display:flex;align-items:flex-start;gap:7px;padding:5px 0;
+  }
+  .profile-panel .reminder-preview-item + .reminder-preview-item{border-top:1px solid var(--border);}
+  .profile-panel .reminder-preview-dot{
+    flex-shrink:0;width:8px;height:8px;border-radius:50%;margin-top:4px;background:var(--gold);
+  }
+  .profile-panel .reminder-preview-text{
+    flex:1;min-width:0;font-size:12px;line-height:1.35;color:var(--text);word-break:break-word;
+  }
+  .profile-panel .reminder-preview-text.clamped{
+    display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;
+  }
+  .profile-panel .reminder-preview-expand{
+    -webkit-appearance:none;appearance:none;flex-shrink:0;background:none;border:none;
+    color:var(--accent-dim);padding:2px;margin-top:2px;display:inline-flex;align-items:center;justify-content:center;
+  }
   .profile-panel .sub-form-actions{display:flex;gap:8px;}
   .profile-panel .sub-form-actions button{
     -webkit-appearance:none;appearance:none;flex:1;border-radius:8px;padding:8px;
@@ -3096,7 +3129,12 @@ function renderProfileMenu(){
   panel.querySelector('[data-action="change-password"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderPasswordForm(); });
   panel.querySelector('[data-action="change-email"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderEmailForm(); });
   panel.querySelector('[data-action="my-review"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderMyReview(); });
-  panel.querySelector('[data-action="calendar"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); calendarRefDate = new Date(); renderCalendarView(); });
+  panel.querySelector('[data-action="calendar"]').addEventListener('mousedown', e=>{
+    e.preventDefault(); e.stopPropagation();
+    calendarRefDate = new Date();
+    calendarSelectedKey = null; // всяко ОТВАРЯНЕ на календара — обратно на днешна дата, по изрична заявка
+    renderCalendarView();
+  });
   panel.querySelector('[data-action="export"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); exportNotes(); closeProfilePanel(); });
   panel.querySelector('[data-action="import"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); document.getElementById('importFileInput').click(); });
   const inboxBtn = panel.querySelector('[data-action="feedback-inbox"]');
@@ -3297,6 +3335,16 @@ function renderMyReview(){
 // подбележки, защото напомняне може да се сложи на всяко от двете.
 let calendarMode = 'month';
 let calendarRefDate = new Date();
+// Кой ден е "избран" за мини-привюто на напомнянията долу в календара
+// (виж renderReminderPreview()) — ГГГГ-ММ-ДД низ, или null = "покажи
+// днешния ден". null нарочно, не направо today-то: renderCalendarView()
+// го смята НАНОВО при всяко подаване на null, значи "нулиране на избора"
+// и "нулиране на навигацията" (calendarRefDate = new Date()) стават на
+// едно и също място, при едно и също действие (отваряне/смяна на таб),
+// без да се дублира логика. Тап върху конкретен ден го задава изрично,
+// само стрелките prev/next НЕ го пипат — разглеждаш друг месец, привюто
+// си остава на последния тапнат/избран ден.
+let calendarSelectedKey = null;
 
 // ЛОКАЛЕН (не UTC) дата-ключ ГГГГ-ММ-ДД — само за календарния изглед.
 // ВАЖНО: тук НЕ ползваме dateStr() (UTC-базиран, ползван другаде в
@@ -3350,13 +3398,37 @@ function calendarRemindersCountForKey(key){
   });
   return cnt;
 }
+// Като calendarRemindersCountForKey() по-горе, но връща самите бележки/
+// подбележки (за мини-привюто в календара), не само бройка — СЪЩИТЕ два
+// филтъра (status!=='done', tag!==DELETED_TAG), за да съвпада винаги с
+// точката на деня в решетката. Сортирано по часа на деня (не по timestamp
+// directo — при повтарящи се напомняния reminderAt е ПЪРВОНАЧАЛНАТА дата,
+// не днешната случка, значи модулна аритметика върху epoch би объркала
+// часовата зона; часът на деня обаче се пази верен през всички повторения).
+function remindersForDateKey(key){
+  const out = [];
+  notes.forEach(n=>{
+    if(n.tag === DELETED_TAG) return;
+    if(n.status !== 'done' && reminderOccursOnDate(n.reminderAt, n.reminderRepeat, key)){
+      out.push({ key:n.id, text:n.text, color:n.color, reminderAt:n.reminderAt });
+    }
+    (n.subs || []).forEach(sub=>{
+      if(sub.status !== 'done' && reminderOccursOnDate(sub.reminderAt, sub.reminderRepeat, key)){
+        out.push({ key:n.id+'::'+sub.id, text:sub.text, color:sub.color, reminderAt:sub.reminderAt });
+      }
+    });
+  });
+  const timeOfDay = ts => { const d = new Date(ts); return d.getHours()*60 + d.getMinutes(); };
+  out.sort((a,b)=> timeOfDay(a.reminderAt) - timeOfDay(b.reminderAt));
+  return out;
+}
 // Решетката на един месец (dow ред + клетки с номер на деня + точка-маркер
 // за минали бележки/бъдещи напомняния) — споделена между месечния изглед
 // (един път) и годишния (12 пъти, един под друг, виж renderCalendarView()).
 // По изрична заявка годишният изглед вече изглежда ТОЧНО като месечния,
 // само скролва надолу/нагоре през дванайсетте месеца — не отделен
 // "компактен" heatmap стил както преди.
-function monthGridHtml(year, month, todayKey, s){
+function monthGridHtml(year, month, todayKey, s, selectedKey){
   const firstOfMonth = new Date(year, month, 1);
   const leading = (firstOfMonth.getDay() + 6) % 7; // понеделник-първо подравняване
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -3367,11 +3439,15 @@ function monthGridHtml(year, month, todayKey, s){
     const key = localDateStr(d.getTime());
     const isToday = key === todayKey;
     const isFuture = key >= todayKey;
+    const isSelected = key === selectedKey;
     const dow = d.getDay(); // 0=нед,6=съб
     const isWeekend = dow === 0 || dow === 6;
     const count = isFuture ? calendarRemindersCountForKey(key) : calendarNotesCountForKey(key);
     const dotCls = count > 0 ? (isFuture ? 'future' : 'past') : '';
-    cells += `<div class="month-cell${isToday ? ' today' : ''}${isWeekend ? ' weekend' : ''}">
+    // data-cal-day — тапваш деня, мини-привюто на напомнянията долу
+    // (renderReminderPreview()) се обновява за него, виж wiring-а в
+    // renderCalendarView().
+    cells += `<div class="month-cell${isToday ? ' today' : ''}${isWeekend ? ' weekend' : ''}${isSelected ? ' selected' : ''}" data-cal-day="${key}">
       <span class="month-daynum">${day}</span>
       ${dotCls ? `<span class="month-dot ${dotCls}"></span>` : ''}
     </div>`;
@@ -3384,6 +3460,10 @@ function renderCalendarView(mode){
   const s = t();
   const panel = document.getElementById('profilePanel');
   const todayKey = localDateStr(Date.now());
+  // null = "покажи днес" (виж коментара при обявяването по-горе) — тук се
+  // смята наново при всяко нулиране, значи отваряне/смяна на таб винаги
+  // показват актуалната днешна дата в мини-привюто, по изрична заявка.
+  if(calendarSelectedKey === null) calendarSelectedKey = todayKey;
   const fmt = d => `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
 
   let bodyHtml, rangeLabel;
@@ -3397,10 +3477,11 @@ function renderCalendarView(mode){
       const key = localDateStr(d.getTime());
       const isToday = key === todayKey;
       const isFuture = key >= todayKey;
+      const isSelected = key === calendarSelectedKey;
       const isWeekend = i === 5 || i === 6; // понеделник-първо: индекс 5=събота, 6=неделя
       const count = isFuture ? calendarRemindersCountForKey(key) : calendarNotesCountForKey(key);
       const markerCls = count > 0 ? (isFuture ? 'future' : 'past') : 'empty';
-      return `<div class="week-day${isToday ? ' today' : ''}${isWeekend ? ' weekend' : ''}">
+      return `<div class="week-day${isToday ? ' today' : ''}${isWeekend ? ' weekend' : ''}${isSelected ? ' selected' : ''}" data-cal-day="${key}">
         <span class="dow">${s.dowShort[i]}</span>
         <span class="dnum">${d.getDate()}</span>
         <span class="marker ${markerCls}">${count > 0 ? count : '–'}</span>
@@ -3410,7 +3491,7 @@ function renderCalendarView(mode){
     const year = calendarRefDate.getFullYear();
     const month = calendarRefDate.getMonth();
     rangeLabel = `${s.monthNames[month]} ${year}`;
-    bodyHtml = monthGridHtml(year, month, todayKey, s);
+    bodyHtml = monthGridHtml(year, month, todayKey, s, calendarSelectedKey);
   } else {
     // Годишен изглед — СЪЩИТЕ месечни решетки (monthGridHtml(), виж по-горе)
     // едно под друго, в скролваем контейнер — по изрична заявка да изглежда
@@ -3422,7 +3503,7 @@ function renderCalendarView(mode){
     for(let m = 0; m < 12; m++){
       monthsHtml += `<div class="year-month">
         <div class="year-month-label">${s.monthNames[m]}</div>
-        ${monthGridHtml(year, m, todayKey, s)}
+        ${monthGridHtml(year, m, todayKey, s, calendarSelectedKey)}
       </div>`;
     }
     bodyHtml = `<div class="year-scroll">${monthsHtml}</div>`;
@@ -3445,9 +3526,18 @@ function renderCalendarView(mode){
         <span><span class="dot past"></span>${s.calendarLegendPast}</span>
         <span><span class="dot future"></span>${s.calendarLegendFuture}</span>
       </div>
+      <div class="reminder-preview" id="calReminderPreview"></div>
     </div>
     <hr>
     <button type="button" class="action" data-action="calendar-back">${ICONS.close}${s.cancelAria}</button>`;
+
+  renderReminderPreview(calendarSelectedKey);
+  panel.querySelectorAll('[data-cal-day]').forEach(cell=>{
+    cell.addEventListener('mousedown', e=>{
+      e.preventDefault(); e.stopPropagation();
+      selectCalendarDay(cell.dataset.calDay);
+    });
+  });
 
   // Годишният изглед се отваря скролнат директно на актуалния месец (не
   // винаги от януари) — само когато действително се показва текущата
@@ -3466,6 +3556,7 @@ function renderCalendarView(mode){
     b.addEventListener('mousedown', e=>{
       e.preventDefault(); e.stopPropagation();
       calendarRefDate = new Date();
+      calendarSelectedKey = null; // смяна на таб = "нулиране" — обратно на днешна дата
       renderCalendarView(b.dataset.calTab);
     });
   });
@@ -3480,6 +3571,64 @@ function renderCalendarView(mode){
     });
   });
   panel.querySelector('[data-action="calendar-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
+}
+
+// Мини-привю на напомнянията за избрания ден в календара (виж
+// calendarSelectedKey/selectCalendarDay() по-долу) — ситен шрифт долу под
+// решетката, по изрична заявка. Показва се само ако има поне едно
+// напомняне за деня — иначе блокът остава празен/скрит, за да не тежи
+// календара с "няма нищо" съобщения.
+function renderReminderPreview(key){
+  const box = document.getElementById('calReminderPreview');
+  if(!box) return;
+  const items = remindersForDateKey(key);
+  if(!items.length){ box.innerHTML = ''; box.style.display = 'none'; return; }
+  const s = t();
+  // dayLabel() очаква timestamp, не ГГГГ-ММ-ДД низ — 12ч на обяд, за да е
+  // далеч от полунощните часова-зона ръбове (виж коментара при
+  // localDateStr() по-горе за същия клас проблем).
+  const [y, m, d] = key.split('-').map(Number);
+  const label = dayLabel(new Date(y, m - 1, d, 12).getTime());
+  box.style.display = 'block';
+  box.innerHTML = `<div class="reminder-preview-label">${escapeHtml(label)}</div>` +
+    items.map(it => `
+      <div class="reminder-preview-item">
+        <span class="reminder-preview-dot"${it.color ? ` style="background:${it.color}"` : ''}></span>
+        <span class="reminder-preview-text clamped" data-key="${it.key}">${escapeHtml(it.text || '')}</span>
+        <button type="button" class="reminder-preview-expand" data-key="${it.key}" style="display:none" aria-label="${s.expandAria}">${ICONS.chevronDown}</button>
+      </div>`).join('');
+  // Бутонът за разгъване се показва само ако текстът реално прелива —
+  // същия принцип като .txt.clamped/attachHandlers() за самите бележки.
+  box.querySelectorAll('.reminder-preview-text.clamped').forEach(el=>{
+    if(el.scrollHeight > el.clientHeight + 1){
+      const btn = box.querySelector(`.reminder-preview-expand[data-key="${el.dataset.key}"]`);
+      if(btn) btn.style.display = 'inline-flex';
+    }
+  });
+  box.querySelectorAll('.reminder-preview-expand').forEach(btn=>{
+    btn.addEventListener('mousedown', e=>{
+      e.preventDefault(); e.stopPropagation();
+      const txt = box.querySelector(`.reminder-preview-text[data-key="${btn.dataset.key}"]`);
+      const stillClamped = txt.classList.toggle('clamped');
+      btn.innerHTML = stillClamped ? ICONS.chevronDown : ICONS.chevronUp;
+      btn.setAttribute('aria-label', stillClamped ? s.expandAria : s.collapseAria);
+    });
+  });
+}
+
+// Тап върху ден от решетката — сменя избрания ден. Нарочно БЕЗ пълен
+// re-render на целия календар (само мести .selected класа в DOM-а и
+// опреснява мини-привюто) — по-леко и не чупи скрол позицията в годишния
+// изглед (renderCalendarView() го скролва до текущия месец само при
+// ПЪРВОТО отваряне, виж по-горе — пълен re-render тук би го върнал там).
+function selectCalendarDay(key){
+  if(key === calendarSelectedKey) return;
+  const panel = document.getElementById('profilePanel');
+  panel.querySelectorAll('[data-cal-day].selected').forEach(el=>el.classList.remove('selected'));
+  const cell = panel.querySelector(`[data-cal-day="${key}"]`);
+  if(cell) cell.classList.add('selected');
+  calendarSelectedKey = key;
+  renderReminderPreview(key);
 }
 
 // Статистика за админ акаунта — общ брой регистрирани (документи в users/,
