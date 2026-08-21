@@ -500,6 +500,15 @@
     -webkit-appearance:none;appearance:none;width:100%;min-width:0;background:var(--card-2);
     border:1px solid var(--border);border-radius:8px;padding:8px 8px;
     font-size:13px;outline:none;font-family:inherit;box-sizing:border-box;
+    /* Изрична фиксирана височина — по изрична заявка кутийката да е
+       ЕДНАКВА (не се различава между празно/попълнено). Родните
+       type="date"/"time" иначе леко варират по височина сами (в Chromium
+       измерено: датата 35px, часът 37.64px за СЪЩОТО padding — иконата
+       часовник/календар не са еднакво "високи" вътрешно), а на iPhone
+       Safari разликата между празно/избрано поле може да е още по-осезаема.
+       Изричната height елиминира разликата навсякъде, независимо от
+       платформата. */
+    height:38px;
   }
   /* Формат-подсказка (напр. "дд.мм.гггг"/"чч:мм") ВЪТРЕ в самото поле, не
      над него — по изрична заявка. Родно type="date"/"time" няма надежден
@@ -530,9 +539,12 @@
   }
   .ctx-menu .reminder-repeat-row{display:flex;gap:6px;padding:0 4px 8px;}
   .ctx-menu .reminder-repeat-row button{
+    /* Една идея по-малки от датата/часа над тях (padding/font-size леко
+       намалени) — по изрична заявка, за да не изглеждат тежки редом с
+       по-важните полета за дата/час. */
     flex:1;width:auto;-webkit-appearance:none;appearance:none;
     background:var(--card-2);border:1px solid var(--border);color:var(--text-dim);
-    border-radius:8px;padding:7px 4px;font-size:11.5px;font-weight:700;font-family:inherit;
+    border-radius:8px;padding:6px 4px;font-size:10.5px;font-weight:700;font-family:inherit;
     text-align:center;justify-content:center;
   }
   .ctx-menu .reminder-repeat-row button.active{
