@@ -1049,20 +1049,6 @@
   .profile-panel .cycle-phase-info{flex:1;min-width:0;}
   .profile-panel .cycle-phase-name{font-size:13px;font-weight:700;color:var(--text);}
   .profile-panel .cycle-phase-days{font-size:10.5px;color:var(--text-dim);margin-top:2px;}
-  .profile-panel .cycle-history{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
-  .profile-panel .cycle-history-head{
-    font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;
-    color:var(--text-dim);margin-bottom:6px;
-  }
-  .profile-panel .cycle-history-row{
-    display:flex;align-items:center;justify-content:space-between;gap:8px;
-    padding:5px 0;font-size:11.5px;color:var(--text);
-  }
-  .profile-panel .cycle-history-row span{display:flex;align-items:center;gap:6px;}
-  .profile-panel .cycle-history-remove{
-    -webkit-appearance:none;appearance:none;flex-shrink:0;background:none;border:none;
-    color:var(--text-dim);padding:2px;display:inline-flex;align-items:center;justify-content:center;
-  }
   .profile-panel .cycle-disclaimer{
     font-size:9px;line-height:1.35;color:var(--text-dim);margin:12px 2px 0;
   }
@@ -2158,7 +2144,6 @@ const STRINGS = {
     cyclePhaseMenstrual: 'Менструална фаза', cyclePhaseFollicular: 'Фоликуларна фаза', cyclePhaseOvulation: 'Овулация', cyclePhaseLuteal: 'Лутеална фаза',
     cycleDaysUntilNext: n => `Следващ цикъл: след ${n} ${n===1?'ден':'дни'}`, cycleOverdue: 'Следващият цикъл вероятно е закъснял',
     cycleNoDataHint: 'Отбележи цикъл в календара, за да видиш текущата фаза.',
-    cycleAvgLength: n => `среден цикъл ${n} дни`, cycleHistoryTitle: 'История',
     cycleLegendLogged: 'Записан цикъл', cycleLegendPredicted: 'Очакван цикъл',
     cycleOverlayToggle: 'Показвай цикъла в календара', cycleDisclaimer: 'Общ ориентир, не медицински съвет.',
     dowShort: ['Пон','Вт','Ср','Чет','Пет','Съб','Нед'],
@@ -2275,7 +2260,6 @@ const STRINGS = {
     cyclePhaseMenstrual: 'Menstrual phase', cyclePhaseFollicular: 'Follicular phase', cyclePhaseOvulation: 'Ovulation', cyclePhaseLuteal: 'Luteal phase',
     cycleDaysUntilNext: n => `Next period: in ${n} day${n===1?'':'s'}`, cycleOverdue: 'Next period may be overdue',
     cycleNoDataHint: 'Log a period in the calendar to see your current phase.',
-    cycleAvgLength: n => `average cycle ${n} days`, cycleHistoryTitle: 'History',
     cycleLegendLogged: 'Logged period', cycleLegendPredicted: 'Predicted period',
     cycleOverlayToggle: 'Show cycle in the calendar', cycleDisclaimer: 'General guidance, not medical advice.',
     dowShort: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
@@ -2390,7 +2374,6 @@ const STRINGS = {
     cyclePhaseMenstrual: 'Менструальная фаза', cyclePhaseFollicular: 'Фолликулярная фаза', cyclePhaseOvulation: 'Овуляция', cyclePhaseLuteal: 'Лютеиновая фаза',
     cycleDaysUntilNext: n => `Следующий цикл: через ${n} дн.`, cycleOverdue: 'Следующий цикл, возможно, задерживается',
     cycleNoDataHint: 'Отметь цикл в календаре, чтобы увидеть текущую фазу.',
-    cycleAvgLength: n => `средний цикл ${n} дн.`, cycleHistoryTitle: 'История',
     cycleLegendLogged: 'Записанный цикл', cycleLegendPredicted: 'Ожидаемый цикл',
     cycleOverlayToggle: 'Показывать цикл в календаре', cycleDisclaimer: 'Общий ориентир, не медицинский совет.',
     dowShort: ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
@@ -2509,7 +2492,6 @@ const STRINGS = {
     cyclePhaseMenstrual: 'Menstruationsphase', cyclePhaseFollicular: 'Follikelphase', cyclePhaseOvulation: 'Eisprung', cyclePhaseLuteal: 'Lutealphase',
     cycleDaysUntilNext: n => `Nächster Zyklus: in ${n} Tag${n===1?'':'en'}`, cycleOverdue: 'Der nächste Zyklus könnte überfällig sein',
     cycleNoDataHint: 'Trage einen Zyklus im Kalender ein, um die aktuelle Phase zu sehen.',
-    cycleAvgLength: n => `durchschnittlicher Zyklus ${n} Tage`, cycleHistoryTitle: 'Verlauf',
     cycleLegendLogged: 'Erfasster Zyklus', cycleLegendPredicted: 'Erwarteter Zyklus',
     cycleOverlayToggle: 'Zyklus im Kalender anzeigen', cycleDisclaimer: 'Allgemeine Orientierung, kein medizinischer Rat.',
     dowShort: ['Mo','Di','Mi','Do','Fr','Sa','So'],
@@ -2626,7 +2608,6 @@ const STRINGS = {
     cyclePhaseMenstrual: 'Fase menstrual', cyclePhaseFollicular: 'Fase folicular', cyclePhaseOvulation: 'Ovulación', cyclePhaseLuteal: 'Fase lútea',
     cycleDaysUntilNext: n => `Próximo ciclo: en ${n} día${n===1?'':'s'}`, cycleOverdue: 'El próximo ciclo podría estar retrasado',
     cycleNoDataHint: 'Registra un ciclo en el calendario para ver la fase actual.',
-    cycleAvgLength: n => `ciclo medio de ${n} días`, cycleHistoryTitle: 'Historial',
     cycleLegendLogged: 'Ciclo registrado', cycleLegendPredicted: 'Ciclo previsto',
     cycleOverlayToggle: 'Mostrar el ciclo en el calendario', cycleDisclaimer: 'Orientación general, no es consejo médico.',
     dowShort: ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'],
@@ -3911,12 +3892,6 @@ function ovulationDateForPeriodStart(startKey, cycleLen){
   d.setDate(d.getDate() + ovDay - 1);
   return localDateStr(d.getTime());
 }
-// dd.мм.гггг от ГГГГ-ММ-ДД низ — самите ключове вече са в тоя ред, чист
-// низов разрез е достатъчен, не е нужен Date обект.
-function fmtCycleDate(key){
-  const [y,m,d] = key.split('-');
-  return `${d}.${m}.${y}`;
-}
 // За наслагването в основния бележник-календар (monthGridHtml()/седмичния
 // изглед/мини-привюто) — връща null, ако тук няма какво да се покаже
 // (изгасено наслагване, няма изобщо записан цикъл, или денят е "празен").
@@ -3950,17 +3925,27 @@ function cycleInfoForDateKey(key){
 }
 
 function handleCycleDayTap(key){
-  if(!cyclePendingStart){
-    cyclePendingStart = key;
+  if(cyclePendingStart){
+    let start = cyclePendingStart, end = key;
+    if(end < start){ const tmp = start; start = end; end = tmp; }
+    cyclePendingStart = null;
+    cycleData.periods.push({ start, end });
+    cycleData.cycleLength = computeCycleLength(cycleData.periods);
+    saveCycleData();
     renderCycleView();
     return;
   }
-  let start = cyclePendingStart, end = key;
-  if(end < start){ const tmp = start; start = end; end = tmp; }
-  cyclePendingStart = null;
-  cycleData.periods.push({ start, end });
-  cycleData.cycleLength = computeCycleLength(cycleData.periods);
-  saveCycleData();
+  // Тап върху ВЕЧЕ логнат ден (не прогнозиран) маха целия цикъл, към който
+  // принадлежи, вместо да го третира като начало на нов запис — по
+  // изрична заявка екранът да е "само визуализация" без отделен списък
+  // "История" (виж CLAUDE.md), значи тапването на решетката си остава
+  // единственият начин да се коригира сгрешен запис.
+  const loggedIdx = cycleData.periods.findIndex(p => dateInCycleRange(key, p.start, p.end));
+  if(loggedIdx !== -1){
+    removeCyclePeriod(loggedIdx);
+    return;
+  }
+  cyclePendingStart = key;
   renderCycleView();
 }
 function cancelCyclePending(){
@@ -4033,19 +4018,6 @@ function renderCycleView(){
     phaseHtml = `<p class="profile-hint">${ICONS.alert}<span>${s.cycleNoDataHint}</span></p>`;
   }
 
-  const historyHtml = sortedPeriods.length ? `
-    <div class="cycle-history">
-      <div class="cycle-history-head">${s.cycleHistoryTitle} · ${s.cycleAvgLength(cycleData.cycleLength)}</div>
-      ${sortedPeriods.slice(0, 8).map(p=>{
-        const idx = cycleData.periods.indexOf(p);
-        const label = p.start === p.end ? fmtCycleDate(p.start) : `${fmtCycleDate(p.start)} – ${fmtCycleDate(p.end)}`;
-        return `<div class="cycle-history-row">
-          <span>${ICONS.droplet}${label}</span>
-          <button type="button" class="cycle-history-remove" data-remove-idx="${idx}" aria-label="${s.deleteAria}">${ICONS.close}</button>
-        </div>`;
-      }).join('')}
-    </div>` : '';
-
   const pendingHtml = cyclePendingStart
     ? `<p class="cycle-tap-hint">${s.cycleTapLastHint} · <button type="button" class="cycle-cancel-pending" data-action="cycle-cancel-pending">${s.cancelAria}</button></p>`
     : `<p class="cycle-tap-hint">${s.cycleTapFirstHint}</p>`;
@@ -4064,7 +4036,6 @@ function renderCycleView(){
       </div>
       ${pendingHtml}
       ${phaseHtml}
-      ${historyHtml}
       <button type="button" class="action" data-action="toggle-cycle-overlay">${ICONS.calendar}${L(s.cycleOverlayToggle)}${cycleOverlayEnabled ? ICONS.check : ''}</button>
       <p class="cycle-disclaimer">${s.cycleDisclaimer}</p>
     </div>
@@ -4083,9 +4054,6 @@ function renderCycleView(){
   });
   const cancelBtn = panel.querySelector('[data-action="cycle-cancel-pending"]');
   if(cancelBtn) cancelBtn.addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); cancelCyclePending(); });
-  panel.querySelectorAll('[data-remove-idx]').forEach(b=>{
-    b.addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); removeCyclePeriod(Number(b.dataset.removeIdx)); });
-  });
   panel.querySelector('[data-action="toggle-cycle-overlay"]').addEventListener('mousedown', e=>{
     e.preventDefault(); e.stopPropagation();
     cycleOverlayEnabled = !cycleOverlayEnabled;
