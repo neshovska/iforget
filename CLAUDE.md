@@ -838,11 +838,12 @@ Firestore документ `users/{uid}` също съдържа `tagOrder: stri
   трие сам, повторно `delete()` на несъществуващ документ е тих no-op),
   `entitlements/{uid}`, всички `feedback` документи с `uid` на изтрития
   акаунт (`where("uid","==",uid)` + batch delete).
-  **ИЗИСКВА `firebase deploy --only functions` от потребителя** — не се
-  качва автоматично (виж `pages.yml`, който маха `functions/` преди
-  GitHub Pages deploy-а). Синтаксисът е проверен (`node --check` +
-  успешен `require()` на целия модул), но реалният `onDelete` trigger не
-  е тестван срещу истински Firebase проект в тази среда.
+  ~~**ИЗИСКВА `firebase deploy --only functions` от потребителя**~~ —
+  **ДЕПЛОЙНАТО** (потвърдено от потребителя — `functions[cleanupDeletedUser
+  (us-central1)] Successful create operation.`, `us-central1` както се
+  очакваше без явен `.region()`). Не се качва автоматично (виж `pages.yml`,
+  който маха `functions/` преди GitHub Pages deploy-а), но вече е на
+  живо във Firebase проекта.
 - **Офлайн ЗАПИС — `enablePersistence()` + значка за синхронизация.**
   Отделно от `sw.js` (който решава дали страницата се ОТВАРЯ офлайн), това
   решава дали писаното офлайн СТИГА до облака. Firestore офлайн опашката
@@ -1490,7 +1491,7 @@ nodemailer**, защото имейлът е Resend (`noreply@iforget.eu`, са�
 3. `firebase deploy --only functions,firestore:rules`.
 4. Реален тест — потвърдено работещо.
 
-## Брандиран email verification (потвърждение на регистрация) — КОДЪТ Е ГОТОВ, чака deploy
+## Брандиран email verification (потвърждение на регистрация) — ДЕПЛОЙНАТО
 
 Потребителят забеляза, че само reset-паролата беше брандирана — имейлът
 "Провери пощата си и потвърди имейла си" при регистрация още идваше от
@@ -1531,11 +1532,12 @@ Firebase-default `noreply@iforgetbg.firebaseapp.com`, защото никога 
   към стария `currentUser.sendEmailVerification()`, за да не остане
   верификацията чупена в прозореца преди deploy.
 
-**Остава** (същите стъпки като password reset, вече познати на
-потребителя): `firebase deploy --only functions,firestore:rules`
-(не трябва нов secret — `RESEND_API_KEY` вече е зададен), после реален
-тест — регистрирай тестов акаунт (или "изпрати пак" бутона от банера),
-провери дали писмото идва от `noreply@iforget.eu`.
+~~**Остава**~~ — **ДЕПЛОЙНАТО** (потвърдено от потребителя, `firebase
+deploy --only functions,firestore:rules` от собствения ѝ Mac,
+`functions[sendBrandedEmailVerification(europe-west1)] Successful update
+operation.`). Реален тест (регистрирай тестов акаунт или "изпрати пак" от
+банера, провери дали писмото идва от `noreply@iforget.eu`) остава за
+следващия път, когато има повод — не е блокиращо.
 
 ## Premium/Stripe инфраструктура — ПОДГОТВЕНА, но НЕВИДИМА за реални потребители
 
