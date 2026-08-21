@@ -7,7 +7,7 @@
     "sync": "npm run sync-www && npx cap sync",
     "open:android": "npm run sync && npx cap open android",
     "open:ios": "npm run sync && npx cap open ios",
-    "icons": "capacitor-assets generate --ios --android --iconBackgroundColor '#0A0A0C' --iconBackgroundColorDark '#0A0A0C' --splashBackgroundColor '#0A0A0C' --splashBackgroundColorDark '#0A0A0C'"
+    "icons": "capacitor-assets generate --ios --android --iconBackgroundColor '#1E2A37' --iconBackgroundColorDark '#1E2A37' --splashBackgroundColor '#1E2A37' --splashBackgroundColorDark '#1E2A37'"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
