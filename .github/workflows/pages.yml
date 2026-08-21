@@ -35,7 +35,7 @@ jobs:
       # CNAME остават непокътнати — точно те са реалният сайт.
       - name: Remove internal/non-public files
         run: |
-          rm -rf CLAUDE.md functions android ios scripts node_modules \
+          rm -rf CLAUDE.md functions android ios scripts node_modules store \
                  firebase.json .firebaserc firestore.rules \
                  package.json package-lock.json capacitor.config.json .gitignore
       - name: Upload artifact
