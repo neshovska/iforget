@@ -481,7 +481,20 @@
      бутони НА МЯСТОТО (същият #ctxMenu, воалът и "изпъкналата" бележка си
      остават), докато потребителят избере дата/час. */
   .ctx-menu .reminder-head{display:flex;align-items:center;gap:8px;padding:4px 6px 8px;font-size:13px;font-weight:700;color:var(--text);}
-  .ctx-menu .reminder-fields{display:flex;gap:6px;padding:0 4px 8px;}
+  /* Надписи "Дата"/"Час" НАД полетата — native <input type="date/time">
+     показва placeholder="" непоследователно (Safari на iPhone напр. изобщо
+     не го зачита за тия типове), значи празните полета изглеждаха съвсем
+     без подсказка какво се въвежда там. Отделен ред точно защото
+     placeholder не е надежден избор тук — истински видим текст, не само
+     aria-label (вече имаше aria-label, но той е невидим за зрящ
+     потребител). Same flex:1 подредба като .reminder-fields по-долу, за да
+     застане точно над съответното поле. */
+  .ctx-menu .reminder-field-labels{display:flex;gap:6px;padding:0 4px;}
+  .ctx-menu .reminder-field-labels span{
+    flex:1;font-size:11px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.3px;color:var(--text-dim);
+  }
+  .ctx-menu .reminder-fields{display:flex;gap:6px;padding:4px 4px 8px;}
   .ctx-menu .reminder-fields input{
     -webkit-appearance:none;appearance:none;flex:1;min-width:0;background:var(--card-2);
     border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 8px;
@@ -5086,6 +5099,7 @@ function renderCtxMenuReminder(noteId, subId){
   menu.innerHTML = `
     <button type="button" class="reminder-back" data-ctx="reminder-back">${ICONS.arrowLeft}${s.onboardBack}</button>
     <div class="reminder-head">${ICONS.bell}${item.reminderAt ? s.ctxEditReminder : s.ctxAddReminder}</div>
+    <div class="reminder-field-labels"><span>${s.reminderDateLabel}</span><span>${s.reminderTimeLabel}</span></div>
     <div class="reminder-fields">
       <input type="date" id="reminderDateInput" aria-label="${s.reminderDateLabel}" value="${existing ? dateInputValue(existing) : ''}">
       <input type="time" id="reminderTimeInput" aria-label="${s.reminderTimeLabel}" value="${existing ? timeInputValue(existing) : ''}">
