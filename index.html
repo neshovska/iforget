@@ -3336,11 +3336,17 @@ function reminderOccursOnDate(reminderAt, reminderRepeat, dateKey){
   }
   return false;
 }
+// Същите правила като remindableItems() (виж по-долу) — приключено или
+// изтрито напомняне вече не звъни, значи не бива да продължава да се
+// показва в календара като предстоящо. По изрична заявка.
 function calendarRemindersCountForKey(key){
   let cnt = 0;
   notes.forEach(n=>{
-    if(reminderOccursOnDate(n.reminderAt, n.reminderRepeat, key)) cnt++;
-    (n.subs || []).forEach(sub=>{ if(reminderOccursOnDate(sub.reminderAt, sub.reminderRepeat, key)) cnt++; });
+    if(n.tag === DELETED_TAG) return;
+    if(n.status !== 'done' && reminderOccursOnDate(n.reminderAt, n.reminderRepeat, key)) cnt++;
+    (n.subs || []).forEach(sub=>{
+      if(sub.status !== 'done' && reminderOccursOnDate(sub.reminderAt, sub.reminderRepeat, key)) cnt++;
+    });
   });
   return cnt;
 }
@@ -4494,6 +4500,14 @@ function markDoneBySwipe(noteId, subId){
   target.status = 'done';
   target.completedAt = Date.now();
   save(); render();
+  // Приключена бележка не бива да звъни повече — remindableItems() вече
+  // изключва status==='done', значи браузърната проверка (checkRemindersNow())
+  // я пропуска от следващия тик нататък автоматично. НО нативно (свален
+  // апп) известие вече може да е НАСРОЧЕНО в самата операционна система
+  // отпреди (LN.schedule() в syncNativeReminders()) — то си стои и ще
+  // звънне на часа си, докато не се отмени изрично. Затова прересинхронизи-
+  // раме веднага тук, не чакаме следващото отваряне на приложението.
+  syncNativeReminders();
   scrollToNote(subId ? noteId+'::'+subId : noteId);
 }
 
@@ -4514,6 +4528,10 @@ function reopenItem(noteId, subId){
   // брои като приключена, макар да е активна.
   delete target.completedAt;
   save(); render();
+  // Връщането в активна/прогрес прави бележката пак допустима за
+  // напомняне (remindableItems() вече не я пропуска) — пресинхронизираме,
+  // за да се насрочи отново нативно, ако времето ѝ още не е минало.
+  syncNativeReminders();
   scrollToNote(subId ? noteId+'::'+subId : noteId);
 }
 
@@ -4550,6 +4568,7 @@ function restoreFromTrash(noteId){
       const at = typeof n.restoreIndex === 'number' ? Math.min(n.restoreIndex, parent.subs.length) : parent.subs.length;
       parent.subs.splice(at, 0, sub);
       save(); render();
+      syncNativeReminders(); // виж коментара в общия случай по-долу
       return;
     }
     // Родителят вече не съществува (също изтрит/изчистен) — пада към
@@ -4561,6 +4580,9 @@ function restoreFromTrash(noteId){
   delete n.prevTag;
   delete n.restoreParentId;
   save(); render();
+  // Възстановена бележка вече не е в кошчето — remindableItems() вече не я
+  // пропуска, значи евентуалното ѝ напомняне трябва пак да се насрочи.
+  syncNativeReminders();
 }
 
 // Swipe-наляво / "Изтрий" от long-press менюто: меко изтрива веднага (виж
@@ -4582,6 +4604,11 @@ function deleteBySwipe(noteId, subId){
   const restoreFn = softDelete(noteId, subId);
   if(!restoreFn) return;
   save();
+  // Изтрита бележка не бива да звъни повече — remindableItems() вече
+  // изключва tag===DELETED_TAG, но НАСРОЧЕНО нативно известие (LN.schedule()
+  // в syncNativeReminders()) си стои в операционната система, докато не се
+  // отмени изрично (виж същия коментар в markDoneBySwipe()).
+  syncNativeReminders();
   // Данните вече са записани, но НЕ пре-рисуваме веднага — оставяме
   // съществуващия елемент на място като прозрачен, докато тече Undo.
   if(ghostEl){
@@ -6357,6 +6384,10 @@ jumpBtn.addEventListener('click', ()=>scrollToBottom(true));
 
 document.getElementById('undoToastBtn').addEventListener('click', ()=>{
   if(undoRestoreFn) undoRestoreFn();
+  // Отмяна на изтриването връща бележката (и евентуалното ѝ напомняне) в
+  // сила — пресинхронизираме нативните известия, симетрично на
+  // deleteBySwipe()/reopenItem()/restoreFromTrash().
+  syncNativeReminders();
   hideUndoToast();
   // Връщането е моментално — не чакаме призрачния таймер да изтече, иначе
   // бележката би стояла зачеркната и прозрачна още секунди след "Отмени".
