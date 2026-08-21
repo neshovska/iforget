@@ -3130,13 +3130,14 @@ function renderProfileMenu(){
       html += `<button type="button" class="action premium-cta" data-action="premium-upgrade">${ICONS.droplet}${L(s.premiumUpgradeBtn)}</button>`;
     }
   }
+  html += `<hr>`;
   // "Календар" — ОТДЕЛЕН бутон директно тук, ИЗВЪН акордеона отдолу — по
   // изрична заявка за по-бързо (1 клик) достигане, вместо да е скрит в
   // подменюто "Данни" (изискваше 2 клика: разгъни групата, после клик на
   // бутона). Мястото му вътре в "Данни" сега заема "Месечен цикъл" — виж
-  // dataContent по-долу.
+  // dataContent по-долу. СЛЕД разделителната линия (не преди/до цветовете) —
+  // по изрична последваща заявка, да не стои залепен за реда с цветовете.
   html += `<button type="button" class="action" data-action="calendar">${ICONS.calendar}${L(s.calendarBtn)}</button>`;
-  html += `<hr>`;
 
   html += profileGroupBlock('view', ICONS.droplet, s.profileGroupView, `
     <button type="button" class="action" data-action="toggle-glass-notes">${ICONS.droplet}${L(s.glassNotesToggle)}${glassNotes ? ICONS.check : ''}</button>
