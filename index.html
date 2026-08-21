@@ -494,26 +494,32 @@
     flex:1;font-size:11px;font-weight:700;text-transform:uppercase;
     letter-spacing:.3px;color:var(--text-dim);
   }
-  /* Формат-подсказка (напр. "дд.мм.гггг"/"чч:мм") до самия надпис ДАТА/ЧАС
-     — по изрична заявка: самите надписи казват КАКВО се въвежда, но не и
-     В КАКЪВ РЕД (ден/месец/година?), а полето под тях е родно
-     type="date"/"time" копче, не текстово поле — placeholder="" не сработва
-     надеждно там (виж коментара при .reminder-field-labels по-горе за
-     същата причина), затова форматът е истински видим текст тук, не
-     placeholder атрибут. Нормален текст (не uppercase/bold като самия
-     надпис) и по-бледо (var(--text-dim) вече е приложен на родителя,
-     .6 opacity тук го смекчава допълнително) — за да остане ясно кое е
-     заглавието и кое е само пример за формат. */
-  .ctx-menu .reminder-field-labels span i{
-    font-style:normal;font-weight:400;text-transform:none;letter-spacing:0;
-    opacity:.65;margin-left:4px;white-space:nowrap;
-  }
   .ctx-menu .reminder-fields{display:flex;gap:6px;padding:4px 4px 8px;}
+  .ctx-menu .reminder-field-wrap{position:relative;flex:1;min-width:0;}
   .ctx-menu .reminder-fields input{
-    -webkit-appearance:none;appearance:none;flex:1;min-width:0;background:var(--card-2);
-    border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 8px;
+    -webkit-appearance:none;appearance:none;width:100%;min-width:0;background:var(--card-2);
+    border:1px solid var(--border);border-radius:8px;padding:8px 8px;
     font-size:13px;outline:none;font-family:inherit;box-sizing:border-box;
   }
+  /* Формат-подсказка (напр. "дд.мм.гггг"/"чч:мм") ВЪТРЕ в самото поле, не
+     над него — по изрична заявка. Родно type="date"/"time" няма надежден
+     placeholder (Safari на iPhone изобщо не го зачита за празно поле, виж
+     .reminder-field-labels по-горе за същата причина), затова е истински
+     текст, наслоен НАД полето (не placeholder атрибут). Chromium desktop
+     обаче РИСУВА собствен вграден намек "mm/dd/yyyy"/"--:-- --" за празно
+     поле — за да не се получат ДВА намека един върху друг, самият input
+     остава color:transparent, докато няма стойност (.has-value го връща
+     обратно); иконата (календар/часовник) е отделен pseudo-елемент,
+     неповлиян от color, си остава видима. pointer-events:none на
+     подсказката — тапваш/кликваш ПРЕЗ нея право върху полето и се отваря
+     нативният picker за избор/смяна, точно както преди. */
+  .ctx-menu .reminder-fields input[type="date"], .ctx-menu .reminder-fields input[type="time"]{color:transparent;}
+  .ctx-menu .reminder-fields input.has-value{color:var(--text);}
+  .ctx-menu .reminder-field-hint{
+    position:absolute;left:9px;top:50%;transform:translateY(-50%);
+    font-size:13px;color:var(--text-dim);opacity:.65;pointer-events:none;white-space:nowrap;
+  }
+  .ctx-menu .reminder-field-wrap input.has-value + .reminder-field-hint{display:none;}
   /* Повторение (Никога/Всеки ден/Всяка седмица) — три чипа, широчината им
      (width:auto + flex:1) трябва изрично да пребие .ctx-menu button{width:
      100%;...} по-долу (по-специфично, .ctx-menu .reminder-repeat-row button
@@ -5729,10 +5735,16 @@ function renderCtxMenuReminder(noteId, subId){
   menu.innerHTML = `
     <button type="button" class="reminder-back" data-ctx="reminder-back">${ICONS.arrowLeft}${s.onboardBack}</button>
     <div class="reminder-head">${ICONS.bell}${item.reminderAt ? s.ctxEditReminder : s.ctxAddReminder}</div>
-    <div class="reminder-field-labels"><span>${s.reminderDateLabel}<i>${s.reminderDateFormatHint}</i></span><span>${s.reminderTimeLabel}<i>${s.reminderTimeFormatHint}</i></span></div>
+    <div class="reminder-field-labels"><span>${s.reminderDateLabel}</span><span>${s.reminderTimeLabel}</span></div>
     <div class="reminder-fields">
-      <input type="date" id="reminderDateInput" aria-label="${s.reminderDateLabel}" value="${existing ? dateInputValue(existing) : ''}">
-      <input type="time" id="reminderTimeInput" aria-label="${s.reminderTimeLabel}" value="${existing ? timeInputValue(existing) : ''}">
+      <div class="reminder-field-wrap">
+        <input type="date" id="reminderDateInput" aria-label="${s.reminderDateLabel}" value="${existing ? dateInputValue(existing) : ''}" class="${existing ? 'has-value' : ''}">
+        <span class="reminder-field-hint">${s.reminderDateFormatHint}</span>
+      </div>
+      <div class="reminder-field-wrap">
+        <input type="time" id="reminderTimeInput" aria-label="${s.reminderTimeLabel}" value="${existing ? timeInputValue(existing) : ''}" class="${existing ? 'has-value' : ''}">
+        <span class="reminder-field-hint">${s.reminderTimeFormatHint}</span>
+      </div>
     </div>
     <div class="reminder-repeat-label">${s.reminderRepeatLabel}</div>
     <div class="reminder-repeat-row">` + repeatOptions.map(o =>
@@ -5742,6 +5754,15 @@ function renderCtxMenuReminder(noteId, subId){
       <button type="button" class="primary" data-ctx="reminder-save">${s.reminderSaveBtn}</button>
       ${item.reminderAt ? `<button type="button" class="danger" data-ctx="reminder-remove">${s.reminderRemoveBtn}</button>` : ''}
     </div>`;
+
+  // Формат-подсказката е ВЪТРЕ в полето (виж CSS/маркъпа по-горе) и се
+  // крие/показва спрямо .has-value — тук я държим синхронна с реалната
+  // стойност при всяка промяна (избор през нативния picker, или изчистване
+  // ако платформата го позволява), не само при първоначалното рисуване.
+  const dateFieldEl = menu.querySelector('#reminderDateInput');
+  const timeFieldEl = menu.querySelector('#reminderTimeInput');
+  dateFieldEl.addEventListener('input', () => dateFieldEl.classList.toggle('has-value', !!dateFieldEl.value));
+  timeFieldEl.addEventListener('input', () => timeFieldEl.classList.toggle('has-value', !!timeFieldEl.value));
 
   menu.querySelectorAll('.reminder-repeat-row button').forEach(b=>{
     b.addEventListener('mousedown', e=>{
