@@ -6296,6 +6296,12 @@ function itemRow(item, noteId, isSub){
   // разгъване/свиване се показва само ако текстът наистина прелива, виж
   // проверката с scrollHeight в attachHandlers().
   const isExpanded = expandedNotes.has(key);
+  // .meta редът по-долу: напомнянето е ПЪРВО, ПРЕДИ таг/"+ добави" — по
+  // изрична заявка: таг и "+ добави" трябва да си стоят на едно и също
+  // място едно спрямо друго, а добавянето/махането на напомняне не бива
+  // да ги мести. Преди reminder-badge беше МЕЖДУ тага и "+ добави" —
+  // точно там ги разместваше (буквално местеше "+ добави" по-встрани)
+  // всеки път, щом бележката получеше/изгубеше напомняне.
   return `<div class="note-wrap">
     <div class="swipe-shell">
       <div class="swipe-bg complete" aria-hidden="true">${ICONS.check} ${t().tagDone}</div>
@@ -6307,8 +6313,8 @@ function itemRow(item, noteId, isSub){
         <div class="body">
           <div class="txt${!isExpanded ? ' clamped' : ''}" data-key="${key}" data-action="edit" data-note="${noteId}" data-sub="${isSub?item.id:''}">${escapeHtml(item.text)}</div>
           <div class="meta">
-            ${!isSub ? tagPillHtml(item, noteId) : ''}
             ${item.reminderAt ? `<span class="reminder-badge">${ICONS.bell}${reminderLabel(item.reminderAt)}${item.reminderRepeat ? ICONS.repeat : ''}</span>` : ''}
+            ${!isSub ? tagPillHtml(item, noteId) : ''}
             ${!isSub && addingSubFor !== noteId ? `<button class="add-sub-link" data-action="sub-open" data-note="${noteId}">${t().addSubLink}</button>` : ''}
             <button class="expand-toggle" data-action="toggle-expand" data-key="${key}" style="display:${isExpanded?'inline-flex':'none'}" aria-label="${isExpanded?t().collapseAria:t().expandAria}">${isExpanded?t().collapseAria:t().expandAria}${isExpanded?ICONS.chevronUp:ICONS.chevronDown}</button>
           </div>
