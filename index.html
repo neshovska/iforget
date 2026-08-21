@@ -919,9 +919,22 @@
   .profile-panel .month-cell.today{border-color:var(--accent);background:rgba(var(--accent-rgb),.12);}
   .profile-panel .month-daynum{font-size:11px;font-weight:600;color:var(--text);}
   .profile-panel .month-cell.today .month-daynum{color:var(--accent);}
-  .profile-panel .month-dot{width:5px;height:5px;border-radius:50%;}
+  .profile-panel .month-dots{display:flex;align-items:center;gap:3px;}
+  .profile-panel .month-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
   .profile-panel .month-dot.past{background:var(--text-dim);}
   .profile-panel .month-dot.future{background:var(--gold);}
+  /* Наслагване на месечния цикъл в основния календар (cycleMarkerForDateKey(),
+     виж "Месечен цикъл" в скрипта) — ОТДЕЛНО кръгче до точката за бележки/
+     напомняния, разграничено по цвят, не по форма: розово = цикъл, лилаво =
+     овулация. Прогнозирано (все още незаписано) = по-бледо, същия принцип
+     като .reminder-preview* "записано/очаквано" по-долу. */
+  .profile-panel .month-dot.cycle-period{background:#d1748f;}
+  .profile-panel .month-dot.cycle-ovulation{background:#9b7ab8;}
+  .profile-panel .month-dot.predicted{opacity:.4;}
+  .profile-panel .week-cycle-dot{width:6px;height:6px;border-radius:50%;margin-top:2px;}
+  .profile-panel .week-cycle-dot.cycle-period{background:#d1748f;}
+  .profile-panel .week-cycle-dot.cycle-ovulation{background:#9b7ab8;}
+  .profile-panel .week-cycle-dot.predicted{opacity:.4;}
   /* Годишен изглед — СЪЩАТА решетка като месечния (monthGridHtml(), виж
      скрипта), просто 12 пъти една под друга в скролваем контейнер, по
      изрична заявка на потребителя ("направи го като месечния, само да
@@ -977,6 +990,63 @@
   .profile-panel .reminder-preview-expand{
     -webkit-appearance:none;appearance:none;flex-shrink:0;background:none;border:none;
     color:var(--accent-dim);padding:2px;margin-top:2px;display:inline-flex;align-items:center;justify-content:center;
+  }
+  /* Екран "Месечен цикъл" (renderCycleView()) — собствена решетка, ОТДЕЛНА
+     от .month-grid/.month-cell на основния календар: тук клетките са
+     кръгли тапващи се копчета (не квадратни), защото тапът тук ЗАПИСВА
+     цикъл, не отваря мини привю. Оставена е на 7-колонна grid структура
+     колкото .month-grid, за да подравни дните на седмицата отгоре еднакво. */
+  .profile-panel .cycle-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:2px;}
+  .profile-panel .cycle-dow{
+    font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:var(--text-dim);
+    text-align:center;padding-bottom:4px;
+  }
+  .profile-panel .cycle-cell{
+    -webkit-appearance:none;appearance:none;aspect-ratio:1;border-radius:50%;border:2px solid transparent;
+    background:var(--card-2);color:var(--text);font-size:11px;font-weight:600;font-family:inherit;
+    display:flex;align-items:center;justify-content:center;padding:0;
+  }
+  .profile-panel .cycle-cell.empty-cell{background:none;border-color:transparent;}
+  .profile-panel .cycle-cell.today{border-color:var(--accent);color:var(--accent);font-weight:800;}
+  .profile-panel .cycle-cell.logged{background:#d1748f;color:#fff;font-weight:800;border-color:transparent;}
+  .profile-panel .cycle-cell.predicted{background:rgba(209,116,143,.18);color:#d1748f;font-weight:700;border:1.5px dashed rgba(209,116,143,.5);}
+  .profile-panel .cycle-cell.pending{background:var(--gold);color:var(--bg);font-weight:800;box-shadow:0 0 0 2px rgba(var(--gold-rgb),.4);}
+  .profile-panel .cycle-tap-hint{
+    font-size:10.5px;color:var(--text-dim);margin:10px 2px 0;line-height:1.4;
+    display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  }
+  .profile-panel .cycle-cancel-pending{
+    -webkit-appearance:none;appearance:none;background:none;border:none;color:var(--accent-dim);
+    font-size:10.5px;font-weight:700;padding:0;font-family:inherit;text-decoration:underline;
+  }
+  .profile-panel .cycle-phase-card{
+    display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px;
+    border-radius:10px;background:var(--card-2);
+  }
+  .profile-panel .cycle-phase-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+  .profile-panel .cycle-phase-dot.menstrual{background:#d1748f;}
+  .profile-panel .cycle-phase-dot.follicular{background:var(--green);}
+  .profile-panel .cycle-phase-dot.ovulation{background:#9b7ab8;}
+  .profile-panel .cycle-phase-dot.luteal{background:var(--gold);}
+  .profile-panel .cycle-phase-info{flex:1;min-width:0;}
+  .profile-panel .cycle-phase-name{font-size:13px;font-weight:700;color:var(--text);}
+  .profile-panel .cycle-phase-days{font-size:10.5px;color:var(--text-dim);margin-top:2px;}
+  .profile-panel .cycle-history{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+  .profile-panel .cycle-history-head{
+    font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;
+    color:var(--text-dim);margin-bottom:6px;
+  }
+  .profile-panel .cycle-history-row{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:5px 0;font-size:11.5px;color:var(--text);
+  }
+  .profile-panel .cycle-history-row span{display:flex;align-items:center;gap:6px;}
+  .profile-panel .cycle-history-remove{
+    -webkit-appearance:none;appearance:none;flex-shrink:0;background:none;border:none;
+    color:var(--text-dim);padding:2px;display:inline-flex;align-items:center;justify-content:center;
+  }
+  .profile-panel .cycle-disclaimer{
+    font-size:9px;line-height:1.35;color:var(--text-dim);margin:12px 2px 0;
   }
   .profile-panel .sub-form-actions{display:flex;gap:8px;}
   .profile-panel .sub-form-actions button{
@@ -1712,6 +1782,23 @@ const TAG_ORDER_KEY = 'tagOrder';
 // под 10 KB за година, срещу стотици килобайти спестени бележки.
 let dayHistory = {};
 const DAY_HISTORY_KEY = 'dayHistory';
+// Месечен цикъл — записва се по СЪЩИЯ принцип като инициализацията в
+// GlowTrack (другото приложение на потребителката): тапваш първия ден на
+// цикъла, после последния, а средната дължина/фазата се пресмятат сами
+// (виж computeCycleLength()/phaseForDate() по-долу). Умишлено МНОГО по-
+// олекотено от GlowTrack версията — без проследяване на симптоми и без
+// текстови съвети по фаза (там са вързани за козметични процедури, които
+// iForget няма) — само истинското проследяване: дати, фаза, прогноза.
+// periods: [{start:'ГГГГ-ММ-ДД', end:'ГГГГ-ММ-ДД'}], cycleLength в дни.
+let cycleData = { periods: [], cycleLength: 28 };
+const CYCLE_DATA_KEY = 'cycleData';
+// Показва ли се цикълът и в основния бележник-календар (renderCalendarView())
+// — бутон за вкл/изкл в самия екран "Месечен цикъл", по изрична заявка.
+// По подразбиране включено: докато няма записан цикъл, наслагването и без
+// друго не показва нищо, значи няма какво да пречи; изключването е за
+// потребител, който вече Е записал цикли, но не иска да ги вижда там.
+let cycleOverlayEnabled = true;
+const CYCLE_OVERLAY_KEY = 'cycleOverlay';
 // Вдига се точно преди да приключи успешно разместване на таг (виж
 // attachCatRowDrag()) — "поглъща" единствения последвал click на реда с
 // категории, за да не отвори филтъра по погрешка веднага след провлачване.
@@ -2047,6 +2134,14 @@ const STRINGS = {
     reviewStreak: n => `${n} дни подред поне с 1 завършена бележка`,
     calendarBtn: 'Календар', calendarWeekTab: 'Седмица', calendarMonthTab: 'Месец', calendarYearTab: 'Година',
     calendarLegendPast: 'бележки', calendarLegendFuture: 'напомняния',
+    cycleMenuBtn: 'Месечен цикъл',
+    cycleTapFirstHint: 'Докосни първия ден на цикъла, после последния.', cycleTapLastHint: 'Сега докосни последния ден',
+    cyclePhaseMenstrual: 'Менструална фаза', cyclePhaseFollicular: 'Фоликуларна фаза', cyclePhaseOvulation: 'Овулация', cyclePhaseLuteal: 'Лутеална фаза',
+    cycleDaysUntilNext: n => `Следващ цикъл: след ${n} ${n===1?'ден':'дни'}`, cycleOverdue: 'Следващият цикъл вероятно е закъснял',
+    cycleNoDataHint: 'Отбележи цикъл в календара, за да видиш текущата фаза.',
+    cycleAvgLength: n => `среден цикъл ${n} дни`, cycleHistoryTitle: 'История',
+    cycleLegendLogged: 'Записан цикъл', cycleLegendPredicted: 'Очакван цикъл',
+    cycleOverlayToggle: 'Показвай цикъла в календара', cycleDisclaimer: 'Общ ориентир, не медицински съвет.',
     dowShort: ['Пон','Вт','Ср','Чет','Пет','Съб','Нед'],
     onboardDemoText: 'Това е бележка — тапни текста два пъти, за да я редактираш.',
     onboardDemoSub: 'Това е подбележка — за под-задачи и детайли.',
@@ -2155,6 +2250,14 @@ const STRINGS = {
     reviewStreak: n => `${n} days in a row with at least 1 completed note`,
     calendarBtn: 'Calendar', calendarWeekTab: 'Week', calendarMonthTab: 'Month', calendarYearTab: 'Year',
     calendarLegendPast: 'notes', calendarLegendFuture: 'reminders',
+    cycleMenuBtn: 'Monthly cycle',
+    cycleTapFirstHint: 'Tap the first day of your period, then the last.', cycleTapLastHint: 'Now tap the last day',
+    cyclePhaseMenstrual: 'Menstrual phase', cyclePhaseFollicular: 'Follicular phase', cyclePhaseOvulation: 'Ovulation', cyclePhaseLuteal: 'Luteal phase',
+    cycleDaysUntilNext: n => `Next period: in ${n} day${n===1?'':'s'}`, cycleOverdue: 'Next period may be overdue',
+    cycleNoDataHint: 'Log a period in the calendar to see your current phase.',
+    cycleAvgLength: n => `average cycle ${n} days`, cycleHistoryTitle: 'History',
+    cycleLegendLogged: 'Logged period', cycleLegendPredicted: 'Predicted period',
+    cycleOverlayToggle: 'Show cycle in the calendar', cycleDisclaimer: 'General guidance, not medical advice.',
     dowShort: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
     onboardDemoText: 'This is a note — tap the text twice to edit it.',
     onboardDemoSub: 'This is a sub-note — for sub-tasks and details.',
@@ -2261,6 +2364,14 @@ const STRINGS = {
     reviewStreak: n => `${n} дней подряд минимум с 1 завершённой заметкой`,
     calendarBtn: 'Календарь', calendarWeekTab: 'Неделя', calendarMonthTab: 'Месяц', calendarYearTab: 'Год',
     calendarLegendPast: 'заметки', calendarLegendFuture: 'напоминания',
+    cycleMenuBtn: 'Менструальный цикл',
+    cycleTapFirstHint: 'Коснись первого дня цикла, потом последнего.', cycleTapLastHint: 'Теперь коснись последнего дня',
+    cyclePhaseMenstrual: 'Менструальная фаза', cyclePhaseFollicular: 'Фолликулярная фаза', cyclePhaseOvulation: 'Овуляция', cyclePhaseLuteal: 'Лютеиновая фаза',
+    cycleDaysUntilNext: n => `Следующий цикл: через ${n} дн.`, cycleOverdue: 'Следующий цикл, возможно, задерживается',
+    cycleNoDataHint: 'Отметь цикл в календаре, чтобы увидеть текущую фазу.',
+    cycleAvgLength: n => `средний цикл ${n} дн.`, cycleHistoryTitle: 'История',
+    cycleLegendLogged: 'Записанный цикл', cycleLegendPredicted: 'Ожидаемый цикл',
+    cycleOverlayToggle: 'Показывать цикл в календаре', cycleDisclaimer: 'Общий ориентир, не медицинский совет.',
     dowShort: ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
     onboardDemoText: 'Это заметка — нажми на текст дважды, чтобы её отредактировать.',
     onboardDemoSub: 'Это подзаметка — для подзадач и деталей.',
@@ -2371,6 +2482,14 @@ const STRINGS = {
     reviewStreak: n => `${n} Tage in Folge mit mindestens 1 erledigten Notiz`,
     calendarBtn: 'Kalender', calendarWeekTab: 'Woche', calendarMonthTab: 'Monat', calendarYearTab: 'Jahr',
     calendarLegendPast: 'Notizen', calendarLegendFuture: 'Erinnerungen',
+    cycleMenuBtn: 'Monatszyklus',
+    cycleTapFirstHint: 'Tippe den ersten Tag deines Zyklus an, dann den letzten.', cycleTapLastHint: 'Jetzt den letzten Tag antippen',
+    cyclePhaseMenstrual: 'Menstruationsphase', cyclePhaseFollicular: 'Follikelphase', cyclePhaseOvulation: 'Eisprung', cyclePhaseLuteal: 'Lutealphase',
+    cycleDaysUntilNext: n => `Nächster Zyklus: in ${n} Tag${n===1?'':'en'}`, cycleOverdue: 'Der nächste Zyklus könnte überfällig sein',
+    cycleNoDataHint: 'Trage einen Zyklus im Kalender ein, um die aktuelle Phase zu sehen.',
+    cycleAvgLength: n => `durchschnittlicher Zyklus ${n} Tage`, cycleHistoryTitle: 'Verlauf',
+    cycleLegendLogged: 'Erfasster Zyklus', cycleLegendPredicted: 'Erwarteter Zyklus',
+    cycleOverlayToggle: 'Zyklus im Kalender anzeigen', cycleDisclaimer: 'Allgemeine Orientierung, kein medizinischer Rat.',
     dowShort: ['Mo','Di','Mi','Do','Fr','Sa','So'],
     onboardDemoText: 'Das ist eine Notiz — tippe zweimal auf den Text, um sie zu bearbeiten.',
     onboardDemoSub: 'Das ist eine Unternotiz — für Teilaufgaben und Details.',
@@ -2479,6 +2598,14 @@ const STRINGS = {
     reviewStreak: n => `${n} días seguidos con al menos 1 nota completada`,
     calendarBtn: 'Calendario', calendarWeekTab: 'Semana', calendarMonthTab: 'Mes', calendarYearTab: 'Año',
     calendarLegendPast: 'notas', calendarLegendFuture: 'recordatorios',
+    cycleMenuBtn: 'Ciclo mensual',
+    cycleTapFirstHint: 'Toca el primer día de tu ciclo y luego el último.', cycleTapLastHint: 'Ahora toca el último día',
+    cyclePhaseMenstrual: 'Fase menstrual', cyclePhaseFollicular: 'Fase folicular', cyclePhaseOvulation: 'Ovulación', cyclePhaseLuteal: 'Fase lútea',
+    cycleDaysUntilNext: n => `Próximo ciclo: en ${n} día${n===1?'':'s'}`, cycleOverdue: 'El próximo ciclo podría estar retrasado',
+    cycleNoDataHint: 'Registra un ciclo en el calendario para ver la fase actual.',
+    cycleAvgLength: n => `ciclo medio de ${n} días`, cycleHistoryTitle: 'Historial',
+    cycleLegendLogged: 'Ciclo registrado', cycleLegendPredicted: 'Ciclo previsto',
+    cycleOverlayToggle: 'Mostrar el ciclo en el calendario', cycleDisclaimer: 'Orientación general, no es consejo médico.',
     dowShort: ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'],
     onboardDemoText: 'Esto es una nota — toca el texto dos veces para editarla.',
     onboardDemoSub: 'Esto es una subnota — para subtareas y detalles.',
@@ -2771,6 +2898,16 @@ function loadLocalCache(){
     const rawHist = localStorage.getItem(DAY_HISTORY_KEY);
     dayHistory = rawHist ? JSON.parse(rawHist) : {};
   }catch(e){ dayHistory = {}; }
+  try{
+    const rawCycle = localStorage.getItem(CYCLE_DATA_KEY);
+    cycleData = rawCycle ? JSON.parse(rawCycle) : { periods: [], cycleLength: 28 };
+    if(!Array.isArray(cycleData.periods)) cycleData.periods = [];
+    if(typeof cycleData.cycleLength !== 'number') cycleData.cycleLength = 28;
+  }catch(e){ cycleData = { periods: [], cycleLength: 28 }; }
+  try{
+    const rawOverlay = localStorage.getItem(CYCLE_OVERLAY_KEY);
+    cycleOverlayEnabled = rawOverlay === null ? true : rawOverlay === '1';
+  }catch(e){ cycleOverlayEnabled = true; }
 }
 
 function showAuthScreen(loading){
@@ -2970,6 +3107,12 @@ function renderProfileMenu(){
       html += `<button type="button" class="action premium-cta" data-action="premium-upgrade">${ICONS.droplet}${L(s.premiumUpgradeBtn)}</button>`;
     }
   }
+  // "Календар" — ОТДЕЛЕН бутон директно тук, ИЗВЪН акордеона отдолу — по
+  // изрична заявка за по-бързо (1 клик) достигане, вместо да е скрит в
+  // подменюто "Данни" (изискваше 2 клика: разгъни групата, после клик на
+  // бутона). Мястото му вътре в "Данни" сега заема "Месечен цикъл" — виж
+  // dataContent по-долу.
+  html += `<button type="button" class="action" data-action="calendar">${ICONS.calendar}${L(s.calendarBtn)}</button>`;
   html += `<hr>`;
 
   html += profileGroupBlock('view', ICONS.droplet, s.profileGroupView, `
@@ -2981,7 +3124,7 @@ function renderProfileMenu(){
 
   let dataContent = `
     <button type="button" class="action" data-action="my-review">${ICONS.trend}${L(s.reviewBtn)}</button>
-    <button type="button" class="action" data-action="calendar">${ICONS.calendar}${L(s.calendarBtn)}</button>
+    <button type="button" class="action" data-action="cycle">${ICONS.droplet}${L(s.cycleMenuBtn)}</button>
     <button type="button" class="action" data-action="export">${ICONS.download}${L(s.exportBackup)}</button>
     <button type="button" class="action" data-action="import">${ICONS.upload}${L(s.importBackup)}</button>
     <p class="profile-hint">${ICONS.alert}<span>${s.retentionNote}</span></p>
@@ -3135,6 +3278,12 @@ function renderProfileMenu(){
     calendarSelectedKey = null; // всяко ОТВАРЯНЕ на календара — обратно на днешна дата, по изрична заявка
     renderCalendarView();
   });
+  panel.querySelector('[data-action="cycle"]').addEventListener('mousedown', e=>{
+    e.preventDefault(); e.stopPropagation();
+    cycleRefDate = new Date();
+    cyclePendingStart = null; // всяко ОТВАРЯНЕ — чисто състояние, не подхваща недовършен тап от преди
+    renderCycleView();
+  });
   panel.querySelector('[data-action="export"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); exportNotes(); closeProfilePanel(); });
   panel.querySelector('[data-action="import"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); document.getElementById('importFileInput').click(); });
   const inboxBtn = panel.querySelector('[data-action="feedback-inbox"]');
@@ -3262,6 +3411,8 @@ function renderDeleteAccountForm(){
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(TAG_ORDER_KEY);
       localStorage.removeItem(DAY_HISTORY_KEY);
+      localStorage.removeItem(CYCLE_DATA_KEY);
+      localStorage.removeItem(CYCLE_OVERLAY_KEY);
       // auth.onAuthStateChanged() поема оттук нататък (показва екрана за вход).
     }).catch(err=>{
       console.error('delete account failed', err);
@@ -3359,6 +3510,16 @@ function localDateStr(ts){
   const d = new Date(ts);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
+// Обратното на localDateStr() — превръща ГГГГ-ММ-ДД низ обратно в ЛОКАЛНА
+// (не UTC) полунощ. new Date('ГГГГ-ММ-ДД') би я парснал като UTC полунощ
+// (ISO формат без час), а после setDate()/getDate() върху нея четат ЛОКАЛНИ
+// компоненти — точно разминаването, документирано при localDateStr() по-
+// горе. Затова цикълът навсякъде минава през тая функция, никога направо
+// през new Date(низ).
+function parseDateKey(key){
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
 function calendarNotesCountForKey(key){
   // Стартира от резюмето на вече изчистените бележки (виж dayHistory), за да
   // не опустяват миналите дни, щом чистенето ги настигне.
@@ -3444,12 +3605,21 @@ function monthGridHtml(year, month, todayKey, s, selectedKey){
     const isWeekend = dow === 0 || dow === 6;
     const count = isFuture ? calendarRemindersCountForKey(key) : calendarNotesCountForKey(key);
     const dotCls = count > 0 ? (isFuture ? 'future' : 'past') : '';
+    // Наслагване на месечния цикъл (cycleMarkerForDateKey(), виж
+    // "Месечен цикъл" по-долу) — ОТДЕЛНО кръгче до/под точката за
+    // бележки/напомняния, не я замества, защото значат различни неща.
+    const cycleMark = cycleMarkerForDateKey(key);
+    const dotsHtml = (dotCls || cycleMark) ? `<span class="month-dots">${
+      dotCls ? `<span class="month-dot ${dotCls}"></span>` : ''
+    }${
+      cycleMark ? `<span class="month-dot cycle-${cycleMark.type}${cycleMark.predicted ? ' predicted' : ''}"></span>` : ''
+    }</span>` : '';
     // data-cal-day — тапваш деня, мини-привюто на напомнянията долу
     // (renderReminderPreview()) се обновява за него, виж wiring-а в
     // renderCalendarView().
     cells += `<div class="month-cell${isToday ? ' today' : ''}${isWeekend ? ' weekend' : ''}${isSelected ? ' selected' : ''}" data-cal-day="${key}">
       <span class="month-daynum">${day}</span>
-      ${dotCls ? `<span class="month-dot ${dotCls}"></span>` : ''}
+      ${dotsHtml}
     </div>`;
   }
   return `<div class="month-grid">` + s.dowShort.map(dw => `<div class="month-dow">${dw}</div>`).join('') + cells + `</div>`;
@@ -3481,10 +3651,12 @@ function renderCalendarView(mode){
       const isWeekend = i === 5 || i === 6; // понеделник-първо: индекс 5=събота, 6=неделя
       const count = isFuture ? calendarRemindersCountForKey(key) : calendarNotesCountForKey(key);
       const markerCls = count > 0 ? (isFuture ? 'future' : 'past') : 'empty';
+      const cycleMark = cycleMarkerForDateKey(key);
       return `<div class="week-day${isToday ? ' today' : ''}${isWeekend ? ' weekend' : ''}${isSelected ? ' selected' : ''}" data-cal-day="${key}">
         <span class="dow">${s.dowShort[i]}</span>
         <span class="dnum">${d.getDate()}</span>
         <span class="marker ${markerCls}">${count > 0 ? count : '–'}</span>
+        ${cycleMark ? `<span class="week-cycle-dot cycle-${cycleMark.type}${cycleMark.predicted ? ' predicted' : ''}"></span>` : ''}
       </div>`;
     }).join('') + `</div>`;
   } else if(calendarMode === 'month'){
@@ -3582,6 +3754,11 @@ function renderReminderPreview(key){
   const box = document.getElementById('calReminderPreview');
   if(!box) return;
   const items = remindersForDateKey(key);
+  // Цикълът (ако наслагването е включено и денят пада в него) излиза
+  // ПЪРВИ в списъка — свързва двата календара в едно и също мини-привю,
+  // вместо отделен изглед/навигация, виж CLAUDE.md.
+  const cycleItem = cycleInfoForDateKey(key);
+  if(cycleItem) items.unshift(cycleItem);
   if(!items.length){ box.innerHTML = ''; box.style.display = 'none'; return; }
   const s = t();
   // dayLabel() очаква timestamp, не ГГГГ-ММ-ДД низ — 12ч на обяд, за да е
@@ -3629,6 +3806,269 @@ function selectCalendarDay(key){
   if(cell) cell.classList.add('selected');
   calendarSelectedKey = key;
   renderReminderPreview(key);
+}
+
+// ══ Месечен цикъл (renderCycleView() по-долу) ══
+// Порт на изчисленията от GlowTrack (същия принцип на записване/прогноза,
+// виж CLAUDE.md), но БЕЗ проследяване на симптоми и БЕЗ съвети по фаза —
+// по изрична заявка само истинското проследяване: дати, фаза, прогноза.
+// Всички дати минават през localDateStr()/parseDateKey() (ЛОКАЛНИ, не UTC)
+// — GlowTrack ползва toISOString() (UTC), но тук важи същото правило,
+// документирано при localDateStr() по-горе, затова портът минава през
+// локалните еквиваленти навсякъде, не буквален превод ред по ред.
+const CYCLE_COLOR_PERIOD = '#d1748f';
+const CYCLE_COLOR_OVULATION = '#9b7ab8';
+let cycleRefDate = new Date(); // "текущият" месец в екрана "Месечен цикъл" (винаги днешният при отваряне)
+let cyclePendingStart = null;  // тапнат "първи ден", докато чакаме тап на "последен ден"
+
+function computeCycleLength(periods){
+  if(periods.length < 2) return 28;
+  const sorted = [...periods].map(p=>p.start).sort();
+  const diffs = [];
+  for(let i=1;i<sorted.length;i++){
+    const d = Math.round((parseDateKey(sorted[i]) - parseDateKey(sorted[i-1])) / 86400000);
+    if(d > 15 && d < 45) diffs.push(d); // извън разумен обхват — вероятно случаен/погрешен запис, пропуска се
+  }
+  if(!diffs.length) return 28;
+  return Math.round(diffs.reduce((a,b)=>a+b,0)/diffs.length);
+}
+function computePeriodLength(periods){
+  const lens = periods.filter(p=>p.start && p.end)
+    .map(p=>Math.round((parseDateKey(p.end)-parseDateKey(p.start))/86400000)+1)
+    .filter(n=>n>0 && n<15);
+  if(!lens.length) return 5;
+  return Math.round(lens.reduce((a,b)=>a+b,0)/lens.length);
+}
+function dateInCycleRange(key, start, end){
+  return key >= start && key <= (end || start);
+}
+// Фазата на дадена дата спрямо записаните цикли — 'menstrual'/'follicular'/
+// 'ovulation'/'luteal', или null ако изобщо няма запис. Ако датата е ПРЕДИ
+// първия записан цикъл, прожектираме назад от него, за да има все пак фаза
+// (напр. разглеждане на отминал месец в основния календар).
+function phaseForDate(key, data){
+  if(!data.periods.length) return null;
+  const sorted = [...data.periods].map(p=>p.start).sort();
+  const cycleLen = data.cycleLength || 28;
+  const periodLen = computePeriodLength(data.periods);
+  const d = parseDateKey(key);
+  let lastStart = null;
+  for(const p of sorted){ if(parseDateKey(p) <= d) lastStart = p; }
+  if(!lastStart){
+    let ls = parseDateKey(sorted[0]);
+    while(ls > d) ls.setDate(ls.getDate() - cycleLen);
+    lastStart = localDateStr(ls.getTime());
+  }
+  const dayOfCycle = Math.floor((d - parseDateKey(lastStart)) / 86400000) % cycleLen + 1;
+  const ovulationDay = Math.max(10, cycleLen - 14);
+  if(dayOfCycle <= periodLen) return 'menstrual';
+  if(dayOfCycle < ovulationDay - 1) return 'follicular';
+  if(dayOfCycle <= ovulationDay + 1) return 'ovulation';
+  return 'luteal';
+}
+// Прогноза за следващите `count` цикъла напред от най-скорошния записан.
+function getPredictedPeriods(data, count){
+  if(!data.periods.length) return [];
+  const sorted = [...data.periods].sort((a,b)=> a.start < b.start ? 1 : -1);
+  const lastStart = parseDateKey(sorted[0].start);
+  const cycleLen = data.cycleLength || 28;
+  const periodLen = computePeriodLength(data.periods);
+  const out = [];
+  for(let k=1;k<=count;k++){
+    const s = new Date(lastStart); s.setDate(s.getDate() + cycleLen*k);
+    const e = new Date(s); e.setDate(e.getDate() + periodLen - 1);
+    out.push({ start: localDateStr(s.getTime()), end: localDateStr(e.getTime()) });
+  }
+  return out;
+}
+function ovulationDateForPeriodStart(startKey, cycleLen){
+  const d = parseDateKey(startKey);
+  const ovDay = Math.max(10, cycleLen - 14); // 1-базиран ден от цикъла
+  d.setDate(d.getDate() + ovDay - 1);
+  return localDateStr(d.getTime());
+}
+// dd.мм.гггг от ГГГГ-ММ-ДД низ — самите ключове вече са в тоя ред, чист
+// низов разрез е достатъчен, не е нужен Date обект.
+function fmtCycleDate(key){
+  const [y,m,d] = key.split('-');
+  return `${d}.${m}.${y}`;
+}
+// За наслагването в основния бележник-календар (monthGridHtml()/седмичния
+// изглед/мини-привюто) — връща null, ако тук няма какво да се покаже
+// (изгасено наслагване, няма изобщо записан цикъл, или денят е "празен").
+// Записан цикъл/овулация имат предимство пред прогнозирани — виждаш САМО
+// действителното, ако и двете съвпаднат за деня.
+function cycleMarkerForDateKey(key){
+  if(!cycleOverlayEnabled || !cycleData.periods.length) return null;
+  if(cycleData.periods.some(p=>dateInCycleRange(key, p.start, p.end))) return { type:'period', predicted:false };
+  const predicted = getPredictedPeriods(cycleData, 6); // няколко цикъла напред — иначе годишният изглед остава празен извън текущия
+  if(predicted.some(p=>dateInCycleRange(key, p.start, p.end))) return { type:'period', predicted:true };
+  const cycleLen = cycleData.cycleLength || 28;
+  for(const p of cycleData.periods){
+    if(ovulationDateForPeriodStart(p.start, cycleLen) === key) return { type:'ovulation', predicted:false };
+  }
+  for(const p of predicted){
+    if(ovulationDateForPeriodStart(p.start, cycleLen) === key) return { type:'ovulation', predicted:true };
+  }
+  return null;
+}
+// За мини-привюто под основния календар (renderReminderPreview()) — същия
+// вид обект като бележките/подбележките с напомняне, за да се вмъкне direkt
+// в списъка без отделна маркиране.
+function cycleInfoForDateKey(key){
+  const mark = cycleMarkerForDateKey(key);
+  if(!mark) return null;
+  const s = t();
+  const label = mark.type === 'ovulation'
+    ? s.cyclePhaseOvulation
+    : (mark.predicted ? s.cycleLegendPredicted : s.cycleLegendLogged);
+  return { key:'cycle-'+key, text:label, color: mark.type === 'ovulation' ? CYCLE_COLOR_OVULATION : CYCLE_COLOR_PERIOD };
+}
+
+function handleCycleDayTap(key){
+  if(!cyclePendingStart){
+    cyclePendingStart = key;
+    renderCycleView();
+    return;
+  }
+  let start = cyclePendingStart, end = key;
+  if(end < start){ const tmp = start; start = end; end = tmp; }
+  cyclePendingStart = null;
+  cycleData.periods.push({ start, end });
+  cycleData.cycleLength = computeCycleLength(cycleData.periods);
+  saveCycleData();
+  renderCycleView();
+}
+function cancelCyclePending(){
+  cyclePendingStart = null;
+  renderCycleView();
+}
+function removeCyclePeriod(idx){
+  cycleData.periods.splice(idx, 1);
+  cycleData.cycleLength = computeCycleLength(cycleData.periods);
+  saveCycleData();
+  renderCycleView();
+}
+
+// Решетката на екрана "Месечен цикъл" — умишлено ОТДЕЛНА от monthGridHtml()
+// (основния бележник-календар): там клетките ОТВАРЯТ мини привю, тук
+// клетките ЗАПИСВАТ цикъл (тап-тап логика, виж handleCycleDayTap()) —
+// различно поведение и различна визия (кръгли тапващи се копчета, не
+// квадратни клетки), не си заслужава изкуствено споделяне.
+function cycleMonthGridHtml(year, month, s){
+  const first = new Date(year, month, 1);
+  const leading = (first.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const todayKey = localDateStr(Date.now());
+  const predicted = getPredictedPeriods(cycleData, 3);
+  let cells = '';
+  for(let i=0;i<leading;i++) cells += `<div class="cycle-cell empty-cell"></div>`;
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(year, month, day);
+    const key = localDateStr(d.getTime());
+    const isLogged = cycleData.periods.some(p=>dateInCycleRange(key, p.start, p.end));
+    const isPredicted = !isLogged && predicted.some(p=>dateInCycleRange(key, p.start, p.end));
+    const isToday = key === todayKey;
+    const isPending = cyclePendingStart === key;
+    let cls = 'cycle-cell';
+    if(isPending) cls += ' pending';
+    else if(isLogged) cls += ' logged';
+    else if(isPredicted) cls += ' predicted';
+    else if(isToday) cls += ' today';
+    cells += `<button type="button" class="${cls}" data-cycle-day="${key}">${day}</button>`;
+  }
+  return `<div class="cycle-grid">` + s.dowShort.map(dw=>`<div class="cycle-dow">${dw}</div>`).join('') + cells + `</div>`;
+}
+
+function renderCycleView(){
+  const s = t();
+  const panel = document.getElementById('profilePanel');
+  const year = cycleRefDate.getFullYear(), month = cycleRefDate.getMonth();
+  const rangeLabel = `${s.monthNames[month]} ${year}`;
+  const todayKey = localDateStr(Date.now());
+  const sortedPeriods = [...cycleData.periods].sort((a,b)=> a.start < b.start ? 1 : -1);
+  const lastPeriod = sortedPeriods[0];
+  const currentPhase = lastPeriod ? phaseForDate(todayKey, cycleData) : null;
+  const phaseLabels = { menstrual:s.cyclePhaseMenstrual, follicular:s.cyclePhaseFollicular, ovulation:s.cyclePhaseOvulation, luteal:s.cyclePhaseLuteal };
+
+  let phaseHtml = '';
+  if(currentPhase){
+    const nextStart = new Date(parseDateKey(lastPeriod.start));
+    nextStart.setDate(nextStart.getDate() + (cycleData.cycleLength || 28));
+    const todayMidnight = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+    const daysUntilNext = Math.round((nextStart - todayMidnight) / 86400000);
+    phaseHtml = `
+      <div class="cycle-phase-card">
+        <span class="cycle-phase-dot ${currentPhase}"></span>
+        <div class="cycle-phase-info">
+          <div class="cycle-phase-name">${phaseLabels[currentPhase]}</div>
+          <div class="cycle-phase-days">${daysUntilNext >= 0 ? s.cycleDaysUntilNext(daysUntilNext) : s.cycleOverdue}</div>
+        </div>
+      </div>`;
+  }else{
+    phaseHtml = `<p class="profile-hint">${ICONS.alert}<span>${s.cycleNoDataHint}</span></p>`;
+  }
+
+  const historyHtml = sortedPeriods.length ? `
+    <div class="cycle-history">
+      <div class="cycle-history-head">${s.cycleHistoryTitle} · ${s.cycleAvgLength(cycleData.cycleLength)}</div>
+      ${sortedPeriods.slice(0, 8).map(p=>{
+        const idx = cycleData.periods.indexOf(p);
+        const label = p.start === p.end ? fmtCycleDate(p.start) : `${fmtCycleDate(p.start)} – ${fmtCycleDate(p.end)}`;
+        return `<div class="cycle-history-row">
+          <span>${ICONS.droplet}${label}</span>
+          <button type="button" class="cycle-history-remove" data-remove-idx="${idx}" aria-label="${s.deleteAria}">${ICONS.close}</button>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  const pendingHtml = cyclePendingStart
+    ? `<p class="cycle-tap-hint">${s.cycleTapLastHint} · <button type="button" class="cycle-cancel-pending" data-action="cycle-cancel-pending">${s.cancelAria}</button></p>`
+    : `<p class="cycle-tap-hint">${s.cycleTapFirstHint}</p>`;
+
+  panel.innerHTML = `
+    <div class="calendar-panel">
+      <div class="calendar-nav">
+        <button type="button" data-cycle-nav="prev">${ICONS.chevronLeft}</button>
+        <span class="calendar-range">${rangeLabel}</span>
+        <button type="button" data-cycle-nav="next">${ICONS.chevronRight}</button>
+      </div>
+      ${cycleMonthGridHtml(year, month, s)}
+      <div class="calendar-legend">
+        <span><span class="dot" style="background:${CYCLE_COLOR_PERIOD}"></span>${s.cycleLegendLogged}</span>
+        <span><span class="dot" style="background:${CYCLE_COLOR_PERIOD};opacity:.4"></span>${s.cycleLegendPredicted}</span>
+      </div>
+      ${pendingHtml}
+      ${phaseHtml}
+      ${historyHtml}
+      <button type="button" class="action" data-action="toggle-cycle-overlay">${ICONS.calendar}${L(s.cycleOverlayToggle)}${cycleOverlayEnabled ? ICONS.check : ''}</button>
+      <p class="cycle-disclaimer">${s.cycleDisclaimer}</p>
+    </div>
+    <hr>
+    <button type="button" class="action" data-action="cycle-back">${ICONS.close}${s.cancelAria}</button>`;
+
+  panel.querySelectorAll('[data-cycle-day]').forEach(cell=>{
+    cell.addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); handleCycleDayTap(cell.dataset.cycleDay); });
+  });
+  panel.querySelectorAll('[data-cycle-nav]').forEach(b=>{
+    b.addEventListener('mousedown', e=>{
+      e.preventDefault(); e.stopPropagation();
+      cycleRefDate.setMonth(cycleRefDate.getMonth() + (b.dataset.cycleNav === 'next' ? 1 : -1));
+      renderCycleView();
+    });
+  });
+  const cancelBtn = panel.querySelector('[data-action="cycle-cancel-pending"]');
+  if(cancelBtn) cancelBtn.addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); cancelCyclePending(); });
+  panel.querySelectorAll('[data-remove-idx]').forEach(b=>{
+    b.addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); removeCyclePeriod(Number(b.dataset.removeIdx)); });
+  });
+  panel.querySelector('[data-action="toggle-cycle-overlay"]').addEventListener('mousedown', e=>{
+    e.preventDefault(); e.stopPropagation();
+    cycleOverlayEnabled = !cycleOverlayEnabled;
+    localStorage.setItem(CYCLE_OVERLAY_KEY, cycleOverlayEnabled ? '1' : '0');
+    renderCycleView();
+  });
+  panel.querySelector('[data-action="cycle-back"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
 }
 
 // Статистика за админ акаунта — общ брой регистрирани (документи в users/,
@@ -3868,6 +4308,13 @@ function loadFromCloud(uid){
     }
     if(snap.exists && Array.isArray(snap.data().tagOrder)) tagOrder = snap.data().tagOrder;
     if(snap.exists && snap.data().dayHistory) dayHistory = snap.data().dayHistory;
+    if(snap.exists && snap.data().cycleData){
+      const cd = snap.data().cycleData;
+      cycleData = {
+        periods: Array.isArray(cd.periods) ? cd.periods : [],
+        cycleLength: typeof cd.cycleLength === 'number' ? cd.cycleLength : 28,
+      };
+    }
     archiveOldCompleted();
     purgeExpiredTrash();
     render();
@@ -4601,6 +5048,21 @@ function saveDayHistory(){
     trackCloudWrite(
       db.collection('users').doc(currentUser.uid).set({ dayHistory }, { merge:true }),
       'cloud dayHistory save'
+    );
+  }
+}
+
+// Записва cycleData (виж обявяването по-горе) — СЪЩИЯТ принцип като
+// saveTagOrder()/saveDayHistory(): локално веднага, после "fire and forget"
+// в облака, за да е достъпен цикълът на всяко устройство, на което влезе
+// потребителката.
+function saveCycleData(){
+  try{ localStorage.setItem(CYCLE_DATA_KEY, JSON.stringify(cycleData)); }
+  catch(e){ console.error('save cycleData failed', e); }
+  if(currentUser){
+    trackCloudWrite(
+      db.collection('users').doc(currentUser.uid).set({ cycleData }, { merge:true }),
+      'cloud cycleData save'
     );
   }
 }
@@ -5597,6 +6059,7 @@ function exportNotes(){
     notes,
     tagOrder,
     dayHistory,
+    cycleData,
   }, null, 2);
   const blob = new Blob([data], {type: 'application/json'});
   const url = URL.createObjectURL(blob);
@@ -5689,6 +6152,13 @@ function importNotesFromFile(file){
           });
           dayHistory = hist;
           saveDayHistory();
+        }
+        if(parsed.cycleData && typeof parsed.cycleData === 'object' && Array.isArray(parsed.cycleData.periods)){
+          const cleanPeriods = parsed.cycleData.periods
+            .filter(p => p && typeof p.start === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(p.start))
+            .map(p => ({ start: p.start, end: (typeof p.end === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(p.end)) ? p.end : p.start }));
+          cycleData = { periods: cleanPeriods, cycleLength: computeCycleLength(cleanPeriods) };
+          saveCycleData();
         }
       }
       save(); render();
