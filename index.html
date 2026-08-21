@@ -564,9 +564,15 @@
     padding:6px;margin-bottom:2px;
   }
   /* Значка на картата, когато бележката има зададено напомняне — виж
-     itemRow(). Сива/приглушена (не акцентен цвят), точно защото функцията
-     още не е активна — да не изглежда като работеща push функция. */
+     itemRow(). Сива/приглушена (не акцентен цвят) — по-тих визуален
+     регистър от истинските действия (тага, "+ добави"), не защото не
+     работи (работи, виж CLAUDE.md). Истински <button> (не <span>) — по
+     изрична заявка кликаема директно за редакция, не само през менюто
+     след задържане (виж data-action="reminder-open" в attachHandlers()).
+     appearance:none/border:none тук, защото <button> носи браузърни
+     подразбирания (рамка/фон), които иначе развалят вида на значката. */
   .reminder-badge{
+    -webkit-appearance:none;appearance:none;border:none;font-family:inherit;cursor:pointer;
     display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;
     color:var(--text-dim);background:var(--card-2);padding:2px 7px;border-radius:7px;
   }
@@ -6315,7 +6321,7 @@ function itemRow(item, noteId, isSub){
         <div class="body">
           <div class="txt${!isExpanded ? ' clamped' : ''}" data-key="${key}" data-action="edit" data-note="${noteId}" data-sub="${isSub?item.id:''}">${escapeHtml(item.text)}</div>
           <div class="meta">
-            ${item.reminderAt ? `<span class="reminder-badge">${ICONS.bell}${reminderLabel(item.reminderAt)}${item.reminderRepeat ? ICONS.repeat : ''}</span>` : ''}
+            ${item.reminderAt ? `<button type="button" class="reminder-badge" data-action="reminder-open" data-note="${noteId}" data-sub="${isSub?item.id:''}" aria-label="${t().ctxEditReminder}">${ICONS.bell}${reminderLabel(item.reminderAt)}${item.reminderRepeat ? ICONS.repeat : ''}</button>` : ''}
             ${!isSub ? tagPillHtml(item, noteId) : ''}
             ${!isSub && addingSubFor !== noteId ? `<button class="add-sub-link" data-action="sub-open" data-note="${noteId}">${t().addSubLink}</button>` : ''}
             <button class="expand-toggle" data-action="toggle-expand" data-key="${key}" style="display:${isExpanded?'inline-flex':'none'}" aria-label="${isExpanded?t().collapseAria:t().expandAria}">${isExpanded?t().collapseAria:t().expandAria}${isExpanded?ICONS.chevronUp:ICONS.chevronDown}</button>
@@ -6666,6 +6672,21 @@ function attachHandlers(){
     el.addEventListener('click', e=>{
       e.stopPropagation();
       openTagPicker(el.dataset.note, el);
+    });
+  });
+  // Значката на напомнянето — директно кликаема за редакция, по изрична
+  // заявка ("да не се стига само от менюто след задържане"). Отваря СЪЩОТО
+  // контекстно меню, само прескача направо на изгледа "Напомняне" (както
+  // при клик на "Напомняне" от главния списък, виж renderCtxMenuMain()) —
+  // openCtxMenu() винаги рисува главния изглед първо, затова веднага след
+  // него презаписваме с renderCtxMenuReminder() и пренасочваме позицията.
+  document.querySelectorAll('[data-action="reminder-open"]').forEach(el=>{
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      const noteId = el.dataset.note, subId = el.dataset.sub || null;
+      openCtxMenu(noteId, subId, el);
+      renderCtxMenuReminder(noteId, subId);
+      positionCtxMenu();
     });
   });
   // Двоен тап/клик върху текста отваря редакция (не единичен) — по-трудно
