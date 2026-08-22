@@ -1,5 +1,20 @@
 apply plugin: 'com.android.application'
 
+// Подпис за release build (нужен на Google Play — неподписан .aab се
+// отхвърля). Самият ключ и паролите НИКОГА не влизат в repo-то: четат се
+// от android/keystore.properties, който е в .gitignore. Виж
+// store/google-play.md за това как се създава ключът.
+//
+// Блокът е УМИШЛЕНО по избор (`hasKeystore`): без файла проектът се
+// отваря и компилира точно както преди — debug build-ове и
+// `npm run open:android` продължават да работят на машина без ключ.
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def hasKeystore = keystorePropertiesFile.exists()
+def keystoreProperties = new Properties()
+if (hasKeystore) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+
 android {
     namespace = "eu.iforget.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,8 +31,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (hasKeystore) {
+            release {
+                // storeFile е АБСОЛЮТЕН път в keystore.properties — относителен
+                // би се смятал спрямо android/app/, което е лесен капан.
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
+            if (hasKeystore) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

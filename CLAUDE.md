@@ -1762,6 +1762,24 @@ Linux sandbox, няма Xcode):**
    дискусията в чата за компромиса "IAP такса на Apple/Google" срещу
    "по-малко seamless за app потребителите").
 
+### Подпис за Android release — ПОДГОТВЕН, НЕПРОВЕРЕН с реален build
+
+`android/app/build.gradle` вече има `signingConfigs.release`, който чете
+`android/keystore.properties` (в `.gitignore`, шаблон в
+`keystore.properties.example`). Без него `./gradlew bundleRelease` прави
+НЕподписан `.aab`, а Google Play отхвърля такъв веднага.
+
+Блокът е УМИШЛЕНО по избор (`def hasKeystore = ...exists()`): на машина
+без ключ проектът се отваря и компилира точно както преди, значи
+`npm run open:android` и debug build-овете не са засегнати.
+
+`storeFile` трябва да е АБСОЛЮТЕН път — относителен се смята спрямо
+`android/app/`, не спрямо `android/`, което е лесен капан.
+
+**НЕ Е ПУСКАН през истински Gradle** — в средата, където е писано, няма
+Android SDK. Ако гръмне при първия build, това е първото място за
+проверка. Пълните стъпки за качване: `store/google-play.md`.
+
 ## Маркетинг материали за магазините (`store/`) — ГОТОВИ
 
 Скрийншоти, банер и описания за App Store/Google Play. **Правени веднъж и
