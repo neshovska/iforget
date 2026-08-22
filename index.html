@@ -5363,8 +5363,98 @@ function attachSwipeHandlers(){
     }
     noteEl.addEventListener('touchend', endSwipe);
     noteEl.addEventListener('touchcancel', endSwipe);
+
+    // ---- Мишка (десктоп) -------------------------------------------
+    // Всичко по-горе слуша САМО touch събития — на компютър бележката не
+    // се плъзгаше и менюто при задържане не се отваряше изобщо (реален
+    // докладван пропуск). Затова тук има ОТДЕЛЕН път за мишка.
+    // Умишлено НЕ е преписано на Pointer Events, макар че те биха
+    // обединили двата случая: touch пътят е минал през дълга поредица
+    // поправки за iOS (виж историята с клавиатурата/жестовете в CLAUDE.md)
+    // и не си струва да се разклаща заради десктопа. По-скучно, но
+    // безопасно — платформата, на която приложението работи, не се пипа.
+    noteEl.addEventListener('mousedown', e=>{
+      if(e.button !== 0) return;             // само левият бутон
+      if(justTouched()) return;              // синтетично събитие след допир
+      // Бутоните вътре в бележката (таг, "+ добави", значка за напомняне) и
+      // полетата за писане имат собствено поведение — не ги превръщаме в
+      // дръжка за влачене.
+      if(e.target.closest('button, a, input, textarea, .edit-input')) return;
+      startX = e.clientX; startY = e.clientY;
+      dx = 0; axis = null; dragging = true; longPressFired = false;
+      noteEl.classList.add('swiping');
+      clearTimeout(pressTimer);
+      pressTimer = setTimeout(()=>{
+        if(axis === null && dragging){
+          longPressFired = true;
+          dragging = false;
+          noteEl.classList.remove('swiping');
+          noteEl.style.transform = '';
+          openCtxMenu(noteEl.dataset.note, noteEl.dataset.sub || null, noteEl);
+        }
+      }, LONG_PRESS_MS);
+      // Движението и пускането се следят на document (виж mouseDrag
+      // по-долу), не на самата бележка — иначе влаченето спира в мига, в
+      // който показалецът излезе извън картата, а при плъзгане настрани
+      // това се случва постоянно.
+      mouseDrag = {
+        move(ev){
+          if(!dragging) return;
+          const moveX = ev.clientX - startX;
+          const moveY = ev.clientY - startY;
+          if(axis === null){
+            if(Math.abs(moveX) > 8 || Math.abs(moveY) > 8){
+              axis = Math.abs(moveX) > Math.abs(moveY) ? 'x' : 'y';
+              clearTimeout(pressTimer);
+            }
+          }
+          if(axis !== 'x') return;
+          ev.preventDefault();
+          dx = moveX;
+          const clamped = Math.max(-110, Math.min(110, dx));
+          noteEl.style.transform = `translateX(${clamped}px)`;
+          bgComplete.style.opacity = clamped > 8 ? Math.min(1, clamped/70) : 0;
+          bgDelete.style.opacity = clamped < -8 ? Math.min(1, -clamped/70) : 0;
+        },
+        end: endSwipe,
+      };
+    });
+
+    // Десен бутон отваря същото меню. На компютър това е далеч по-
+    // очакваният жест от задържане на бутона — задържането остава и
+    // работи, но никой не се сеща да го пробва с мишка.
+    noteEl.addEventListener('contextmenu', e=>{
+      if(justTouched()) return;
+      if(e.target.closest('input, textarea, .edit-input')) return; // нативното меню за текст остава
+      e.preventDefault();
+      clearTimeout(pressTimer);
+      dragging = false; mouseDrag = null;
+      noteEl.classList.remove('swiping');
+      noteEl.style.transform = '';
+      openCtxMenu(noteEl.dataset.note, noteEl.dataset.sub || null, noteEl);
+    });
   });
 }
+
+// Коя бележка се влачи в момента с мишка ({move, end} от
+// attachSwipeHandlers()), или null. Съществува, за да са слушателите на
+// document ЕДИН БРОЙ за целия живот на страницата: attachSwipeHandlers()
+// се вика при ВСЯКО рисуване, значи закачане на document слушател вътре в
+// цикъла по бележките би трупало по един на бележка на рисуване — хиляди
+// след няколко минути употреба.
+let mouseDrag = null;
+document.addEventListener('mousemove', e=>{ if(mouseDrag) mouseDrag.move(e); });
+document.addEventListener('mouseup', ()=>{ if(mouseDrag){ const d = mouseDrag; mouseDrag = null; d.end(); } });
+
+// Тъч устройствата пускат СИНТЕТИЧНИ mouse събития след допир (mousedown/
+// mouseup/contextmenu), значи без този пазач всеки допир по телефона би
+// минал и през пътя за мишка — двоен жест, двойно меню. Пази се само
+// моментът на последния допир; 700ms са с резерв над обичайните ~300ms
+// закъснение при синтезиране.
+let lastTouchAt = 0;
+document.addEventListener('touchstart', ()=>{ lastTouchAt = Date.now(); }, {passive:true, capture:true});
+document.addEventListener('touchend', ()=>{ lastTouchAt = Date.now(); }, {passive:true, capture:true});
+function justTouched(){ return Date.now() - lastTouchAt < 700; }
 
 function commitEdit(noteId, subId, value){
   const target = subId ? findSub(noteId, subId) : findNote(noteId);
