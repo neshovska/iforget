@@ -1,0 +1,132 @@
+# Подписан iOS build + качване към TestFlight/App Store Connect
+#
+# ЗАЩО В ОБЛАКА: компютърът на собственика (MacBook Air 2015, macOS
+# Monterey) дава максимум Xcode 14.2, а Capacitor 8 иска Xcode 15+.
+# Локално сглобяване е невъзможно — виж store/app-store.md.
+#
+# ⚠️ НИКОГА НЕ Е ПУСКАН. Не може да бъде, преди да съществуват Apple
+# акаунтът и ключовете. Очаквай един кръг поправки при първото пускане —
+# това е нормално за подписване в CI. Отделно е потвърдено, че самият код
+# се компилира (виж ios-build.yml, ** BUILD SUCCEEDED **), значи ако тук
+# нещо гръмне, най-вероятно е в подписването, не в приложението.
+#
+# Изисква 7 secrets — виж таблицата в store/app-store.md.
+
+name: iOS release (TestFlight)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+      - run: xcodebuild -version
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Инсталирай Capacitor и синхронизирай iOS
+        run: |
+          npm ci
+          node scripts/sync-www.js
+          npx cap sync ios
+
+      # Всяко качване иска УНИКАЛЕН номер на build-а. Apple отказва
+      # повторно качване със същия — най-честата спънка при второто
+      # качване. Номерът на пускането в GitHub расте сам, значи върши
+      # работа без ръчно броене. Видимата версия (1.0) не се пипа тук —
+      # тя се сменя нарочно в Xcode проекта при истинска нова версия.
+      - name: Уникален номер на build-а
+        run: |
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" \
+            ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" ios/App/App/Info.plist
+
+      # Сертификатът се внася във ВРЕМЕНЕН keychain, не в системния —
+      # машината е чужда и се изхвърля след пускането, но така поне не
+      # оставяме ключ в подразбиращия се keychain по време на работата.
+      - name: Внеси сертификата и profile-а
+        env:
+          P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN=$RUNNER_TEMP/build.keychain
+          KEYCHAIN_PASS=$(uuidgen)
+
+          echo "$P12_BASE64" | base64 --decode > $RUNNER_TEMP/cert.p12
+          echo "$PROFILE_BASE64" | base64 --decode > $RUNNER_TEMP/profile.mobileprovision
+
+          security create-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASS" "$KEYCHAIN"
+          security import $RUNNER_TEMP/cert.p12 -P "$P12_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: \
+            -k "$KEYCHAIN_PASS" "$KEYCHAIN" >/dev/null
+          security list-keychain -d user -s "$KEYCHAIN" login.keychain
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' \
+            /dev/stdin <<< "$(security cms -D -i $RUNNER_TEMP/profile.mobileprovision)")
+          cp $RUNNER_TEMP/profile.mobileprovision \
+            ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
+          echo "PROFILE_UUID=$UUID" >> $GITHUB_ENV
+          echo "Profile UUID: $UUID"
+
+      - name: Archive
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj \
+            -scheme App \
+            -sdk iphoneos \
+            -configuration Release \
+            -archivePath $RUNNER_TEMP/App.xcarchive \
+            DEVELOPMENT_TEAM=${{ secrets.IOS_TEAM_ID }} \
+            PROVISIONING_PROFILE_SPECIFIER=$PROFILE_UUID \
+            CODE_SIGN_STYLE=Manual \
+            archive
+
+      - name: Направи .ipa
+        run: |
+          cat > $RUNNER_TEMP/ExportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>teamID</key><string>${{ secrets.IOS_TEAM_ID }}</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>provisioningProfiles</key><dict>
+              <key>eu.iforget.app</key><string>$PROFILE_UUID</string>
+            </dict>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive \
+            -archivePath $RUNNER_TEMP/App.xcarchive \
+            -exportOptionsPlist $RUNNER_TEMP/ExportOptions.plist \
+            -exportPath $RUNNER_TEMP/export
+          ls -lh $RUNNER_TEMP/export
+
+      - name: Качи в App Store Connect
+        env:
+          API_KEY_B64: ${{ secrets.APPSTORE_API_KEY_P8_BASE64 }}
+          API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          API_ISSUER: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/private_keys
+          echo "$API_KEY_B64" | base64 --decode > ~/private_keys/AuthKey_$API_KEY_ID.p8
+          xcrun altool --upload-app \
+            -f "$RUNNER_TEMP/export/App.ipa" \
+            -t ios \
+            --apiKey "$API_KEY_ID" \
+            --apiIssuer "$API_ISSUER"
+
+      - name: Почисти ключовете
+        if: always()
+        run: |
+          rm -f ~/private_keys/*.p8 $RUNNER_TEMP/cert.p12 $RUNNER_TEMP/profile.mobileprovision
+          security delete-keychain $RUNNER_TEMP/build.keychain || true
