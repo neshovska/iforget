@@ -1794,9 +1794,19 @@ Linux sandbox, няма Xcode):**
 `storeFile` трябва да е АБСОЛЮТЕН път — относителен се смята спрямо
 `android/app/`, не спрямо `android/`, което е лесен капан.
 
-**НЕ Е ПУСКАН през истински Gradle** — в средата, където е писано, няма
-Android SDK. Ако гръмне при първия build, това е първото място за
-проверка. Пълните стъпки за качване: `store/google-play.md`.
+**✅ ПРОВЕРЕН с истински build (22.08.2026).** `./gradlew bundleRelease`
+на Mac даде подписан `app-release.aab` (5.5 MB, `META-INF/IFORGET.RSA` в
+корена на архива). Пълните стъпки за качване: `store/google-play.md`.
+
+Два капана от първото пускане:
+• **`jarsigner -verify` НЕ работи за `.aab`** — казва "no manifest." и за
+  подписан файл, защото форматът не е jar. Проверявай подписа с
+  `unzip -l ... | awk '$4 ~ /^META-INF\//'` (търси се `.RSA` в КОРЕНА;
+  `base/root/META-INF/...` са вътрешни файлове на приложението и не са
+  подпис) или направо с `./gradlew :app:signingReport` — там при успех
+  пише `Config: release` вместо `Config: null`.
+• `keystore.properties` върви в `android/`, НЕ в `android/app/` —
+  `rootProject.file()` сочи към `android/`.
 
 ## Маркетинг материали за магазините (`store/`) — ГОТОВИ
 
