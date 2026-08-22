@@ -6010,6 +6010,29 @@ async function syncNativeReminders(){
   }catch(err){ console.error('native reminders sync failed', err); }
 }
 
+// Прибира вече ПОКАЗАНИТЕ известия от лентата на телефона, а с тях и
+// червения бадж върху иконата на приложението.
+// СЪВСЕМ РАЗЛИЧНО от LN.cancel() в syncNativeReminders(): cancel() маха
+// само НАСРОЧЕНИТЕ, още незвъннали известия. Звъннало веднъж, известието
+// става "delivered" и живее в лентата, докато потребителят не го плъзне
+// сам — нито приключването на бележката, нито изтриването ѝ го махат,
+// защото на това ниво то вече не е "напомняне", а обикновено известие.
+// Реален докладван случай: нито едно напомняне за днес, а иконата още
+// показва бадж "1" — остатък от известие, звъннало по-рано.
+// Вика се при отваряне и при връщане към приложението (по изрична
+// заявка — виж двата call site-а най-долу в скрипта). Нищо не се губи:
+// самата бележка си стои в списъка със значката за напомняне, тя е
+// носителят на информацията; известието е само еднократният сигнал.
+async function clearDeliveredNativeNotifications(){
+  const LN = nativeNotifications();
+  // Проверката за самия метод е нарочна: по-стари версии на плъгина го
+  // нямат, а в браузър nativeNotifications() и без това връща null.
+  if(!LN || !LN.removeAllDeliveredNotifications) return;
+  try{
+    await LN.removeAllDeliveredNotifications();
+  }catch(err){ console.error('clearing delivered notifications failed', err); }
+}
+
 // Форма за избор на цвят — заменя списъка с бутони в СЪЩИЯ #ctxMenu (воалът/
 // изпъкването остават), същия принцип като renderCtxMenuReminder(). Цветовете
 // са СЪЩИТЕ като в профила (PROFILE_COLORS/.color-sw) — за визуална
@@ -7220,8 +7243,15 @@ applyCleanLook();
 pruneFired();
 checkRemindersNow();
 setInterval(checkRemindersNow, REMINDER_CHECK_MS);
-document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) checkRemindersNow(); });
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden) return;
+  checkRemindersNow();
+  // Връщането към приложението изчиства вече звъннали известия от лентата
+  // (и баджа върху иконата) — виж clearDeliveredNativeNotifications().
+  clearDeliveredNativeNotifications();
+});
 syncNativeReminders();
+clearDeliveredNativeNotifications();
 applyStaticText();
 requestPersistentStorage();
 loadPremiumConfig();
