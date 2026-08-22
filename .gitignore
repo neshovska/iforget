@@ -32,3 +32,10 @@ firebase-debug.*.log
 
 # --- macOS ---
 .DS_Store
+
+# Ключът за подписване на Android release — НИКОГА в repo-то. Изтече ли,
+# някой друг може да качва обновления от твое име в Google Play, а Google
+# НЕ може да го смени след първото качване (виж store/google-play.md).
+android/keystore.properties
+*.jks
+*.keystore
