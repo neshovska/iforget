@@ -1,0 +1,61 @@
+# Пробно сглобяване на iOS частта
+#
+# ЗАЩО СЪЩЕСТВУВА: компютърът на собственика е MacBook Air 2015
+# (MacBookAir7,2), който Apple е спряла на macOS Monterey. Monterey
+# поддържа максимум Xcode 14.2, а Capacitor 8 иска Xcode 15+
+# (`Package.swift` е на swift-tools-version 5.9). Тоест iOS проектът НЕ
+# може да бъде сглобен локално — и никога не е бил.
+#
+# Този workflow сглобява за СИМУЛАТОР, което не изисква нито сертификати,
+# нито Apple Developer акаунт ($99/год.). Не произвежда нищо за качване —
+# отговаря само на въпроса "компилира ли се изобщо", който досега нямаше
+# отговор. По-добре счупен build да излезе тук, отколкото след плащане.
+#
+# Пуска се РЪЧНО (Actions → iOS build → Run workflow). Нарочно няма
+# автоматичен тригър при push: macOS машините са бавни, а уеб версията и
+# Android не зависят от този проект.
+#
+# Repo-то е публично, значи macOS минутите са безплатни.
+
+name: iOS build (проверка)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Коя версия на Xcode ползваме
+        run: xcodebuild -version
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Инсталирай Capacitor
+        run: npm ci
+
+      # Нарочно САМО ios, не `npm run sync` (той прави и Android, който
+      # тук е излишен и иска Android SDK).
+      - name: Копирай уеб файловете и синхронизирай iOS
+        run: |
+          node scripts/sync-www.js
+          npx cap sync ios
+
+      # Сглобяване за симулатор — не иска подпис. Целта е компилацията,
+      # не работещ артефакт, затова CODE_SIGNING е изключен изрично.
+      - name: Сглоби за симулатор
+        run: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -sdk iphonesimulator \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
