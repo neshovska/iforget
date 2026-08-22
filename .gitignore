@@ -30,6 +30,14 @@ firebase-debug.log
 firebase-debug.*.log
 *.local
 
+# Локална конфигурация на Cloud Functions (firebase functions:params). Не е
+# задължително да съдържа тайни — Stripe Price ID-тата не са — но .env
+# файловете са точно мястото, където тайна попада по невнимание, а един
+# `git add -A` стига, за да иде публично. Истинските тайни (RESEND_API_KEY,
+# STRIPE_SECRET_KEY) живеят в Google Cloud Secret Manager, не тук.
+functions/.env
+functions/.env.*
+
 # --- macOS ---
 .DS_Store
 
