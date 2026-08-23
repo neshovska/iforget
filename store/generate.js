@@ -205,14 +205,21 @@ let BASE;
     await page.close();
   }
 
-  // Размерите са точните, които двата магазина приемат:
-  //  • 430×932 @3 = 1290×2796 — App Store 6.9"/6.7" И Google Play.
-  //  • 1032×1376 @2 = 2064×2752 — App Store iPad 13". Задължителни са,
-  //    защото приложението се предлага и за iPad.
+  // 430×932 @3 = 1290×2796 — приема се и от App Store (6.9"/6.7"), и от
+  // Google Play.
+  //
+  // iPad размерът (1032×1376 @2 = 2064×2752) се прави САМО при
+  // `IPAD=1 node store/generate.js`. Приложението нарочно се предлага
+  // само за iPhone (`TARGETED_DEVICE_FAMILY = 1`), защото няма отделен
+  // изглед за таблет — на голям екран бележките се разпъват по цялата
+  // ширина и горе остава голямо празно поле. Ако някога се направи
+  // истински iPad изглед, снимките са на едно превключване разстояние.
   const SIZES = [
     { dir: OUT, viewport: { width: 430, height: 932 }, dsf: 3 },
-    { dir: OUT + '-ipad', viewport: { width: 1032, height: 1376 }, dsf: 2 },
   ];
+  if(process.env.IPAD){
+    SIZES.push({ dir: OUT + '-ipad', viewport: { width: 1032, height: 1376 }, dsf: 2 });
+  }
 
   for(const s of SIZES){
     const ctx = await browser.newContext({

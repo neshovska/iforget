@@ -99,6 +99,13 @@ jobs:
           echo "PROFILE_UUID=$UUID" >> $GITHUB_ENV
           echo "Profile UUID: $UUID"
 
+      # TARGETED_DEVICE_FAMILY=1 значи САМО iPhone. Стойността стои и в
+      # project.pbxproj, но се подава и тук като предпазна мрежа: ако
+      # `cap sync` някога я върне на "1,2", приложението пак ще излезе
+      # само за iPhone, вместо тихо да стане и за iPad — а iPad build
+      # изисква отделни снимки в App Store и не минава подаване без тях.
+      # Изборът е нарочен: няма отделен изглед за таблет, на голям екран
+      # интерфейсът е разтеглен телефон.
       - name: Archive
         run: |
           xcodebuild -project ios/App/App.xcodeproj \
@@ -110,6 +117,7 @@ jobs:
             PROVISIONING_PROFILE_SPECIFIER=$PROFILE_UUID \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Distribution" \
+            TARGETED_DEVICE_FAMILY=1 \
             archive
 
       - name: Направи .ipa
