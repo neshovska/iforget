@@ -19,10 +19,24 @@ on:
 
 jobs:
   release:
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v5
-      - run: xcodebuild -version
+
+      # Apple отказва качване на файл, сглобен със стар SDK: "All iOS apps
+      # must be built with the iOS 26 SDK or later". Машините на GitHub
+      # носят по няколко версии Xcode наведнъж, а подразбиращата се не е
+      # непременно най-новата — затова я избираме изрично, вместо да се
+      # надяваме. Стъпката принтира и наличните SDK-та, за да се вижда
+      # веднага в лога, ако Apple вдигне изискването пак.
+      - name: Избери най-новия Xcode
+        run: |
+          ls -d /Applications/Xcode*.app
+          NEWEST=$(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          echo "Избран: $NEWEST"
+          sudo xcode-select -s "$NEWEST/Contents/Developer"
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i iphoneos
 
       - uses: actions/setup-node@v5
         with:
