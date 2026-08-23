@@ -163,9 +163,76 @@ My Apps → + → New App
 приложението няма собствена криптография, ползва само HTTPS/TLS през
 Firebase, тоест стандартната на операционната система.
 
-⚠️ **Декларацията за данни (App Privacy)** е като Data safety при Google:
-имейл, бележки И **здравна информация** (месечният цикъл, `cycleData`).
-Не я пропускай.
+⚠️ **App Store Connect не запазва сам.** Натискай `Save` след всяко
+парче. `Save` НЕ подава за ревю — това прави само "Add for Review".
+
+---
+
+## 6а. App Privacy — готовите отговори
+
+Проверено какво реално събира приложението, не предположено: заредени са
+само `firebase-auth`, `firebase-firestore` и `firebase-functions` (виж
+`index.html`), тоест НЯМА аналитика и НЯМА отчитане на сривове.
+
+"Do you or your third-party partners collect any data from this app?" →
+**Yes**, после точно тези четири:
+
+| Категория | Тип | Откъде идва |
+|---|---|---|
+| Contact Info | **Email Address** | вход с имейл (Firebase Auth) |
+| Identifiers | **User ID** | `uid`, ключът на `users/{uid}` |
+| User Content | **Other User Content** | самите бележки |
+| Health & Fitness | **Health** | месечният цикъл (`cycleData`) |
+
+За всеки от четирите Apple задава три въпроса; отговорите са еднакви:
+
+1. Използва ли се за **tracking**? → **No**
+2. **Linked to identity**? → **Yes** (бележките живеят под акаунта)
+3. За какво се използва? → само **App Functionality**. Без Analytics,
+   без Advertising, без Product Personalization.
+
+**Какво НЕ се маркира и защо:**
+
+- **Payment Info** — Stripe е подготвен, но изключен
+  (`config/premium.enabled`), а картата минава през хоствана страница на
+  Stripe, не през приложението. ⚠️ **Ако Premium се пусне, тази
+  декларация трябва да се обнови** — това е точно видът разминаване,
+  заради което приложения падат по-късно, не при първото ревю.
+- **Usage Data / Diagnostics / Crash Data** — няма такива SDK-та.
+- **Location / Contacts / Search History** — търсенето е изцяло локално.
+
+Здравната информация е точката, в която приложенията се спъват най-често
+— не при първото ревю, а после, когато Apple забележи разминаване.
+Затова се декларира, макар функцията да не се рекламира в описанието.
+
+---
+
+## 6б. App Review Information — акаунтът за ревюиращия
+
+⚠️ **НЕ давай личен акаунт.** Ревюиращият влиза в него и вижда истинските
+бележки, включително записите за месечния цикъл. Направи отделен
+(регистрация на iforget.eu; потвърждаване на имейла НЕ е нужно — банерът
+не блокира влизането). Чист акаунт е и по-разбираем: ревюиращият вижда
+обучението при първи вход, вместо чужди бележки на български.
+
+Полетата за контакт (име, телефон, имейл) са задължителни — те са за
+връзка с ТЕБ, ако ревюиращият има въпрос.
+
+Полезен текст за `Notes` (на английски):
+
+```
+iForget is a daily to-do and notes app.
+
+Sign-in is required because notes sync across devices via Firebase. A test account is provided above.
+
+Reminders are scheduled locally on the device (no push server). Please allow the notification permission when prompted to test them.
+
+The app interface is available in 5 languages; it defaults to the device language and can be changed in the profile menu.
+```
+
+**App Store Version Release** → избери **Manually release this version**.
+Одобрението идва както обикновено, но приложението излиза живо чак когато
+ти натиснеш бутона — например след като TestFlight потвърди, че работи.
 
 ---
 
