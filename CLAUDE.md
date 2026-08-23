@@ -1871,6 +1871,47 @@ TestFlight, значи Apple Developer ($99/год.) — обичайният б
 през облака за iOS. Няма "натисни и виж за минута", както с Android.
 Това е трайно неудобство на тази машина, не еднократно.
 
+### iOS release (подписан build + качване) — ✅ РАБОТИ (23.08.2026)
+
+`.github/workflows/ios-release.yml` качи подписан `.ipa` в App Store
+Connect (Archive 73 сек, `.ipa` 3 сек, **качване 74 сек** — истинско
+качване, не прескочена стъпка). Дотогава беше писан изцяло на сляпо.
+Изисква 7 secrets, таблицата им е в `store/app-store.md`.
+
+**Двете поправки, нужни при първите два опита** — не ги връщай обратно:
+1. **`No signing certificate "iOS Development" found`.** Capacitor
+   заковава `CODE_SIGN_IDENTITY = "iPhone Developer"` в
+   `ios/App/App.xcodeproj/project.pbxproj` (два реда, Debug и Release).
+   Проектът НЕ се редактира — `npx cap sync` го пренаписва при всяко
+   синхронизиране и поправката би изчезнала тихо. Стойността се подава
+   отвън при сглобяването: `CODE_SIGN_STYLE=Manual`
+   `CODE_SIGN_IDENTITY="Apple Distribution"`.
+2. **`built with the iOS 18.5 SDK ... must be built with the iOS 26 SDK
+   or later`.** Оттам `runs-on: macos-26` + изрична стъпка, която избира
+   най-новия наличен Xcode. Машините на GitHub носят по няколко версии
+   наведнъж и подразбиращата се НЕ е непременно най-новата — затова се
+   избира, а не се разчита. Стъпката принтира и наличните SDK-та, за да
+   се вижда веднага в лога, ако Apple вдигне изискването пак.
+
+**Номерът на build-а** се взима от `github.run_number` (расте сам) —
+Apple отказва повторно качване със същия номер, най-честата спънка при
+второто качване. Видимата версия (1.0) НЕ се пипа там.
+
+**`ITSAppUsesNonExemptEncryption = false` в `ios/App/App/Info.plist`** —
+иначе App Store Connect пита за export compliance при ВСЯКО качване.
+Декларацията е вярна и е проверена, не предположена: приложението няма
+собствена криптография (`grep` за crypto/encrypt/cipher/aes/rsa дава
+само лъжливи съвпадения от низа `reminderSaveBtn`), ползва единствено
+HTTPS/TLS през Firebase, тоест стандартната криптография на
+операционната система.
+
+**Имена в магазините се разминават нарочно:** в App Store приложението е
+`iForget - Simple Notes` (чистото `iForget` е заето от друг
+разработчик), в Google Play — `iForget`. Bundle ID-то и самото
+приложение не се влияят. App Store Connect НЕ предлага български сред
+езиците за описание, затова листингът там е на английски; българските
+текстове в `store/store-listing-texts.md` се ползват за Google Play.
+
 ### Подпис за Android release — ПОДГОТВЕН, НЕПРОВЕРЕН с реален build
 
 `android/app/build.gradle` вече има `signingConfigs.release`, който чете
