@@ -143,63 +143,87 @@ let BASE;
   // "21.08.2026 г. 18:30", както я вижда български потребител.
   // ПРОВЕРЕНО: само args:['--lang=bg-BG'] НЕ стига — решаващата е
   // env-променливата LANG; --lang остава, защото не пречи.
+  // PW_CHROMIUM — аварийна пътечка за среда, в която Playwright пакетът и
+  // свалените браузъри са различни версии (тогава launch() гърми с
+  // "Executable doesn't exist"). Празна е при нормална употреба.
   const browser = await chromium.launch({
     args: ['--lang=bg-BG'],
     env: { ...process.env, LANG: 'bg_BG.UTF-8', LANGUAGE: 'bg_BG' },
+    ...(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {}),
   });
-  // 430×932 @3x = 1290×2796 — приема се и от App Store (6.7"), и от Google Play.
-  const ctx = await browser.newContext({
-    viewport: { width: 430, height: 932 },
-    deviceScaleFactor: 3,
-    isMobile: true, hasTouch: true,
-    locale: 'bg-BG',
-  });
+  // Един и същ набор от пет кадъра се прави за два размера — виж SIZES
+  // по-долу. Приложението е сглобено за iPhone И iPad
+  // (`TARGETED_DEVICE_FAMILY = "1,2"` в iOS проекта), а App Store иска
+  // отделни снимки за всяко семейство устройства и не пуска подаване без
+  // тях.
+  async function captureSet(ctx, outDir){
+    fs.mkdirSync(outDir, { recursive: true });
+    const shot = (page, name) => page.screenshot({ path: path.join(outDir, name) });
 
-  const shot = (page, name) => page.screenshot({ path: path.join(OUT, name) });
+    // 1. Основен списък
+    let page = await newPage(ctx);
+    await shot(page, '1-list.png');
+    await page.close();
 
-  // 1. Основен списък
-  let page = await newPage(ctx);
-  await shot(page, '1-list.png');
-  await page.close();
+    // 2. Меню при задържане върху бележка
+    page = await newPage(ctx);
+    await page.evaluate(`(() => {
+      const el = ${WRAP_BY_TEXT('Купи подарък')};
+      openCtxMenu(el.dataset.note, null, el.querySelector('.note'));
+    })()`);
+    await page.waitForTimeout(600);
+    await shot(page, '2-menu.png');
+    await page.close();
 
-  // 2. Меню при задържане върху бележка
-  page = await newPage(ctx);
-  await page.evaluate(`(() => {
-    const el = ${WRAP_BY_TEXT('Купи подарък')};
-    openCtxMenu(el.dataset.note, null, el.querySelector('.note'));
-  })()`);
-  await page.waitForTimeout(600);
-  await shot(page, '2-menu.png');
-  await page.close();
+    // 3. Календар (месечен изглед)
+    page = await newPage(ctx);
+    await page.evaluate(() => { openProfilePanel(document.getElementById('userChip')); renderCalendarView('month'); });
+    await page.waitForTimeout(700);
+    await shot(page, '3-calendar.png');
+    await page.close();
 
-  // 3. Календар (месечен изглед)
-  page = await newPage(ctx);
-  await page.evaluate(() => { openProfilePanel(document.getElementById('userChip')); renderCalendarView('month'); });
-  await page.waitForTimeout(700);
-  await shot(page, '3-calendar.png');
-  await page.close();
+    // 4. Форма за напомняне. Натискаме самата значка на напомнянето
+    // (data-action="reminder-open") — това е истинският бърз път на
+    // потребителя до формата и отваря менюто направо в нея. Викането на
+    // renderCtxMenuReminder() веднага след openCtxMenu() не работи:
+    // менюто още се позиционира и остава на главния списък с бутони.
+    page = await newPage(ctx);
+    await page.evaluate(`(() => {
+      const el = ${WRAP_BY_TEXT('Купи подарък')};
+      el.querySelector('[data-action="reminder-open"]').click();
+    })()`);
+    await page.waitForTimeout(700);
+    await shot(page, '4-reminder.png');
+    await page.close();
 
-  // 4. Форма за напомняне. Натискаме самата значка на напомнянето
-  // (data-action="reminder-open") — това е истинският бърз път на
-  // потребителя до формата и отваря менюто направо в нея. Викането на
-  // renderCtxMenuReminder() веднага след openCtxMenu() не работи:
-  // менюто още се позиционира и остава на главния списък с бутони.
-  page = await newPage(ctx);
-  await page.evaluate(`(() => {
-    const el = ${WRAP_BY_TEXT('Купи подарък')};
-    el.querySelector('[data-action="reminder-open"]').click();
-  })()`);
-  await page.waitForTimeout(700);
-  await shot(page, '4-reminder.png');
-  await page.close();
+    // 5. "Твоят преглед" — седмичен/месечен прогрес + серията. Избран пред
+    // голото профилно меню: показва РЕЗУЛТАТ от употребата, а не настройки.
+    page = await newPage(ctx, REVIEW_EXTRA);
+    await page.evaluate(() => { openProfilePanel(document.getElementById('userChip')); renderMyReview(); });
+    await page.waitForTimeout(700);
+    await shot(page, '5-review.png');
+    await page.close();
+  }
 
-  // 5. "Твоят преглед" — седмичен/месечен прогрес + серията. Избран пред
-  // голото профилно меню: показва РЕЗУЛТАТ от употребата, а не настройки.
-  page = await newPage(ctx, REVIEW_EXTRA);
-  await page.evaluate(() => { openProfilePanel(document.getElementById('userChip')); renderMyReview(); });
-  await page.waitForTimeout(700);
-  await shot(page, '5-review.png');
-  await page.close();
+  // Размерите са точните, които двата магазина приемат:
+  //  • 430×932 @3 = 1290×2796 — App Store 6.9"/6.7" И Google Play.
+  //  • 1032×1376 @2 = 2064×2752 — App Store iPad 13". Задължителни са,
+  //    защото приложението се предлага и за iPad.
+  const SIZES = [
+    { dir: OUT, viewport: { width: 430, height: 932 }, dsf: 3 },
+    { dir: OUT + '-ipad', viewport: { width: 1032, height: 1376 }, dsf: 2 },
+  ];
+
+  for(const s of SIZES){
+    const ctx = await browser.newContext({
+      viewport: s.viewport,
+      deviceScaleFactor: s.dsf,
+      isMobile: true, hasTouch: true,
+      locale: 'bg-BG',
+    });
+    await captureSet(ctx, s.dir);
+    await ctx.close();
+  }
 
   // --- Банер за Google Play (feature graphic, точно 1024×500) ---------
   const bctx = await browser.newContext({ viewport:{width:1024, height:500}, deviceScaleFactor:1, locale:'bg-BG' });
