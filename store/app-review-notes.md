@@ -45,113 +45,87 @@ Recording).
 
 ---
 
-## Видеото не се прикача — дава се като ЛИНК
+## ⚠️ Полето за отговор приема НАЙ-МНОГО 4000 знака
 
-Полето `Attachment` приема само изображения. Стандартната практика (и
-приемана от ревюиращите) е видеото да се качи някъде и в отговора да се
-даде линк.
+Първата, подробна версия беше 4964 — App Store Connect я отряза. Текстът
+по-долу е свитата, реално пратена версия: **3839 знака**, всичките седем
+отговора запазени.
 
-**YouTube, видимост „Unlisted"** е най-сигурно. ⚠️ **НЕ „Private"** —
-личното иска влизане в акаунт и ревюиращият няма да го отвори. Скритото
-не се показва в търсене, но се отваря от всеки с линка.
+## Видеото се дава като ЛИНК, не се прикача
 
-⚠️ **Тествай линка в прозорец инкогнито, преди да го пратиш.** Линк, който
-иска влизане, е най-честият начин подаването да се върне пак — със
-загубени още няколко дни.
+Полето `Attachment` приема само изображения. Видеото се качва в YouTube с
+видимост **Unlisted** (⚠️ НЕ "Private" — личното иска влизане в акаунт и
+ревюиращият не го отваря) и линкът влиза в самия текст.
 
-Тогава точка 1 от текста по-долу става:
+⚠️ Тествай линка в прозорец инкогнито, преди да пратиш.
 
-```
-1. SCREEN RECORDING
-A screen recording captured on a physical iPhone is available here:
-[ЛИНК]
+**Пратеното видео:** https://youtu.be/PdBvvfXHhc8
 
-It starts from app launch and covers account registration, login, creating and completing notes, swipe gestures, setting a reminder including the iOS notification permission prompt, the calendar view, and the account deletion flow.
-```
+## Къде отива текстът
+
+1. App Store Connect → **App Review** → тапваш реда с датата на подаването
+   → поле за писане под съобщението от Apple → Send.
+2. Същият текст в полето **Notes** на App Review Information — Apple
+   изрично го препоръчва, за да не пита пак при бъдещи подавания.
+3. ⚠️ **Смени избрания build на 5**, преди да подадеш пак.
+
+## Защо данните за акаунта НЕ са в текста
+
+Текстът сочи към полето **Sign-In Information**, вместо да повтаря имейл
+и парола. Така не може да се получи разминаване, ако някога се сменят, а
+ревюиращият и без друго чете точно това поле.
+
+Акаунтът, който се вижда създаден и изтрит във ВИДЕОТО, е друг — еднократен,
+само за демонстрацията. Затова текстът го обяснява изрично: иначе
+ревюиращият може да опита да влезе с него, да не успее и да реши, че
+приложението е счупено.
 
 ---
 
-## Текстът (на английски, за копиране)
+## Текстът, както беше пратен (24.08.2026)
 
 ```
 Thank you for reviewing iForget.
 
 1. SCREEN RECORDING
-Attached / provided as requested. Recorded on a physical iPhone running the latest iOS, starting from app launch and covering registration, login, creating and completing notes, reminders (including the notification permission prompt), the calendar, and the account deletion flow.
+Captured on a physical iPhone: https://youtu.be/PdBvvfXHhc8
+It starts at app launch and covers registration, login, creating and completing notes, swipe gestures, setting a reminder including the iOS notification permission prompt, the calendar, and account deletion.
 
-2. DEVICES AND OPERATING SYSTEMS TESTED
-- iPhone [МОДЕЛ], iOS [ВЕРСИЯ] — via TestFlight
-- The same codebase also runs as a web app at https://iforget.eu and as an Android app, tested on a Samsung Galaxy A17 (SM-A176B), Android 16.
+2. DEVICES TESTED
+iPhone 13 Pro Max, iOS 26.6, via TestFlight. The same codebase also runs as a web app (https://iforget.eu) and as an Android app, tested on a Samsung Galaxy A17, Android 16.
 
-3. APP FUNCTION AND TARGET AUDIENCE
-iForget is a simple daily to-do and notes app. It is deliberately designed for day-to-day use rather than long-term archiving: completed notes are automatically moved to the trash after 30 days.
+3. FUNCTION AND AUDIENCE
+iForget is a simple daily to-do and notes app, built for day-to-day use rather than archiving: completed notes move to the trash automatically after 30 days.
 
-The problem it solves: most task apps are either too simple (a flat list) or too complex (projects, boards, tags hierarchies). iForget sits in between — a single chronological list with three states (active, in progress, done), optional sub-tasks, categories, colours, and local reminders.
+Most task apps are either a flat list or a full project system. iForget sits between: one chronological list with three states (active, in progress, done), plus sub-tasks, categories, colours and local reminders.
 
-Core features:
-- Notes with three states, changed by tapping the status dot or swiping
-- Sub-notes nested under a parent note
-- Categories, including a soft-delete trash with 5-day retention
-- Local reminders, optionally repeating daily or weekly
-- Calendar view (week / month / year)
-- A weekly and monthly personal review, and a streak counter
-- Search by text and by date, with Cyrillic/Latin transliteration
-- Light, dark and two additional visual themes
-- Interface in 5 languages: Bulgarian, English, Russian, German, Spanish
+Features: three-state notes changed by tapping the status dot or swiping; nested sub-notes; categories and a 5-day soft-delete trash; local reminders that can repeat daily or weekly; week/month/year calendar; a weekly and monthly personal review with a streak counter; search by text and by date; light, dark and two further themes; interface in Bulgarian, English, Russian, German and Spanish.
 
-Target audience: general consumers who want a straightforward daily task list. The interface language defaults to the device language. The app is free, with no ads, no in-app purchases and no subscriptions.
+Audience: general consumers wanting a straightforward daily task list. The app is free, with no ads, no in-app purchases and no subscriptions.
 
-4. SETUP AND ACCESS INSTRUCTIONS
-The app requires an account because notes sync across devices.
+4. SETUP AND ACCESS
+An account is required because notes sync across devices. A working demo account is in the Sign-In Information field. There is one account type only, with no roles or paid tiers, and no sample files are needed.
 
-Demo account (also entered in the Sign-In Information field):
-  Email: [ИМЕЙЛ НА ТЕСТОВИЯ АКАУНТ]
-  Password: [ПАРОЛА]
+A short 8-step tutorial runs on first launch and can be replayed from Profile > Help.
 
-There is only one account type — there are no roles, tiers or paid levels. No sample files are needed.
+To test reminders: long-press a note, choose "Reminder", set a time a few minutes ahead and save. iOS asks for notification permission at that moment. Reminders are scheduled locally and fire with the app fully closed.
 
-On first launch a short 8-step tutorial runs automatically and points at each main feature. It can be replayed at any time from Profile → Help → Replay tutorial.
+The account created and deleted in the recording was a throwaway used only for that demonstration; the demo account in Sign-In Information is separate and active.
 
-To test reminders: long-press any note (or tap an existing reminder badge), choose "Reminder", set a date and time a few minutes ahead, and save. iOS will ask for notification permission at that moment. Reminders are scheduled locally on the device and fire even when the app is fully closed.
+5. EXTERNAL SERVICES
+Firebase Authentication (email and password only; no social sign-in). Cloud Firestore, storing each user's notes in one document keyed by their user ID, with security rules limiting access to the owner. Firebase Cloud Functions for password-reset and email-verification messages, delivered through Resend. Google Fonts for the interface.
 
-5. EXTERNAL SERVICES USED
-- Firebase Authentication (Google) — email and password sign-in only. No third-party or social sign-in is used.
-- Cloud Firestore (Google) — stores each user's notes in a single document keyed by their user ID. Security rules restrict read and write access to the owner of that document.
-- Firebase Cloud Functions (Google) — sends branded password-reset and email-verification messages.
-- Resend — the email delivery provider used by those Cloud Functions.
-- Google Fonts — web fonts for the interface.
+No analytics, advertising, crash-reporting or tracking SDKs are included. No payment processor is active; the app contains no purchase flow of any kind.
 
-No analytics, advertising, crash reporting or tracking SDKs are included. No payment processor is active: the app is entirely free and contains no purchase flow of any kind.
-
-Reminders use @capacitor/local-notifications and are scheduled by the operating system on the device itself. No push notification server is involved, and no reminder data leaves the device for that purpose.
+Reminders use @capacitor/local-notifications and are scheduled by the operating system on the device. No push server is involved and no reminder data leaves the device.
 
 6. REGIONAL DIFFERENCES
-There are none. The app behaves identically in every region. The only variation is the interface language, which follows the device language and can be changed manually in the profile menu; all 5 languages expose exactly the same features.
+None. The app behaves identically everywhere. The only variation is interface language, which follows the device setting and can be changed manually; all five languages expose the same features.
 
 7. REGULATED INDUSTRY / THIRD-PARTY MATERIAL
-The app does not operate in a regulated industry and contains no protected third-party material.
+Neither applies. The app includes an optional feature for logging menstrual cycle dates: the user records the start and end of a period, and the app shows the current phase name and a predicted next date calculated from those entries. It gives no diagnosis, no medical guidance and no lifestyle recommendations, and displays a disclaimer that it is a general guide and not medical advice. This is why it is declared as Health data in App Privacy while the age rating questionnaire records no medical or treatment information.
 
-The app includes an optional feature for logging menstrual cycle dates. It is a personal date log: the user records the start and end of a period, and the app shows the current phase name and a predicted next date calculated from those entries. It provides no diagnosis, no medical guidance and no health or lifestyle recommendations, and it displays a disclaimer stating that it is a general guide and not medical advice. This is why it is declared as Health data in App Privacy, while the age rating questionnaire was answered as containing no medical or treatment information.
-
-All artwork is original: the app icon and the background photograph were created by the developer. The fonts are licensed under the SIL Open Font License.
+All artwork is original: the app icon and background photograph were created by the developer. Fonts are licensed under the SIL Open Font License.
 
 Please let us know if anything else would help the review.
 ```
-
----
-
-## ⚠️ Бъдещ риск, свързан с точка 5
-
-Отговорът казва честно, че **няма активен платежен път** — и това е вярно
-днес: Premium е скрит зад `config/premium.enabled` във Firestore.
-
-Но ако някога го включиш, внимавай: **Apple не позволява продажба на
-цифрово съдържание в iOS приложение през външен платежен процесор**
-(Stripe). Такова съдържание трябва да минава през In-App Purchase, с
-комисионата на Apple. Stripe пътят е законен само през САЙТА, извън
-приложението.
-
-Тоест "щракването на ключа", описано в CLAUDE.md, е безопасно за уеб и за
-Android, но **за iOS изисква отделна работа** (StoreKit) или Premium да се
-продава само през iforget.eu. Не е проблем сега, но не бива да се включи
-по невнимание, докато приложението е в App Store.
