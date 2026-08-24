@@ -1880,6 +1880,44 @@ function isSatoriUser(){
   return !!(currentUser && currentUser.email && currentUser.email.toLowerCase() === SATORI_EMAIL);
 }
 
+// ── Връзките към privacy.html/terms.html в СВАЛЕНОТО приложение
+// Реален докладван бъг (24.08.2026, TestFlight на iPhone): линковете за
+// поверителност и общи условия на екрана за вход не правят НИЩО при
+// натискане, макар в браузър да се отварят нормално.
+// Причина: и двата са `<a target="_blank">` с ОТНОСИТЕЛЕН адрес. В
+// нативната обвивка той се разрешава спрямо собствения origin на
+// приложението (`capacitor://localhost/...`). `target="_blank"` иска нов
+// прозорец, а WKWebView не може да отвори втори — Capacitor праща външните
+// http(s) адреси към системния браузър, но СОБСТВЕНИЯТ му origin не е
+// "външен", значи не го поема никой и кликът пропада тихо.
+// Затова в нативното приложение адресът се прави АБСОЛЮТЕН — тогава
+// Capacitor го разпознава като външен и го отваря в Safari/Chrome.
+// В браузър `LEGAL_BASE` е празен низ, значи всичко остава точно както
+// беше (относителен адрес, същият домейн, без излишно излизане навън).
+// Файловете СА в www/ (виж FILES_TO_COPY в scripts/sync-www.js) — липсата
+// им не е причината и копирането им не бива да се маха.
+function isNativeApp(){
+  const cap = window.Capacitor;
+  return !!(cap && cap.isNativePlatform && cap.isNativePlatform());
+}
+const LEGAL_BASE = isNativeApp() ? 'https://iforget.eu/' : '';
+// Статичните връзки в <body> се пишат преди скриптът да е тръгнал, затова
+// се пренасочват тук. Динамичните (профилното меню) ползват LEGAL_BASE
+// направо при рисуване.
+function fixNativeLegalLinks(){
+  if(!LEGAL_BASE) return;
+  ['authPrivacyLink', 'authTermsLink'].forEach(id => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    const raw = el.getAttribute('href');
+    // Пазач срещу двойно префиксиране: getAttribute() връща вече
+    // презаписаната стойност, значи втори извик би дал
+    // "https://iforget.eu/https://iforget.eu/privacy.html".
+    if(/^https?:\/\//i.test(raw)) return;
+    el.setAttribute('href', LEGAL_BASE + raw);
+  });
+}
+
 // ═══════════════════════════════════════════════════════════
 // Premium инфраструктура — ПОДГОТВЕНА, но НЕВИДИМА/НЕАКТИВНА, докато
 // потребителят изрично не "включи ключа" — виж config/premium документа в
@@ -3192,8 +3230,8 @@ function renderProfileMenu(){
   html += profileGroupBlock('help', ICONS.mail, s.profileGroupHelp, `
     <button type="button" class="action" data-action="replay-tutorial">${ICONS.replay}${L(s.replayTutorial)}</button>
     <a class="action" href="mailto:${SUPPORT_EMAIL}" aria-label="${s.feedbackBtn}">${ICONS.mail}${L(SUPPORT_EMAIL)}</a>
-    <a class="action small-link" href="privacy.html" target="_blank" rel="noopener">${ICONS.shield}${L(s.privacyLink)}</a>
-    <a class="action small-link" href="terms.html" target="_blank" rel="noopener">${ICONS.doc}${L(s.termsLink)}</a>
+    <a class="action small-link" href="${LEGAL_BASE}privacy.html" target="_blank" rel="noopener">${ICONS.shield}${L(s.privacyLink)}</a>
+    <a class="action small-link" href="${LEGAL_BASE}terms.html" target="_blank" rel="noopener">${ICONS.doc}${L(s.termsLink)}</a>
   `);
 
   panel.innerHTML = html;
@@ -7343,6 +7381,7 @@ document.addEventListener('visibilitychange', ()=>{
 syncNativeReminders();
 clearDeliveredNativeNotifications();
 applyStaticText();
+fixNativeLegalLinks();
 requestPersistentStorage();
 loadPremiumConfig();
 // Показваме екрана за вход веднага в "зареждане" вид, докато Firebase
