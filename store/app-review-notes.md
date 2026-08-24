@@ -45,6 +45,32 @@ Recording).
 
 ---
 
+## Видеото не се прикача — дава се като ЛИНК
+
+Полето `Attachment` приема само изображения. Стандартната практика (и
+приемана от ревюиращите) е видеото да се качи някъде и в отговора да се
+даде линк.
+
+**YouTube, видимост „Unlisted"** е най-сигурно. ⚠️ **НЕ „Private"** —
+личното иска влизане в акаунт и ревюиращият няма да го отвори. Скритото
+не се показва в търсене, но се отваря от всеки с линка.
+
+⚠️ **Тествай линка в прозорец инкогнито, преди да го пратиш.** Линк, който
+иска влизане, е най-честият начин подаването да се върне пак — със
+загубени още няколко дни.
+
+Тогава точка 1 от текста по-долу става:
+
+```
+1. SCREEN RECORDING
+A screen recording captured on a physical iPhone is available here:
+[ЛИНК]
+
+It starts from app launch and covers account registration, login, creating and completing notes, swipe gestures, setting a reminder including the iOS notification permission prompt, the calendar view, and the account deletion flow.
+```
+
+---
+
 ## Текстът (на английски, за копиране)
 
 ```
