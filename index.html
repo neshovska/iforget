@@ -667,18 +667,53 @@
      високият z-index в страницата), докато Firebase Auth не потвърди активна
      сесия. Бележките вече живеят в Firestore, разделени по потребител
      (users/{uid}), затова без вход няма какво да се покаже. */
+  /* Реален бъг от iPhone (24.08.2026): при РЕГИСТРАЦИЯ полето "Потвърди
+     парола" оставаше зад клавиатурата и нямаше начин да се стигне до него.
+     Формата за регистрация е с едно поле по-висока от тази за вход —
+     затова се проявява само там.
+     ДВЕ причини, поправени заедно:
+     1. ВИСОЧИНАТА. Беше `inset:0`, тоест `bottom:0` — а той се мери спрямо
+        LAYOUT viewport-а, не спрямо видимата зона. Ако
+        interactive-widget=resizes-content не се поддържа (потвърдено на
+        това устройство при историята с долната лента, виж коментара за
+        .bottombar), layout viewport-ът НЕ се свива при клавиатура: екранът
+        за вход остава 844px висок, докато се виждат 433px, и долната му
+        част е физически под клавиатурата. Сега височината идва от
+        var(--app-height) — същата, която JS-ът (updateAppHeight()) вече
+        смалява, значи екранът се свива заедно с видимата зона.
+     2. НЯМАШЕ КАКВО ДА СЕ СКРОЛНЕ. Браузърът сам показва фокусираното поле,
+        но само ако има скролируем предшественик. Тук нямаше нито един.
+        Оттам `overflow-y:auto`.
+     `justify-content:center` не се комбинира с overflow: при преливане реже
+     и от двата края и горният става недостижим (същият капан като при
+     .notes-inner, виж коментара за leading overflow по-долу). Затова
+     центрирането минава през `margin:auto 0` на .auth-card — центрира,
+     докато има място, и отстъпва, щом свърши.
+     ⚠️ ЧЕСТНО: Chromium в тестовата среда НЕ възпроизвежда оригиналния
+     симптом дори със старите стойности — контролен опит го показа. Значи
+     тук е проверено само, че НОВОТО поведение е правилно (екранът се
+     скролва, полето и заглавието са достижими, картата пак е центрирана
+     без клавиатура). Че бъгът е РЕШЕН, се потвърждава само на устройство.
+     Това е същата поука като при дългата история с клавиатурата по-горе:
+     нативната среда се държи различно от десктоп браузър. */
   .auth-screen{
-    display:none;position:fixed;inset:0;z-index:50;background:var(--bg);
+    display:none;position:fixed;left:0;right:0;top:0;z-index:50;background:var(--bg);
+    height:100vh;height:var(--app-height, 100vh);
     background-image:linear-gradient(rgba(20,27,46,.55),rgba(20,27,46,.55)),url("auth-bg.jpg?v=1");
     background-size:cover;background-position:center;
-    flex-direction:column;align-items:center;justify-content:center;padding:24px;
+    flex-direction:column;align-items:center;justify-content:flex-start;padding:24px;
+    overflow-y:auto;
     text-align:center;
   }
   .auth-screen.show{display:flex;}
   /* Топбар-ът (с бутона за език) е скрит зад екрана за вход, докато няма
      сесия — затова тук има собствено копче за смяна на езика. */
   .auth-lang-btn{position:absolute;top:calc(env(safe-area-inset-top,0px) + 16px);right:16px;}
-  .auth-card{max-width:320px;width:100%;}
+  /* margin:auto 0 центрира картата вертикално, докато има свободно място, а
+     при преливане (клавиатура + по-високата форма за регистрация) отстъпва
+     и пуска скрола да работи в двете посоки. Виж коментара над
+     .auth-screen. */
+  .auth-card{max-width:320px;width:100%;margin:auto 0;flex-shrink:0;}
   .auth-card h1{font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:600;color:var(--accent);margin:0 0 8px;letter-spacing:.3px;}
   /* Мотото на приложението — под заглавието, над функционалния текст. */
   .auth-motto{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;font-style:italic;color:var(--gold);line-height:1.4;margin:0 0 10px;}
