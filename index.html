@@ -762,6 +762,35 @@
     font-family:inherit;padding:4px;line-height:1.3;
   }
   .auth-toggle-mode{font-size:13px;color:var(--text-dim);margin-top:12px;}
+  /* "Продължи без акаунт" — виж коментара при бутона в <body>. Отделен е с
+     линия от формата, за да се чете като РАВНОСТОЕН избор, а не като
+     дребен придатък под нея: App Store иска достъпът без акаунт да е
+     истински, не формално наличен. Затова е с рамка и пълна ширина, но
+     без плътен фон — водещото действие остава "Вход". */
+  .auth-guest{margin-top:18px;padding-top:16px;border-top:1px solid var(--border);}
+  .auth-guest-btn{
+    width:100%;padding:11px 14px;border-radius:12px;
+    border:1px solid var(--border);background:transparent;color:var(--text);
+    font-family:inherit;font-size:14.5px;font-weight:600;cursor:pointer;
+    transition:background-color .15s ease,border-color .15s ease;
+  }
+  .auth-guest-btn:hover{background:rgba(var(--card-rgb),.5);border-color:var(--accent);}
+  .auth-guest-hint{font-size:11.5px;color:var(--text-dim);line-height:1.45;margin:8px 0 0;}
+  .auth-back-btn{
+    margin-top:16px;padding:8px 14px;border-radius:10px;
+    border:1px solid var(--border);background:transparent;color:var(--text-dim);
+    font-family:inherit;font-size:13px;cursor:pointer;
+  }
+  .auth-back-btn:hover{color:var(--text);border-color:var(--accent);}
+  /* Бележката в профила, че се работи локално. Тонът е информативен, не
+     тревожен — работата без акаунт е пълноценна, просто без синхронизация. */
+  .guest-note{
+    display:flex;gap:7px;align-items:flex-start;
+    font-size:10.5px;line-height:1.45;color:var(--text-dim);
+    margin:0 0 10px;padding:8px 10px;border-radius:10px;
+    background:rgba(var(--card-rgb),.45);
+  }
+  .guest-note .ic{flex:0 0 auto;margin-top:1px;}
   .auth-loading{font-size:13px;color:var(--text-dim);margin-top:18px;}
   .auth-legal-links{margin-top:20px;font-size:11px;color:var(--text-dim);}
   .auth-legal-links a{color:var(--text-dim);text-decoration:underline;}
@@ -1668,7 +1697,21 @@
         <span id="authToggleText">Нямаш акаунт?</span>
         <button type="button" id="toggleAuthModeBtn" class="link-btn">Регистрирай се</button>
       </div>
+      <!-- Вход БЕЗ акаунт. Не е украса, а изискване на App Store (Guideline
+           5.1.1(v)): не може да се иска регистрация за функции, които не
+           зависят от акаунт. При iForget писането на бележки работи изцяло
+           локално (виж save() — localStorage е първи и не пита за вход);
+           акаунтът служи само за синхронизация между устройства. Затова
+           бутонът е ИСТИНСКИ бутон, не ситен линк — заключен вход зад
+           незабележима вратичка е същият отказ. -->
+      <div class="auth-guest">
+        <button type="button" id="authGuestBtn" class="auth-guest-btn">Продължи без акаунт</button>
+        <p class="auth-guest-hint" id="authGuestHint">Бележките остават само на това устройство.</p>
+      </div>
     </div>
+    <!-- Показва се САМО когато вече работиш без акаунт и си отворил екрана от
+         профила — иначе няма къде да се върнеш и вратата е еднопосочна. -->
+    <button type="button" id="authBackBtn" class="auth-back-btn" style="display:none;">Назад към бележките</button>
     <div class="auth-loading" id="authLoading" style="display:none;">Зареждане...</div>
     <p class="auth-signature" id="authSignature">iForget — помни това, което има значение.</p>
     <div class="auth-legal-links">
@@ -1862,6 +1905,23 @@ const CYCLE_DATA_KEY = 'cycleData';
 // потребител, който вече Е записал цикли, но не иска да ги вижда там.
 let cycleOverlayEnabled = true;
 const CYCLE_OVERLAY_KEY = 'cycleOverlay';
+
+// ── РАБОТА БЕЗ АКАУНТ
+// Изискване на App Store (Guideline 5.1.1(v)): не може да се иска
+// регистрация за функции, които не зависят от акаунт. При iForget писането
+// на бележки е изцяло локално — `save()` пише в localStorage синхронно и
+// БЕЗ да пита за вход, а Firestore записът отгоре е "fire and forget" под
+// `if(currentUser)`. Тоест приложението вече УМЕЕШЕ да работи без акаунт;
+// липсваше само врата към това състояние, защото `.auth-screen` покрива
+// всичко, докато `hideAuthScreen()` не се извика.
+// Акаунтът остава нужен САМО за синхронизация между устройства.
+// Флагът се пази в localStorage, за да не пита пак при всяко отваряне.
+const GUEST_MODE_KEY = 'guestMode';
+let guestMode = false;
+// Вдига се, когато влезеш в акаунт, СЛЕД като си работил без такъв. Тогава
+// loadFromCloud() не бива да презапише локалните бележки с облачните —
+// това би изтрило мълчаливо всичко, писано дотогава. Виж mergeGuestNotes().
+let pendingGuestMerge = false;
 // Вдига се точно преди да приключи успешно разместване на таг (виж
 // attachCatRowDrag()) — "поглъща" единствения последвал click на реда с
 // категории, за да не отвори филтъра по погрешка веднага след провлачване.
@@ -2127,6 +2187,10 @@ const ICONS = {
   lock: '<svg class="ic" viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>',
   // Облак с наклонена черта — значката "не е синхронизирано" (виж
   // updateSyncBadge()). 11px, за да пасне на дребната значка.
+  // Кръгчето на профила, когато се работи БЕЗ акаунт — там иначе стои
+  // първата буква на имейла, а такъв няма. Без него бутонът би бил празен
+  // и профилното меню (календар, изглед, износ, обучение) — недостижимо.
+  user: '<svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>',
   cloudOff: '<svg class="ic" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.2 18H6a4 4 0 0 1-.9-7.9A6 6 0 0 1 15 6.6"></path><path d="M18 10a4 4 0 0 1 .5 8"></path><line x1="3" y1="3" x2="21" y2="21"></line></svg>',
   // Удивителен знак в кръгче — бележката за изтичащите бележки в група
   // "Данни" (виж .profile-hint). По-дребен от останалите (11px) и с
@@ -2170,6 +2234,11 @@ const STRINGS = {
     authFeat2: 'Твоят прогрес',
     authFeat3: 'Твоят контрол',
     authSignature: 'iForget — помни това, което има значение.',
+    authGuestBtn: 'Продължи без акаунт',
+    authGuestHint: 'Бележките остават само на това устройство.',
+    guestSignInBtn: 'Влез или се регистрирай',
+    guestLocalNote: 'Работиш без акаунт. Бележките са само тук, на това устройство — влез, за да се пазят в облака и да ги виждаш и на друг телефон.',
+    authBackToApp: 'Назад към бележките',
     authLoadingText: 'Зареждане...', authError: 'Неуспешен вход. Опитай отново.',
     confirmLogout: 'Да излезеш ли от акаунта?', profileAria: 'Профил',
     profileColorDefault: 'По подразбиране', leftHandedMode: 'Режим за лявата ръка',
@@ -2289,6 +2358,11 @@ const STRINGS = {
     authFeat2: 'Your progress',
     authFeat3: 'Your control',
     authSignature: 'iForget — remember what matters.',
+    authGuestBtn: 'Continue without an account',
+    authGuestHint: 'Your notes stay on this device only.',
+    guestSignInBtn: 'Sign in or register',
+    guestLocalNote: 'You are using iForget without an account. Notes are stored on this device only — sign in to keep them in the cloud and see them on another phone.',
+    authBackToApp: 'Back to your notes',
     authLoadingText: 'Loading...', authError: 'Sign-in failed. Please try again.',
     confirmLogout: 'Sign out of your account?', profileAria: 'Profile',
     profileColorDefault: 'Default', leftHandedMode: 'Left-handed mode',
@@ -2405,6 +2479,11 @@ const STRINGS = {
     authFeat2: 'Твой прогресс',
     authFeat3: 'Твой контроль',
     authSignature: 'iForget — помни то, что важно.',
+    authGuestBtn: 'Продолжить без аккаунта',
+    authGuestHint: 'Заметки останутся только на этом устройстве.',
+    guestSignInBtn: 'Войти или зарегистрироваться',
+    guestLocalNote: 'Вы работаете без аккаунта. Заметки хранятся только на этом устройстве — войдите, чтобы они сохранялись в облаке и были доступны на другом телефоне.',
+    authBackToApp: 'Назад к заметкам',
     authLoadingText: 'Загрузка...', authError: 'Не удалось войти. Попробуй снова.',
     confirmLogout: 'Выйти из аккаунта?', profileAria: 'Профиль',
     profileColorDefault: 'По умолчанию', leftHandedMode: 'Режим для левшей',
@@ -2521,6 +2600,11 @@ const STRINGS = {
     authFeat2: 'Dein Fortschritt',
     authFeat3: 'Deine Kontrolle',
     authSignature: 'iForget — erinnere dich an das, was zählt.',
+    authGuestBtn: 'Ohne Konto fortfahren',
+    authGuestHint: 'Deine Notizen bleiben nur auf diesem Gerät.',
+    guestSignInBtn: 'Anmelden oder registrieren',
+    guestLocalNote: 'Du nutzt iForget ohne Konto. Die Notizen liegen nur auf diesem Gerät — melde dich an, damit sie in der Cloud gespeichert und auf einem anderen Telefon sichtbar werden.',
+    authBackToApp: 'Zurück zu den Notizen',
     authLoadingText: 'Wird geladen...', authError: 'Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
     confirmLogout: 'Vom Konto abmelden?', profileAria: 'Profil',
     profileColorDefault: 'Standard', leftHandedMode: 'Linkshänder-Modus',
@@ -2637,6 +2721,11 @@ const STRINGS = {
     authFeat2: 'Tu progreso',
     authFeat3: 'Tu control',
     authSignature: 'iForget — recuerda lo que importa.',
+    authGuestBtn: 'Continuar sin cuenta',
+    authGuestHint: 'Tus notas se quedan solo en este dispositivo.',
+    guestSignInBtn: 'Inicia sesión o regístrate',
+    guestLocalNote: 'Estás usando iForget sin cuenta. Las notas se guardan solo en este dispositivo: inicia sesión para conservarlas en la nube y verlas en otro teléfono.',
+    authBackToApp: 'Volver a tus notas',
     authLoadingText: 'Cargando...', authError: 'No se pudo iniciar sesión. Inténtalo de nuevo.',
     confirmLogout: '¿Cerrar sesión de la cuenta?', profileAria: 'Perfil',
     profileColorDefault: 'Predeterminado', leftHandedMode: 'Modo para zurdos',
@@ -2927,6 +3016,9 @@ function applyStaticText(){
   document.getElementById('verifyResendBtn').textContent = s.verifyResendBtn;
   document.getElementById('authPrivacyLink').textContent = s.privacyLink;
   document.getElementById('authTermsLink').textContent = s.termsLink;
+  document.getElementById('authGuestBtn').textContent = s.authGuestBtn;
+  document.getElementById('authGuestHint').textContent = s.authGuestHint;
+  document.getElementById('authBackBtn').textContent = s.authBackToApp;
   setAuthMode(authMode); // презарежда надписите "Вход"/"Регистрация" на текущия език
 }
 
@@ -3016,15 +3108,63 @@ function loadLocalCache(){
     const rawOverlay = localStorage.getItem(CYCLE_OVERLAY_KEY);
     cycleOverlayEnabled = rawOverlay === null ? true : rawOverlay === '1';
   }catch(e){ cycleOverlayEnabled = true; }
+  // Прочита се ТУК, а не по-късно: викането е синхронно при старта, преди
+  // auth.onAuthStateChanged() изобщо да може да гръмне, значи потокът вече
+  // знае дали устройството работи без акаунт.
+  try{ guestMode = localStorage.getItem(GUEST_MODE_KEY) === '1'; }
+  catch(e){ guestMode = false; }
 }
 
 function showAuthScreen(loading){
   document.getElementById('authScreen').classList.add('show');
   document.getElementById('authLoading').style.display = loading ? 'block' : 'none';
   document.getElementById('authFormWrap').style.display = loading ? 'none' : 'block';
+  // "Назад към бележките" има смисъл САМО ако вече работиш без акаунт —
+  // тогава екранът е отворен доброволно, от профила, и трябва да има изход.
+  // При първо отваряне (нищо зад гърба) би бил бутон за никъде.
+  const back = document.getElementById('authBackBtn');
+  if(back) back.style.display = (guestMode && !loading) ? 'inline-block' : 'none';
 }
 function hideAuthScreen(){
   document.getElementById('authScreen').classList.remove('show');
+}
+
+// Пуска приложението БЕЗ акаунт. Точно същият завършек като успешен вход
+// (виж loadFromCloud()) — минус всичко облачно: няма какво да се тегли,
+// защото loadLocalCache() вече е напълнил notes при старта на скрипта.
+function enterGuestMode(){
+  guestMode = true;
+  try{ localStorage.setItem(GUEST_MODE_KEY, '1'); }catch(e){}
+  updateUserChip(null);
+  archiveOldCompleted();
+  purgeExpiredTrash();
+  render();
+  hideAuthScreen();
+  setTimeout(()=>scrollToBottom(false), 0);
+  maybeFocusQuickAdd();
+  maybeHandleShareTarget();
+  syncNativeReminders();
+  // Обучението — при първо влизане и без акаунт. Признакът е същият като при
+  // нов акаунт (никакви бележки), но флагът "вече е минато" се пази локално,
+  // защото няма документ във Firestore, в който да се запише.
+  let onboarded = false;
+  try{ onboarded = localStorage.getItem('onboarded') === '1'; }catch(e){}
+  if(!onboarded && notes.length === 0){
+    try{ localStorage.setItem('onboarded', '1'); }catch(e){}
+    runOnboardingTour(null);
+  }
+}
+
+// Влизане в акаунт СЛЕД работа без такъв: облачните и локалните бележки се
+// СЛИВАТ, вместо облачните да заменят локалните. Без това потребител, писал
+// дълго без акаунт, би загубил всичко в мига, в който влезе в съществуващ
+// акаунт — най-скъпият вид тиха загуба на данни.
+// Сливането е по id: локалните id-та са уникални (виж addNote()), значи
+// съвпадение значи една и съща бележка, а не две различни.
+function mergeGuestNotes(local, cloud){
+  const byId = new Set(cloud.map(n => n.id));
+  const extra = local.filter(n => !byId.has(n.id));
+  return extra.length ? cloud.concat(extra) : cloud;
 }
 
 // Превключва формата между "Вход" и "Регистрация" — само надписите се
@@ -3182,7 +3322,16 @@ function renderProfileMenu(){
   const s = t();
   const panel = document.getElementById('profilePanel');
   const email = currentUser ? (currentUser.email || '') : '';
-  let html = `<div class="profile-email">${escapeHtml(email)}</div>`;
+  let html = '';
+  if(currentUser){
+    html += `<div class="profile-email">${escapeHtml(email)}</div>`;
+  }else{
+    // Работа без акаунт: вместо имейл — обяснение какво значи това и врата
+    // към входа. Обяснението е тук, а не само на екрана за вход, защото
+    // именно тук потребителят се сеща да попита "а къде ми е акаунтът".
+    html += `<p class="guest-note">${ICONS.cloudOff}<span>${s.guestLocalNote}</span></p>`;
+    html += `<button type="button" class="action" data-action="guest-signin">${ICONS.user}${L(s.guestSignInBtn)}</button>`;
+  }
   // Всички PROFILE_COLORS отново са свободни за всички потребители — виж
   // CLAUDE.md/git история за краткия период, в който бяха частично
   // заключени зад Premium (PROFILE_COLORS_FREE), после отменено по
@@ -3246,13 +3395,19 @@ function renderProfileMenu(){
   }
   html += profileGroupBlock('data', ICONS.calendar, s.profileGroupData, dataContent);
 
-  html += profileGroupBlock('account', ICONS.pencil, s.profileGroupAccount, `
-    <button type="button" class="action" data-action="change-password">${ICONS.pencil}${L(s.changePassword)}</button>
-    <button type="button" class="action" data-action="change-email">${ICONS.pencil}${L(s.changeEmail)}</button>
-    <hr>
-    <button type="button" class="action danger" data-action="logout">${ICONS.close}${L(s.logoutBtn)}</button>
-    <button type="button" class="action danger" data-action="delete-account">${ICONS.trash}${L(s.deleteAccount)}</button>
-  `);
+  // Групата "Акаунт" се показва само когато има акаунт — смяна на парола,
+  // на имейл, изход и изтриване на профил нямат никакъв смисъл без такъв и
+  // само биха объркали. Износът на резервно копие е в "Данни" и работи и
+  // двата начина, значи и без акаунт има как да си изнесеш бележките.
+  if(currentUser){
+    html += profileGroupBlock('account', ICONS.pencil, s.profileGroupAccount, `
+      <button type="button" class="action" data-action="change-password">${ICONS.pencil}${L(s.changePassword)}</button>
+      <button type="button" class="action" data-action="change-email">${ICONS.pencil}${L(s.changeEmail)}</button>
+      <hr>
+      <button type="button" class="action danger" data-action="logout">${ICONS.close}${L(s.logoutBtn)}</button>
+      <button type="button" class="action danger" data-action="delete-account">${ICONS.trash}${L(s.deleteAccount)}</button>
+    `);
+  }
 
   // Помощ — Поверителност/Общи условия по ситен шрифт (.small-link) по
   // изрична молба — по-малко визуално тегло от истинските действия.
@@ -3378,8 +3533,21 @@ function renderProfileMenu(){
     applyLeftHanded();
     renderProfileMenu();
   });
-  panel.querySelector('[data-action="change-password"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderPasswordForm(); });
-  panel.querySelector('[data-action="change-email"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderEmailForm(); });
+  // Четирите бутона за акаунт ги НЯМА в режим без акаунт (виж
+  // renderProfileMenu() по-горе) — затова се закачат само ако съществуват.
+  // Без проверката querySelector() връща null и целият панел гърми при
+  // рисуване, тоест профилът става недостъпен изцяло.
+  const pwBtn = panel.querySelector('[data-action="change-password"]');
+  if(pwBtn) pwBtn.addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderPasswordForm(); });
+  const emailBtn = panel.querySelector('[data-action="change-email"]');
+  if(emailBtn) emailBtn.addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderEmailForm(); });
+  const guestSignInBtn = panel.querySelector('[data-action="guest-signin"]');
+  if(guestSignInBtn) guestSignInBtn.addEventListener('mousedown', e=>{
+    e.preventDefault(); e.stopPropagation();
+    closeProfilePanel();
+    setAuthMode('signin');
+    showAuthScreen(false);
+  });
   panel.querySelector('[data-action="my-review"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderMyReview(); });
   panel.querySelector('[data-action="calendar"]').addEventListener('mousedown', e=>{
     e.preventDefault(); e.stopPropagation();
@@ -3401,8 +3569,10 @@ function renderProfileMenu(){
   });
   const statsBtn = panel.querySelector('[data-action="admin-stats"]');
   if(statsBtn) statsBtn.addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderAdminStats(); });
-  panel.querySelector('[data-action="logout"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); closeProfilePanel(); signOutUser(); });
-  panel.querySelector('[data-action="delete-account"]').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderDeleteAccountForm(); });
+  const logoutBtn = panel.querySelector('[data-action="logout"]');
+  if(logoutBtn) logoutBtn.addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); closeProfilePanel(); signOutUser(); });
+  const delAccBtn = panel.querySelector('[data-action="delete-account"]');
+  if(delAccBtn) delAccBtn.addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderDeleteAccountForm(); });
   const premiumBtn = panel.querySelector('[data-action="premium-upgrade"]');
   if(premiumBtn) premiumBtn.addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderPremiumPlans(); });
 
@@ -4327,6 +4497,16 @@ function renderEmailForm(){
 
 function updateUserChip(user){
   const chip = document.getElementById('userChip');
+  // Без акаунт кръгчето пак ТРЯБВА да се вижда: през него се отваря целият
+  // профил (календар, изглед, износ, обучение, а и самият вход). Скрито,
+  // както беше преди, всичко това става недостижимо в режим без акаунт.
+  if(!user && guestMode){
+    chip.style.display = 'flex';
+    chip.title = t().guestSignInBtn;
+    chip.innerHTML = ICONS.user;
+    chip.style.color = profileColor || 'var(--accent)';
+    return;
+  }
   if(!user){ chip.style.display = 'none'; chip.innerHTML = ''; chip.style.color = ''; return; }
   chip.style.display = 'flex';
   chip.title = user.displayName || user.email || '';
@@ -4396,7 +4576,11 @@ function loadFromCloud(uid){
     // това е първи вход изобщо, виж runOnboardingTour().
     const isNewUser = !snap.exists && notes.length === 0;
     if(snap.exists && Array.isArray(snap.data().notes)){
-      notes = snap.data().notes;
+      // Влизане след работа без акаунт — локалното се СЛИВА с облачното,
+      // не се изхвърля. Виж mergeGuestNotes() за причината.
+      notes = pendingGuestMerge
+        ? mergeGuestNotes(notes, snap.data().notes)
+        : snap.data().notes;
       notes.forEach(n=>{
         if(!n.subs) n.subs = [];
         if(n.tag===undefined) n.tag = null;
@@ -4418,6 +4602,13 @@ function loadFromCloud(uid){
         // би причинила безкраен цикъл в phaseForDate().
         cycleLength: (typeof cd.cycleLength === 'number' && isFinite(cd.cycleLength) && cd.cycleLength > 0) ? cd.cycleLength : 28,
       };
+    }
+    // Слятото трябва да стигне и до облака веднага — иначе локалните бележки
+    // живеят само в паметта до следващата промяна и едно затваряне на
+    // приложението дотогава ги губи.
+    if(pendingGuestMerge){
+      pendingGuestMerge = false;
+      save();
     }
     archiveOldCompleted();
     purgeExpiredTrash();
@@ -4768,9 +4959,22 @@ auth.onAuthStateChanged(user=>{
   updateUserChip(user);
   updateVerifyBanner();
   if(user){
+    // Влизането слага край на работата без акаунт. Флагът се маха ПРЕДИ
+    // loadFromCloud(), за да не остане устройството "гост" след успешен вход.
+    if(guestMode){
+      guestMode = false;
+      pendingGuestMerge = true;   // виж mergeGuestNotes() — локалното не се губи
+      try{ localStorage.removeItem(GUEST_MODE_KEY); }catch(e){}
+    }
     userIsPremium = false; // reset до реалния резултат от loadEntitlement() — избягва "мигане" на стар статус от предишен акаунт
     loadEntitlement(user.uid);
     loadFromCloud(user.uid);
+  }else if(guestMode){
+    // Работа без акаунт: бележките идват от localStorage (loadLocalCache()
+    // вече е минал при старта) и НЕ се нулират — точно обратното на изхода
+    // от акаунт по-долу, където празният списък е нарочен.
+    userIsPremium = false;
+    enterGuestMode();
   }else{
     userIsPremium = false;
     notes = [];
@@ -7392,6 +7596,11 @@ document.getElementById('toggleAuthModeBtn').addEventListener('mousedown', e=>{
   setAuthMode(authMode === 'signin' ? 'signup' : 'signin');
 });
 document.getElementById('verifyResendBtn').addEventListener('mousedown', e=>{ e.preventDefault(); resendVerifyEmail(); });
+// "Продължи без акаунт" / "Назад към бележките". И двата ползват 'mousedown'
+// като съседите си горе — на тъч устройства реагира веднага, без 300ms
+// изчакване за евентуален двоен тап.
+document.getElementById('authGuestBtn').addEventListener('mousedown', e=>{ e.preventDefault(); enterGuestMode(); });
+document.getElementById('authBackBtn').addEventListener('mousedown', e=>{ e.preventDefault(); hideAuthScreen(); });
 
 applyTheme();
 applyAccentColor();
@@ -7445,6 +7654,14 @@ const AUTH_CHECK_TIMEOUT_MS = 5000;
 let authResolved = false;
 setTimeout(()=>{
   if(authResolved) return;
+  // Ако устройството вече работи без акаунт, формата за вход тук би била
+  // безсмислена спънка — потребителят е избрал друго и бележките му са
+  // локални, значи го пускаме право в приложението.
+  if(guestMode){
+    console.warn('auth.onAuthStateChanged не отговори навреме — продължавам без акаунт');
+    enterGuestMode();
+    return;
+  }
   console.warn('auth.onAuthStateChanged не отговори навреме — показвам формата за вход');
   showAuthScreen(false);
 }, AUTH_CHECK_TIMEOUT_MS);
