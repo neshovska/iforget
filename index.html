@@ -888,6 +888,23 @@
     background:linear-gradient(90deg, rgba(var(--gold-rgb),.16), rgba(var(--gold-rgb),.05));
     border:1px solid var(--gold-dim);color:var(--gold);font-weight:700;margin-bottom:8px;
   }
+  /* "Влез или се регистрирай" в режим без акаунт. Оформен като истински
+     бутон (рамка + акцентен цвят), не като поредния плосък ред в менюто —
+     по изрична заявка: редовете горе са настройки, а този ВОДИ НАЯКЪДЕ
+     (към екрана за вход) и това трябва да личи, преди да го натиснеш.
+     ВАЖНО: същият капан със специфичността като .premium-cta по-горе —
+     трябват 3 селектора (.profile-panel button.action.guest-signin-btn),
+     иначе .profile-panel button.action{background:none;...} печели и
+     изяжда рамката. */
+  .profile-panel button.action.guest-signin-btn{
+    background:rgba(var(--accent-rgb),.10);
+    border:1px solid var(--accent);
+    color:var(--accent);
+    font-weight:700;
+    justify-content:center;
+    margin-bottom:10px;
+  }
+  .profile-panel button.action.guest-signin-btn .action-label{flex:0 1 auto;}
   .profile-panel .premium-badge{
     display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--gold);
     padding:8px;margin-bottom:8px;
@@ -3330,7 +3347,7 @@ function renderProfileMenu(){
     // към входа. Обяснението е тук, а не само на екрана за вход, защото
     // именно тук потребителят се сеща да попита "а къде ми е акаунтът".
     html += `<p class="guest-note">${ICONS.cloudOff}<span>${s.guestLocalNote}</span></p>`;
-    html += `<button type="button" class="action" data-action="guest-signin">${ICONS.user}${L(s.guestSignInBtn)}</button>`;
+    html += `<button type="button" class="action guest-signin-btn" data-action="guest-signin">${ICONS.user}${L(s.guestSignInBtn)}</button>`;
   }
   // Всички PROFILE_COLORS отново са свободни за всички потребители — виж
   // CLAUDE.md/git история за краткия период, в който бяха частично
