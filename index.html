@@ -2295,6 +2295,7 @@ const STRINGS = {
     newPasswordPlaceholder: 'Нова парола', confirmNewPasswordPlaceholder: 'Потвърди новата парола',
     newEmailPlaceholder: 'Нов имейл',
     passwordChanged: 'Паролата е сменена успешно.', emailChanged: 'Имейлът е сменен успешно.',
+    emailChangeVerifySent: 'Изпратихме писмо до новия адрес. Отвори го и потвърди — чак тогава имейлът се сменя.',
     needsRecentLogin: 'За тази промяна трябва скорошен вход — излез и влез отново, после опитай пак.',
     expandAria: 'Разгъни', collapseAria: 'Свий',
     deletedUndo: 'Бележката е изтрита.', undoBtn: 'Отмени', deleteAria: 'Изтрий',
@@ -2419,6 +2420,7 @@ const STRINGS = {
     newPasswordPlaceholder: 'New password', confirmNewPasswordPlaceholder: 'Confirm new password',
     newEmailPlaceholder: 'New email',
     passwordChanged: 'Password changed successfully.', emailChanged: 'Email changed successfully.',
+    emailChangeVerifySent: 'We sent a message to the new address. Open it and confirm — the email changes only then.',
     needsRecentLogin: 'This change needs a recent login — sign out, sign back in, then try again.',
     expandAria: 'Expand', collapseAria: 'Collapse',
     deletedUndo: 'Note deleted.', undoBtn: 'Undo', deleteAria: 'Delete',
@@ -2540,6 +2542,7 @@ const STRINGS = {
     newPasswordPlaceholder: 'Новый пароль', confirmNewPasswordPlaceholder: 'Подтверди новый пароль',
     newEmailPlaceholder: 'Новый email',
     passwordChanged: 'Пароль успешно изменён.', emailChanged: 'Email успешно изменён.',
+    emailChangeVerifySent: 'Мы отправили письмо на новый адрес. Откройте его и подтвердите — только тогда email изменится.',
     needsRecentLogin: 'Для этого изменения нужен недавний вход — выйди и войди снова, затем попробуй ещё раз.',
     expandAria: 'Развернуть', collapseAria: 'Свернуть',
     deletedUndo: 'Заметка удалена.', undoBtn: 'Отменить', deleteAria: 'Удалить',
@@ -2661,6 +2664,7 @@ const STRINGS = {
     newPasswordPlaceholder: 'Neues Passwort', confirmNewPasswordPlaceholder: 'Neues Passwort bestätigen',
     newEmailPlaceholder: 'Neue E-Mail',
     passwordChanged: 'Passwort erfolgreich geändert.', emailChanged: 'E-Mail erfolgreich geändert.',
+    emailChangeVerifySent: 'Wir haben eine Nachricht an die neue Adresse geschickt. Öffne sie und bestätige — erst dann ändert sich die E-Mail.',
     needsRecentLogin: 'Für diese Änderung ist eine kürzliche Anmeldung erforderlich — melde dich ab und wieder an und versuche es erneut.',
     expandAria: 'Ausklappen', collapseAria: 'Einklappen',
     deletedUndo: 'Notiz gelöscht.', undoBtn: 'Rückgängig', deleteAria: 'Löschen',
@@ -2782,6 +2786,7 @@ const STRINGS = {
     newPasswordPlaceholder: 'Nueva contraseña', confirmNewPasswordPlaceholder: 'Confirma la nueva contraseña',
     newEmailPlaceholder: 'Nuevo correo',
     passwordChanged: 'Contraseña cambiada correctamente.', emailChanged: 'Correo cambiado correctamente.',
+    emailChangeVerifySent: 'Enviamos un mensaje a la nueva dirección. Ábrelo y confírmalo: el correo cambia solo entonces.',
     needsRecentLogin: 'Este cambio requiere un inicio de sesión reciente — cierra sesión, vuelve a entrar y prueba de nuevo.',
     expandAria: 'Expandir', collapseAria: 'Contraer',
     deletedUndo: 'Nota eliminada.', undoBtn: 'Deshacer', deleteAria: 'Eliminar',
@@ -4500,12 +4505,32 @@ function renderEmailForm(){
     const msg = document.getElementById('emailFormMsg');
     msg.className = 'form-msg';
     if(!newEmail) return;
-    currentUser.updateEmail(newEmail).then(()=>{
+    // verifyBeforeUpdateEmail(), НЕ updateEmail(). Реален докладван бъг
+    // (29.08.2026): смяната на имейл гърмеше с 'auth/operation-not-allowed',
+    // а нашият превод за тоя код говори за ВХОДА ("не е включен за това
+    // приложение") — подвеждащо, защото входът очевидно работи.
+    // Причината: Firebase БЛОКИРА updateEmail(), когато в проекта е включена
+    // защитата "Email enumeration protection" (включена по подразбиране за
+    // новите проекти) и връща точно тоя код. Заместителят е
+    // verifyBeforeUpdateEmail() — праща линк до НОВИЯ адрес и сменя имейла
+    // едва след потвърждение.
+    // Освен че работи, е и по-безопасно: никой не може да отнеме акаунт,
+    // сменяйки имейла към адрес, до който няма достъп.
+    // ⚠️ Писмото идва от Firebase (noreply@iforgetbg.firebaseapp.com), НЕ от
+    // noreply@iforget.eu — за разлика от забравена парола и потвърждение на
+    // регистрация, които минават през Cloud Functions + Resend. Ако някога
+    // трябва да се брандира и това, пътят е
+    // admin.auth().generateVerifyAndChangeEmailLink() по същия модел като
+    // sendBrandedEmailVerification() в functions/index.js.
+    currentUser.verifyBeforeUpdateEmail(newEmail).then(()=>{
       msg.className = 'form-msg success';
-      msg.textContent = t().emailChanged;
-      setTimeout(closeProfilePanel, 1200);
+      // НЕ "имейлът е сменен" — още не е. Сменя се чак след като човек
+      // отвори писмото; надпис "успешно сменен" тук би бил лъжа и после
+      // "защо още показва стария имейл".
+      msg.textContent = t().emailChangeVerifySent;
+      setTimeout(closeProfilePanel, 3500);
     }).catch(err=>{
-      console.error('updateEmail failed', err);
+      console.error('verifyBeforeUpdateEmail failed', err);
       msg.className = 'form-msg error';
       msg.textContent = err.code === 'auth/requires-recent-login' ? t().needsRecentLogin : translateAuthError(err.code);
     });
