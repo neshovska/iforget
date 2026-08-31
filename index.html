@@ -2295,6 +2295,7 @@ const STRINGS = {
     newPasswordPlaceholder: 'Нова парола', confirmNewPasswordPlaceholder: 'Потвърди новата парола',
     currentPasswordPlaceholder: 'Текущата ти парола',
     dictationHint: 'Може и да диктуваш — микрофонът на клавиатурата',
+    errEmailTaken: 'Този имейл вече се ползва от друг акаунт.',
     errPasswordRequired: 'Въведи текущата си парола.',
     newEmailPlaceholder: 'Нов имейл',
     passwordChanged: 'Паролата е сменена успешно.', emailChanged: 'Имейлът е сменен успешно.',
@@ -2423,6 +2424,7 @@ const STRINGS = {
     newPasswordPlaceholder: 'New password', confirmNewPasswordPlaceholder: 'Confirm new password',
     currentPasswordPlaceholder: 'Your current password',
     dictationHint: 'You can dictate too — the microphone on your keyboard',
+    errEmailTaken: 'This email is already used by another account.',
     errPasswordRequired: 'Enter your current password.',
     newEmailPlaceholder: 'New email',
     passwordChanged: 'Password changed successfully.', emailChanged: 'Email changed successfully.',
@@ -2548,6 +2550,7 @@ const STRINGS = {
     newPasswordPlaceholder: 'Новый пароль', confirmNewPasswordPlaceholder: 'Подтверди новый пароль',
     currentPasswordPlaceholder: 'Твой текущий пароль',
     dictationHint: 'Можно и диктовать — микрофон на клавиатуре',
+    errEmailTaken: 'Этот email уже используется другим аккаунтом.',
     errPasswordRequired: 'Введи свой текущий пароль.',
     newEmailPlaceholder: 'Новый email',
     passwordChanged: 'Пароль успешно изменён.', emailChanged: 'Email успешно изменён.',
@@ -2673,6 +2676,7 @@ const STRINGS = {
     newPasswordPlaceholder: 'Neues Passwort', confirmNewPasswordPlaceholder: 'Neues Passwort bestätigen',
     currentPasswordPlaceholder: 'Dein aktuelles Passwort',
     dictationHint: 'Du kannst auch diktieren — das Mikrofon auf der Tastatur',
+    errEmailTaken: 'Diese E-Mail wird bereits von einem anderen Konto genutzt.',
     errPasswordRequired: 'Gib dein aktuelles Passwort ein.',
     newEmailPlaceholder: 'Neue E-Mail',
     passwordChanged: 'Passwort erfolgreich geändert.', emailChanged: 'E-Mail erfolgreich geändert.',
@@ -2798,6 +2802,7 @@ const STRINGS = {
     newPasswordPlaceholder: 'Nueva contraseña', confirmNewPasswordPlaceholder: 'Confirma la nueva contraseña',
     currentPasswordPlaceholder: 'Tu contraseña actual',
     dictationHint: 'También puedes dictar: el micrófono del teclado',
+    errEmailTaken: 'Este correo ya lo usa otra cuenta.',
     errPasswordRequired: 'Introduce tu contraseña actual.',
     newEmailPlaceholder: 'Nuevo correo',
     passwordChanged: 'Contraseña cambiada correctamente.', emailChanged: 'Correo cambiado correctamente.',
@@ -3087,6 +3092,28 @@ function sendVerificationEmail(){
     console.error('sendBrandedEmailVerification failed', err);
     if(err.code === 'functions/not-found' && currentUser){
       return currentUser.sendEmailVerification();
+    }
+    throw err;
+  });
+}
+// Праща БРАНДИРАН имейл за смяна на адреса (noreply@iforget.eu, през
+// Resend) — виж functions/index.js:sendBrandedEmailChange(). Линкът отива
+// до НОВИЯ адрес и акаунтът се мести чак когато човек го отвори.
+// FALLBACK към Firebase-овия verifyBeforeUpdateEmail() при
+// 'functions/not-found' (функцията още не е деплойната) — прави същото,
+// само писмото идва от noreply@iforgetbg.firebaseapp.com. Същия принцип
+// като sendVerificationEmail()/handleForgotPassword() по-горе.
+// Грешките от функцията се пренасят като Firebase-подобни кодове, за да
+// ги преведе съществуващият translateAuthError() без отделно клонче.
+function sendEmailChangeRequest(newEmail){
+  const call = functionsInstance.httpsCallable('sendBrandedEmailChange');
+  return call({ newEmail }).catch(err=>{
+    console.error('sendBrandedEmailChange failed', err);
+    if(err.code === 'functions/not-found' && currentUser){
+      return currentUser.verifyBeforeUpdateEmail(newEmail);
+    }
+    if(err.code === 'functions/already-exists'){
+      throw { code: 'auth/email-already-in-use' };
     }
     throw err;
   });
@@ -4564,7 +4591,7 @@ function renderEmailForm(){
     // admin.auth().generateVerifyAndChangeEmailLink() по същия модел като
     // sendBrandedEmailVerification() в functions/index.js.
     reauthenticate(curPw)
-      .then(()=> currentUser.verifyBeforeUpdateEmail(newEmail))
+      .then(()=> sendEmailChangeRequest(newEmail))
       .then(()=>{
         msg.className = 'form-msg success';
         // НЕ "имейлът е сменен" — още не е. Сменя се чак след като човек
@@ -4575,7 +4602,12 @@ function renderEmailForm(){
       }).catch(err=>{
         console.error('email change failed', err);
         msg.className = 'form-msg error';
-        msg.textContent = err.code === 'auth/requires-recent-login' ? t().needsRecentLogin : translateAuthError(err.code);
+        // Общият превод на 'email-already-in-use' говори за РЕГИСТРАЦИЯ
+        // ("опитай вход вместо регистрация") — безсмислен съвет, когато
+        // човек сменя имейла на акаунт, в който вече е влязъл.
+        msg.textContent = err.code === 'auth/requires-recent-login' ? t().needsRecentLogin
+          : err.code === 'auth/email-already-in-use' ? t().errEmailTaken
+          : translateAuthError(err.code);
       });
   });
 }

@@ -68,19 +68,32 @@ function renderError(msg){
     <a class="back-link" href="/">← Обратно към iForget</a>`;
 }
 
+// Страницата обслужва ДВА режима, защото и двата се потвърждават с един и
+// същ applyActionCode() — различава се само какво е станало, значи и какво
+// пише накрая:
+//   verifyEmail          — потвърждение на имейла при регистрация;
+//   verifyAndChangeEmail — потвърждение на НОВ имейл при смяна.
+// Второто идва от sendBrandedEmailChange() (виж functions/index.js) и
+// линкът е пратен до НОВИЯ адрес — щом човек е стигнал дотук, значи има
+// достъп до него, което е целият смисъл на проверката.
+const MODES = {
+  verifyEmail: 'Имейлът е потвърден успешно!',
+  verifyAndChangeEmail: 'Готово — това вече е имейлът на акаунта ти. Влизай с него отсега нататък.',
+};
+
 function renderSuccess(){
   card.innerHTML = `
     <h1>iForget</h1>
-    <div class="success-text">Имейлът е потвърден успешно!</div>
+    <div class="success-text">${MODES[mode]}</div>
     <a class="back-link" href="/">Обратно в iForget →</a>`;
 }
 
-if(mode !== 'verifyEmail' || !oobCode){
+if(!MODES[mode] || !oobCode){
   renderError('Линкът е невалиден.');
 }else{
   auth.applyActionCode(oobCode).then(renderSuccess).catch(err=>{
     console.error('applyActionCode failed', err);
-    renderError('Линкът е изтекъл или вече е използван. Поискай нов линк от банера в приложението.');
+    renderError('Линкът е изтекъл или вече е използван. Поискай нов от приложението.');
   });
 }
 </script>
