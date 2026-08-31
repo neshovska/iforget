@@ -2293,6 +2293,8 @@ const STRINGS = {
     deleteAccountWarning: 'Това ще изтрие завинаги акаунта ти и всичките ти бележки. Действието е необратимо.',
     deleteAccountConfirmBtn: 'Изтрий завинаги',
     newPasswordPlaceholder: 'Нова парола', confirmNewPasswordPlaceholder: 'Потвърди новата парола',
+    currentPasswordPlaceholder: 'Текущата ти парола',
+    errPasswordRequired: 'Въведи текущата си парола.',
     newEmailPlaceholder: 'Нов имейл',
     passwordChanged: 'Паролата е сменена успешно.', emailChanged: 'Имейлът е сменен успешно.',
     emailChangeVerifySent: 'Изпратихме писмо до новия адрес. Отвори го и потвърди — чак тогава имейлът се сменя.',
@@ -2418,6 +2420,8 @@ const STRINGS = {
     deleteAccountWarning: 'This will permanently delete your account and all your notes. This cannot be undone.',
     deleteAccountConfirmBtn: 'Delete forever',
     newPasswordPlaceholder: 'New password', confirmNewPasswordPlaceholder: 'Confirm new password',
+    currentPasswordPlaceholder: 'Your current password',
+    errPasswordRequired: 'Enter your current password.',
     newEmailPlaceholder: 'New email',
     passwordChanged: 'Password changed successfully.', emailChanged: 'Email changed successfully.',
     emailChangeVerifySent: 'We sent a message to the new address. Open it and confirm — the email changes only then.',
@@ -2540,6 +2544,8 @@ const STRINGS = {
     deleteAccountWarning: 'Это навсегда удалит твой аккаунт и все твои заметки. Действие необратимо.',
     deleteAccountConfirmBtn: 'Удалить навсегда',
     newPasswordPlaceholder: 'Новый пароль', confirmNewPasswordPlaceholder: 'Подтверди новый пароль',
+    currentPasswordPlaceholder: 'Твой текущий пароль',
+    errPasswordRequired: 'Введи свой текущий пароль.',
     newEmailPlaceholder: 'Новый email',
     passwordChanged: 'Пароль успешно изменён.', emailChanged: 'Email успешно изменён.',
     emailChangeVerifySent: 'Мы отправили письмо на новый адрес. Откройте его и подтвердите — только тогда email изменится.',
@@ -2662,6 +2668,8 @@ const STRINGS = {
     deleteAccountWarning: 'Dies löscht dein Konto und alle deine Notizen dauerhaft. Diese Aktion kann nicht rückgängig gemacht werden.',
     deleteAccountConfirmBtn: 'Endgültig löschen',
     newPasswordPlaceholder: 'Neues Passwort', confirmNewPasswordPlaceholder: 'Neues Passwort bestätigen',
+    currentPasswordPlaceholder: 'Dein aktuelles Passwort',
+    errPasswordRequired: 'Gib dein aktuelles Passwort ein.',
     newEmailPlaceholder: 'Neue E-Mail',
     passwordChanged: 'Passwort erfolgreich geändert.', emailChanged: 'E-Mail erfolgreich geändert.',
     emailChangeVerifySent: 'Wir haben eine Nachricht an die neue Adresse geschickt. Öffne sie und bestätige — erst dann ändert sich die E-Mail.',
@@ -2784,6 +2792,8 @@ const STRINGS = {
     deleteAccountWarning: 'Esto eliminará tu cuenta y todas tus notas de forma permanente. Esta acción no se puede deshacer.',
     deleteAccountConfirmBtn: 'Eliminar para siempre',
     newPasswordPlaceholder: 'Nueva contraseña', confirmNewPasswordPlaceholder: 'Confirma la nueva contraseña',
+    currentPasswordPlaceholder: 'Tu contraseña actual',
+    errPasswordRequired: 'Introduce tu contraseña actual.',
     newEmailPlaceholder: 'Nuevo correo',
     passwordChanged: 'Contraseña cambiada correctamente.', emailChanged: 'Correo cambiado correctamente.',
     emailChangeVerifySent: 'Enviamos un mensaje a la nueva dirección. Ábrelo y confírmalo: el correo cambia solo entonces.',
@@ -4452,11 +4462,26 @@ function renderFeedbackInbox(){
   });
 }
 
+// Потвърждение със СЕГАШНАТА парола, преди смяна на парола или на имейл.
+// Две причини, и двете съществени:
+// 1. БЕЗОПАСНОСТ. Дотогава и двете форми пипаха акаунта без нищо да питат —
+//    отключен телефон с отворено приложение стигаше, за да си смени някой
+//    паролата и да отнеме акаунта. Двете действия са точно тези, с които
+//    акаунт се превзема, значи точно те трябва да искат доказателство.
+// 2. `auth/requires-recent-login`. Firebase отказва тия две операции, ако
+//    входът е отдавнашен. Дотогава казвахме "излез и влез пак" — вярно, но
+//    груб съвет. Повторното удостоверяване тук решава същото на място.
+function reauthenticate(password){
+  const cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
+  return currentUser.reauthenticateWithCredential(cred);
+}
+
 function renderPasswordForm(){
   const s = t();
   const panel = document.getElementById('profilePanel');
   panel.innerHTML = `
     <div class="sub-form">
+      <input type="password" id="curPw" placeholder="${s.currentPasswordPlaceholder}" autocomplete="current-password">
       <input type="password" id="newPw1" placeholder="${s.newPasswordPlaceholder}" minlength="6" autocomplete="new-password">
       <input type="password" id="newPw2" placeholder="${s.confirmNewPasswordPlaceholder}" minlength="6" autocomplete="new-password">
       <div class="form-msg" id="pwFormMsg"></div>
@@ -4468,21 +4493,28 @@ function renderPasswordForm(){
   document.getElementById('pwCancelBtn').addEventListener('mousedown', e=>{ e.preventDefault(); e.stopPropagation(); renderProfileMenu(); });
   document.getElementById('pwSaveBtn').addEventListener('mousedown', e=>{
     e.preventDefault(); e.stopPropagation();
+    const cur = document.getElementById('curPw').value;
     const pw1 = document.getElementById('newPw1').value;
     const pw2 = document.getElementById('newPw2').value;
     const msg = document.getElementById('pwFormMsg');
     msg.className = 'form-msg';
+    if(!cur){ msg.textContent = t().errPasswordRequired; msg.classList.add('error'); return; }
     if(pw1.length < 6){ msg.textContent = t().errWeakPassword; msg.classList.add('error'); return; }
     if(pw1 !== pw2){ msg.textContent = t().errPasswordMismatch; msg.classList.add('error'); return; }
-    currentUser.updatePassword(pw1).then(()=>{
-      msg.className = 'form-msg success';
-      msg.textContent = t().passwordChanged;
-      setTimeout(closeProfilePanel, 1200);
-    }).catch(err=>{
-      console.error('updatePassword failed', err);
-      msg.className = 'form-msg error';
-      msg.textContent = err.code === 'auth/requires-recent-login' ? t().needsRecentLogin : translateAuthError(err.code);
-    });
+    reauthenticate(cur)
+      .then(()=> currentUser.updatePassword(pw1))
+      .then(()=>{
+        msg.className = 'form-msg success';
+        msg.textContent = t().passwordChanged;
+        setTimeout(closeProfilePanel, 1200);
+      }).catch(err=>{
+        console.error('password change failed', err);
+        msg.className = 'form-msg error';
+        // Грешната сегашна парола идва като wrong-password или (при включена
+        // защита срещу изброяване) invalid-credential — и двата вече сочат
+        // към "грешна парола" в translateAuthError().
+        msg.textContent = err.code === 'auth/requires-recent-login' ? t().needsRecentLogin : translateAuthError(err.code);
+      });
   });
 }
 
@@ -4492,6 +4524,7 @@ function renderEmailForm(){
   panel.innerHTML = `
     <div class="sub-form">
       <input type="email" id="newEmailInput" placeholder="${s.newEmailPlaceholder}" value="${escapeHtml(currentUser.email||'')}" autocomplete="email">
+      <input type="password" id="emailCurPw" placeholder="${s.currentPasswordPlaceholder}" autocomplete="current-password">
       <div class="form-msg" id="emailFormMsg"></div>
       <div class="sub-form-actions">
         <button type="button" class="secondary" id="emailCancelBtn">${s.cancelAria}</button>
@@ -4502,9 +4535,11 @@ function renderEmailForm(){
   document.getElementById('emailSaveBtn').addEventListener('mousedown', e=>{
     e.preventDefault(); e.stopPropagation();
     const newEmail = document.getElementById('newEmailInput').value.trim();
+    const curPw = document.getElementById('emailCurPw').value;
     const msg = document.getElementById('emailFormMsg');
     msg.className = 'form-msg';
     if(!newEmail) return;
+    if(!curPw){ msg.textContent = t().errPasswordRequired; msg.classList.add('error'); return; }
     // verifyBeforeUpdateEmail(), НЕ updateEmail(). Реален докладван бъг
     // (29.08.2026): смяната на имейл гърмеше с 'auth/operation-not-allowed',
     // а нашият превод за тоя код говори за ВХОДА ("не е включен за това
@@ -4522,18 +4557,20 @@ function renderEmailForm(){
     // трябва да се брандира и това, пътят е
     // admin.auth().generateVerifyAndChangeEmailLink() по същия модел като
     // sendBrandedEmailVerification() в functions/index.js.
-    currentUser.verifyBeforeUpdateEmail(newEmail).then(()=>{
-      msg.className = 'form-msg success';
-      // НЕ "имейлът е сменен" — още не е. Сменя се чак след като човек
-      // отвори писмото; надпис "успешно сменен" тук би бил лъжа и после
-      // "защо още показва стария имейл".
-      msg.textContent = t().emailChangeVerifySent;
-      setTimeout(closeProfilePanel, 3500);
-    }).catch(err=>{
-      console.error('verifyBeforeUpdateEmail failed', err);
-      msg.className = 'form-msg error';
-      msg.textContent = err.code === 'auth/requires-recent-login' ? t().needsRecentLogin : translateAuthError(err.code);
-    });
+    reauthenticate(curPw)
+      .then(()=> currentUser.verifyBeforeUpdateEmail(newEmail))
+      .then(()=>{
+        msg.className = 'form-msg success';
+        // НЕ "имейлът е сменен" — още не е. Сменя се чак след като човек
+        // отвори писмото; надпис "успешно сменен" тук би бил лъжа и после
+        // "защо още показва стария имейл".
+        msg.textContent = t().emailChangeVerifySent;
+        setTimeout(closeProfilePanel, 3500);
+      }).catch(err=>{
+        console.error('email change failed', err);
+        msg.className = 'form-msg error';
+        msg.textContent = err.code === 'auth/requires-recent-login' ? t().needsRecentLogin : translateAuthError(err.code);
+      });
   });
 }
 
