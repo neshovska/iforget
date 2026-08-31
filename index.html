@@ -1770,7 +1770,7 @@
     <button id="noteCancelBtn" aria-label="Откажи"><svg class="ic" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg></button>
     <button id="addBtn"><svg class="ic" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></button>
   </div>
-  <div class="dictation-hint"><svg class="ic" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg> Може и да диктуваш — микрофонът на клавиатурата</div>
+  <div class="dictation-hint"><svg class="ic" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg> <span id="dictationHint">Може и да диктуваш — микрофонът на клавиатурата</span></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -2294,6 +2294,7 @@ const STRINGS = {
     deleteAccountConfirmBtn: 'Изтрий завинаги',
     newPasswordPlaceholder: 'Нова парола', confirmNewPasswordPlaceholder: 'Потвърди новата парола',
     currentPasswordPlaceholder: 'Текущата ти парола',
+    dictationHint: 'Може и да диктуваш — микрофонът на клавиатурата',
     errPasswordRequired: 'Въведи текущата си парола.',
     newEmailPlaceholder: 'Нов имейл',
     passwordChanged: 'Паролата е сменена успешно.', emailChanged: 'Имейлът е сменен успешно.',
@@ -2421,6 +2422,7 @@ const STRINGS = {
     deleteAccountConfirmBtn: 'Delete forever',
     newPasswordPlaceholder: 'New password', confirmNewPasswordPlaceholder: 'Confirm new password',
     currentPasswordPlaceholder: 'Your current password',
+    dictationHint: 'You can dictate too — the microphone on your keyboard',
     errPasswordRequired: 'Enter your current password.',
     newEmailPlaceholder: 'New email',
     passwordChanged: 'Password changed successfully.', emailChanged: 'Email changed successfully.',
@@ -2545,6 +2547,7 @@ const STRINGS = {
     deleteAccountConfirmBtn: 'Удалить навсегда',
     newPasswordPlaceholder: 'Новый пароль', confirmNewPasswordPlaceholder: 'Подтверди новый пароль',
     currentPasswordPlaceholder: 'Твой текущий пароль',
+    dictationHint: 'Можно и диктовать — микрофон на клавиатуре',
     errPasswordRequired: 'Введи свой текущий пароль.',
     newEmailPlaceholder: 'Новый email',
     passwordChanged: 'Пароль успешно изменён.', emailChanged: 'Email успешно изменён.',
@@ -2669,6 +2672,7 @@ const STRINGS = {
     deleteAccountConfirmBtn: 'Endgültig löschen',
     newPasswordPlaceholder: 'Neues Passwort', confirmNewPasswordPlaceholder: 'Neues Passwort bestätigen',
     currentPasswordPlaceholder: 'Dein aktuelles Passwort',
+    dictationHint: 'Du kannst auch diktieren — das Mikrofon auf der Tastatur',
     errPasswordRequired: 'Gib dein aktuelles Passwort ein.',
     newEmailPlaceholder: 'Neue E-Mail',
     passwordChanged: 'Passwort erfolgreich geändert.', emailChanged: 'E-Mail erfolgreich geändert.',
@@ -2793,6 +2797,7 @@ const STRINGS = {
     deleteAccountConfirmBtn: 'Eliminar para siempre',
     newPasswordPlaceholder: 'Nueva contraseña', confirmNewPasswordPlaceholder: 'Confirma la nueva contraseña',
     currentPasswordPlaceholder: 'Tu contraseña actual',
+    dictationHint: 'También puedes dictar: el micrófono del teclado',
     errPasswordRequired: 'Introduce tu contraseña actual.',
     newEmailPlaceholder: 'Nuevo correo',
     passwordChanged: 'Contraseña cambiada correctamente.', emailChanged: 'Correo cambiado correctamente.',
@@ -3048,6 +3053,7 @@ function applyStaticText(){
   document.getElementById('verifyResendBtn').textContent = s.verifyResendBtn;
   document.getElementById('authPrivacyLink').textContent = s.privacyLink;
   document.getElementById('authTermsLink').textContent = s.termsLink;
+  document.getElementById('dictationHint').textContent = s.dictationHint;
   document.getElementById('authGuestBtn').textContent = s.authGuestBtn;
   document.getElementById('authGuestHint').textContent = s.authGuestHint;
   document.getElementById('authBackBtn').textContent = s.authBackToApp;

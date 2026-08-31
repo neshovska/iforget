@@ -50,54 +50,98 @@ const note = o => Object.assign({
   color: null, subs: [],
 }, o);
 
-const SEED = {
-  onboarded: true,
-  tagOrder: ['Дом', 'Здраве'],
-  // Датите са нарочно близки (вчера + днес): списъкът се скролва най-долу
-  // при отваряне, значи по-стари бележки биха останали извън кадъра.
-  notes: [
-    note({ text:'Плати сметките за тока и водата', tag:'Дом', status:'done',
-           completedAt: now - 2*3600e3, createdAt: at(0, 8, 10) }),
-    note({ text:'Довърши презентацията за понеделник', tag:'work', status:'progress',
-           color:'#C6A052', createdAt: at(-1, 16, 40),
-           subs:[ note({text:'Събери числата за второто тримесечие', status:'done', completedAt: now - 3600e3}),
-                  note({text:'Прегледай слайдовете с Иван', status:'progress'}),
-                  note({text:'Изпрати финалния файл'}) ] }),
-    note({ text:'Купи подарък за рождения ден на Мира', tag:'personal',
-           reminderAt: at(0, 18, 30), createdAt: at(0, 9, 5) }),
-    note({ text:'Полей цветята', tag:'Дом', reminderAt: at(0, 20, 0),
-           reminderRepeat:'daily', createdAt: at(0, 9, 20) }),
-    note({ text:'Запиши час за преглед при зъболекар', tag:'Здраве',
-           reminderAt: at(2, 10, 0), createdAt: at(0, 11, 0) }),
-  ],
-  dayHistory: (()=>{ const h={}; for(let i=1;i<=12;i++){
-      const d=new Date(now - i*DAY); const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-      h[k]={c: 2+(i%3), d: 1+(i%3)}; } return h; })(),
+// Демо текстовете са на ДВА езика. Причината не е козметична: листингът в
+// App Store е на английски (App Store Connect не предлага български), а
+// снимките дотогава бяха на кирилица — англоезичен човек вижда непознати
+// букви и няма как да разбере, че приложението говори и неговия език.
+// Google Play приема и двата превода, значи и двата набора вършат работа.
+const DEMO = {
+  bg: {
+    tagOrder: ['Дом', 'Здраве'],
+    pinned: 'Купи подарък',            // по кой текст се търси бележка в кадрите
+    notes: [
+      { text:'Плати сметките за тока и водата', tag:'Дом' },
+      { text:'Довърши презентацията за понеделник', tag:'work',
+        subs:['Събери числата за второто тримесечие', 'Прегледай слайдовете с Иван', 'Изпрати финалния файл'] },
+      { text:'Купи подарък за рождения ден на Мира', tag:'personal' },
+      { text:'Полей цветята', tag:'Дом' },
+      { text:'Запиши час за преглед при зъболекар', tag:'Здраве' },
+    ],
+    extra: ['Занеси якето на химическо', 'Обади се на счетоводителя',
+            'Напазарувай за седмицата', 'Прочети главата за понеделник'],
+  },
+  en: {
+    tagOrder: ['Home', 'Health'],
+    pinned: 'Buy a birthday present',
+    notes: [
+      { text:'Pay the electricity and water bills', tag:'Home' },
+      { text:'Finish the presentation for Monday', tag:'work',
+        subs:['Pull the second-quarter numbers', 'Go through the slides with Ivan', 'Send the final file'] },
+      { text:'Buy a birthday present for Mira', tag:'personal' },
+      { text:'Water the plants', tag:'Home' },
+      { text:'Book a dentist appointment', tag:'Health' },
+    ],
+    extra: ['Take the jacket to the cleaners', 'Call the accountant',
+            'Do the weekly shopping', 'Read the chapter for Monday'],
+  },
 };
+
+// Датите са нарочно близки (вчера + днес): списъкът се скролва най-долу
+// при отваряне, значи по-стари бележки биха останали извън кадъра.
+function buildSeed(code){
+  const d = DEMO[code];
+  const n = d.notes;
+  return {
+    onboarded: true,
+    tagOrder: d.tagOrder,
+    notes: [
+      note({ text:n[0].text, tag:n[0].tag, status:'done',
+             completedAt: now - 2*3600e3, createdAt: at(0, 8, 10) }),
+      note({ text:n[1].text, tag:n[1].tag, status:'progress',
+             color:'#C6A052', createdAt: at(-1, 16, 40),
+             subs:[ note({text:n[1].subs[0], status:'done', completedAt: now - 3600e3}),
+                    note({text:n[1].subs[1], status:'progress'}),
+                    note({text:n[1].subs[2]}) ] }),
+      note({ text:n[2].text, tag:n[2].tag,
+             reminderAt: at(0, 18, 30), createdAt: at(0, 9, 5) }),
+      note({ text:n[3].text, tag:n[3].tag, reminderAt: at(0, 20, 0),
+             reminderRepeat:'daily', createdAt: at(0, 9, 20) }),
+      note({ text:n[4].text, tag:n[4].tag,
+             reminderAt: at(2, 10, 0), createdAt: at(0, 11, 0) }),
+    ],
+    dayHistory: (()=>{ const h={}; for(let i=1;i<=12;i++){
+        const dd=new Date(now - i*DAY); const k=`${dd.getFullYear()}-${String(dd.getMonth()+1).padStart(2,'0')}-${String(dd.getDate()).padStart(2,'0')}`;
+        h[k]={c: 2+(i%3), d: 1+(i%3)}; } return h; })(),
+  };
+}
 
 // Само за екрана "Твоят преглед": още приключени бележки от по-рано тази
 // седмица, за да е прогрес лентата реалистично пълна, а не "1 от 5".
 // НЕ влизат в главния списък (снимка 1) — той е бутнат най-долу при
 // отваряне и всяка добавена бележка отгоре би изтикала секция извън кадър.
-const REVIEW_EXTRA = [
-  note({ text:'Занеси якето на химическо', tag:'personal', status:'done',
-         completedAt: at(-3, 12, 0), createdAt: at(-3, 9, 0) }),
-  note({ text:'Обади се на счетоводителя', tag:'work', status:'done',
-         completedAt: at(-2, 15, 30), createdAt: at(-2, 10, 15) }),
-  note({ text:'Напазарувай за седмицата', tag:'Дом', status:'done',
-         completedAt: at(-2, 18, 0), createdAt: at(-2, 11, 0) }),
-  note({ text:'Прочети главата за понеделник', tag:'personal', status:'done',
-         completedAt: at(-1, 21, 0), createdAt: at(-1, 19, 30) }),
-];
+function buildReviewExtra(code){
+  const d = DEMO[code];
+  const tags = ['personal', 'work', d.tagOrder[0], 'personal'];
+  return d.extra.map((text, i) => note({
+    text, tag: tags[i], status:'done',
+    completedAt: at(-(3 - Math.min(i, 2)), 12 + i, 0),
+    createdAt: at(-(3 - Math.min(i, 2)), 9 + i, 0),
+  }));
+}
 
 const STUB = fs.readFileSync(path.join(__dirname, 'fbstub.js'), 'utf8');
 
-async function newPage(ctx, extraNotes){
+// `code` е езикът на демото ('bg'/'en'). Езикът на самия ИНТЕРФЕЙС се
+// задава през localStorage ПРЕДИ страницата да тръгне — приложението го
+// чете оттам при старт (`let lang = localStorage.getItem(LANG_KEY)`), значи
+// не се налага да се кликат бутони и да се чака пре-рисуване.
+async function newPage(ctx, code, extraNotes){
   const page = await ctx.newPage();
+  const base = buildSeed(code);
   const seed = extraNotes
-    ? Object.assign({}, SEED, { notes: SEED.notes.concat(extraNotes) })
-    : SEED;
-  await page.addInitScript(`window.__SEED_DOC = ${JSON.stringify(seed)};\n${STUB}`);
+    ? Object.assign({}, base, { notes: base.notes.concat(extraNotes) })
+    : base;
+  await page.addInitScript(`try{ localStorage.setItem('lang', ${JSON.stringify(code)}); }catch(e){}\nwindow.__SEED_DOC = ${JSON.stringify(seed)};\n${STUB}`);
   // Спираме САМО Firebase SDK скриптовете (подменени са от fbstub.js).
   await page.route('**/www.gstatic.com/firebasejs/**', r => r.abort());
 
@@ -124,9 +168,9 @@ async function newPage(ctx, extraNotes){
 // Взима .note-wrap на конкретна бележка по текста ѝ — по-надеждно от
 // "първата в списъка" (тя е приключената, а менюто ѝ показва рядкото
 // "Върни в активни" вместо обичайните действия).
-const WRAP_BY_TEXT = (txt) => `(() => {
+const WRAP_BY_TEXT_JS = `(() => {
   const w = [...document.querySelectorAll('.note-wrap')]
-    .find(el => el.querySelector('.txt') && el.querySelector('.txt').textContent.includes(${JSON.stringify(txt)}));
+    .find(el => el.querySelector('.txt') && el.querySelector('.txt').textContent.includes(__PINNED__));
   return w;
 })()`;
 
@@ -156,52 +200,63 @@ let BASE;
   // (`TARGETED_DEVICE_FAMILY = "1,2"` в iOS проекта), а App Store иска
   // отделни снимки за всяко семейство устройства и не пуска подаване без
   // тях.
-  async function captureSet(ctx, outDir){
+  async function captureSet(ctx, outDir, code){
     fs.mkdirSync(outDir, { recursive: true });
     const shot = (page, name) => page.screenshot({ path: path.join(outDir, name) });
+    const wrap = WRAP_BY_TEXT_JS.replace('__PINNED__', JSON.stringify(DEMO[code].pinned));
 
-    // 1. Основен списък
-    let page = await newPage(ctx);
-    await shot(page, '1-list.png');
+    // 1. Езиците — ПЪРВИЯТ кадър, по изрична заявка. Основният екран с
+    // отворен избор на език: вижда се веднага, че приложението не е само
+    // на един език. Първата снимка в магазина често е и единствената,
+    // която човек изобщо поглежда.
+    let page = await newPage(ctx, code);
+    await page.evaluate(() => { openLangPicker(document.getElementById('langBtn')); });
+    await page.waitForTimeout(500);
+    await shot(page, '1-languages.png');
     await page.close();
 
-    // 2. Меню при задържане върху бележка
-    page = await newPage(ctx);
+    // 2. Основен списък
+    page = await newPage(ctx, code);
+    await shot(page, '2-list.png');
+    await page.close();
+
+    // 3. Меню при задържане върху бележка
+    page = await newPage(ctx, code);
     await page.evaluate(`(() => {
-      const el = ${WRAP_BY_TEXT('Купи подарък')};
+      const el = ${wrap};
       openCtxMenu(el.dataset.note, null, el.querySelector('.note'));
     })()`);
     await page.waitForTimeout(600);
-    await shot(page, '2-menu.png');
+    await shot(page, '3-menu.png');
     await page.close();
 
-    // 3. Календар (месечен изглед)
-    page = await newPage(ctx);
+    // 4. Календар (месечен изглед)
+    page = await newPage(ctx, code);
     await page.evaluate(() => { openProfilePanel(document.getElementById('userChip')); renderCalendarView('month'); });
     await page.waitForTimeout(700);
-    await shot(page, '3-calendar.png');
+    await shot(page, '4-calendar.png');
     await page.close();
 
-    // 4. Форма за напомняне. Натискаме самата значка на напомнянето
+    // 5. Форма за напомняне. Натискаме самата значка на напомнянето
     // (data-action="reminder-open") — това е истинският бърз път на
     // потребителя до формата и отваря менюто направо в нея. Викането на
     // renderCtxMenuReminder() веднага след openCtxMenu() не работи:
     // менюто още се позиционира и остава на главния списък с бутони.
-    page = await newPage(ctx);
+    page = await newPage(ctx, code);
     await page.evaluate(`(() => {
-      const el = ${WRAP_BY_TEXT('Купи подарък')};
+      const el = ${wrap};
       el.querySelector('[data-action="reminder-open"]').click();
     })()`);
     await page.waitForTimeout(700);
-    await shot(page, '4-reminder.png');
+    await shot(page, '5-reminder.png');
     await page.close();
 
-    // 5. "Твоят преглед" — седмичен/месечен прогрес + серията. Избран пред
+    // 6. "Твоят преглед" — седмичен/месечен прогрес + серията. Избран пред
     // голото профилно меню: показва РЕЗУЛТАТ от употребата, а не настройки.
-    page = await newPage(ctx, REVIEW_EXTRA);
+    page = await newPage(ctx, code, buildReviewExtra(code));
     await page.evaluate(() => { openProfilePanel(document.getElementById('userChip')); renderMyReview(); });
     await page.waitForTimeout(700);
-    await shot(page, '5-review.png');
+    await shot(page, '6-review.png');
     await page.close();
   }
 
@@ -214,22 +269,41 @@ let BASE;
   // изглед за таблет — на голям екран бележките се разпъват по цялата
   // ширина и горе остава голямо празно поле. Ако някога се направи
   // истински iPad изглед, снимките са на едно превключване разстояние.
+  // Два набора: български (за Google Play) и английски (за App Store,
+  // където листингът Е на английски — виж store/status.md). Всеки в своя
+  // папка, за да не се презаписват.
+  const LANGS = [
+    { code: 'bg', dir: OUT,           locale: 'bg-BG' },
+    { code: 'en', dir: OUT + '-en',   locale: 'en-US' },
+  ];
+
+  // 430×932 @3 = 1290×2796 — приема се и от App Store (6.9"/6.7"), и от
+  // Google Play.
+  //
+  // iPad размерът (1032×1376 @2 = 2064×2752) се прави САМО при
+  // `IPAD=1 node store/generate.js`. Приложението нарочно се предлага
+  // само за iPhone (`TARGETED_DEVICE_FAMILY = 1`), защото няма отделен
+  // изглед за таблет — на голям екран бележките се разпъват по цялата
+  // ширина и горе остава голямо празно поле. Ако някога се направи
+  // истински iPad изглед, снимките са на едно превключване разстояние.
   const SIZES = [
-    { dir: OUT, viewport: { width: 430, height: 932 }, dsf: 3 },
+    { suffix: '',      viewport: { width: 430, height: 932 }, dsf: 3 },
   ];
   if(process.env.IPAD){
-    SIZES.push({ dir: OUT + '-ipad', viewport: { width: 1032, height: 1376 }, dsf: 2 });
+    SIZES.push({ suffix: '-ipad', viewport: { width: 1032, height: 1376 }, dsf: 2 });
   }
 
-  for(const s of SIZES){
-    const ctx = await browser.newContext({
-      viewport: s.viewport,
-      deviceScaleFactor: s.dsf,
-      isMobile: true, hasTouch: true,
-      locale: 'bg-BG',
-    });
-    await captureSet(ctx, s.dir);
-    await ctx.close();
+  for(const l of LANGS){
+    for(const s of SIZES){
+      const ctx = await browser.newContext({
+        viewport: s.viewport,
+        deviceScaleFactor: s.dsf,
+        isMobile: true, hasTouch: true,
+        locale: l.locale,
+      });
+      await captureSet(ctx, l.dir + s.suffix, l.code);
+      await ctx.close();
+    }
   }
 
   // --- Банер за Google Play (feature graphic, точно 1024×500) ---------
