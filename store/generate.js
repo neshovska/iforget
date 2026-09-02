@@ -50,15 +50,19 @@ const note = o => Object.assign({
   color: null, subs: [],
 }, o);
 
-// Демо текстовете са на ДВА езика. Причината не е козметична: листингът в
-// App Store е на английски (App Store Connect не предлага български), а
-// снимките дотогава бяха на кирилица — англоезичен човек вижда непознати
-// букви и няма как да разбере, че приложението говори и неговия език.
-// Google Play приема и двата превода, значи и двата набора вършат работа.
+// Демо текстовете са на ВСИЧКИТЕ 5 езика на приложението (bg/en/ru/de/es,
+// виж STRINGS в index.html) — по изрична заявка ("снимката да са видими
+// всички езици ни трябва"): всеки, който отвори листинга на своя език
+// (Google Play приема localized screenshots за всеки от петте; App Store
+// Connect няма български, но приема ru/de/es отделно от en), трябва да
+// вижда приложението, говорещо НЕГОВИЯ език на самите кадри, не превод в
+// текста около тях. `pinned` е нарочно ЦЕЛИЯТ текст на бележката (не само
+// начало) — WRAP_BY_TEXT_JS търси по `.includes()`, а при различен словоред
+// (напр. немски) кратка фраза лесно не е точно подниз.
 const DEMO = {
   bg: {
     tagOrder: ['Дом', 'Здраве'],
-    pinned: 'Купи подарък',            // по кой текст се търси бележка в кадрите
+    pinned: 'Купи подарък за рождения ден на Мира',
     notes: [
       { text:'Плати сметките за тока и водата', tag:'Дом' },
       { text:'Довърши презентацията за понеделник', tag:'work',
@@ -72,7 +76,7 @@ const DEMO = {
   },
   en: {
     tagOrder: ['Home', 'Health'],
-    pinned: 'Buy a birthday present',
+    pinned: 'Buy a birthday present for Mira',
     notes: [
       { text:'Pay the electricity and water bills', tag:'Home' },
       { text:'Finish the presentation for Monday', tag:'work',
@@ -83,6 +87,48 @@ const DEMO = {
     ],
     extra: ['Take the jacket to the cleaners', 'Call the accountant',
             'Do the weekly shopping', 'Read the chapter for Monday'],
+  },
+  ru: {
+    tagOrder: ['Дом', 'Здоровье'],
+    pinned: 'Купить подарок на день рождения для Миры',
+    notes: [
+      { text:'Оплатить счета за электричество и воду', tag:'Дом' },
+      { text:'Закончить презентацию к понедельнику', tag:'work',
+        subs:['Собрать цифры за второй квартал', 'Просмотреть слайды с Иваном', 'Отправить финальный файл'] },
+      { text:'Купить подарок на день рождения для Миры', tag:'personal' },
+      { text:'Полить цветы', tag:'Дом' },
+      { text:'Записаться к стоматологу', tag:'Здоровье' },
+    ],
+    extra: ['Отнести куртку в химчистку', 'Позвонить бухгалтеру',
+            'Сделать покупки на неделю', 'Прочитать главу к понедельнику'],
+  },
+  de: {
+    tagOrder: ['Zuhause', 'Gesundheit'],
+    pinned: 'Ein Geburtstagsgeschenk für Mira kaufen',
+    notes: [
+      { text:'Strom- und Wasserrechnung bezahlen', tag:'Zuhause' },
+      { text:'Präsentation für Montag fertigstellen', tag:'work',
+        subs:['Zahlen für das zweite Quartal zusammenstellen', 'Folien mit Ivan durchgehen', 'Die finale Datei senden'] },
+      { text:'Ein Geburtstagsgeschenk für Mira kaufen', tag:'personal' },
+      { text:'Blumen gießen', tag:'Zuhause' },
+      { text:'Zahnarzttermin vereinbaren', tag:'Gesundheit' },
+    ],
+    extra: ['Jacke zur Reinigung bringen', 'Den Buchhalter anrufen',
+            'Wocheneinkauf machen', 'Das Kapitel für Montag lesen'],
+  },
+  es: {
+    tagOrder: ['Casa', 'Salud'],
+    pinned: 'Comprar un regalo de cumpleaños para Mira',
+    notes: [
+      { text:'Pagar las facturas de luz y agua', tag:'Casa' },
+      { text:'Terminar la presentación para el lunes', tag:'work',
+        subs:['Reunir las cifras del segundo trimestre', 'Revisar las diapositivas con Ivan', 'Enviar el archivo final'] },
+      { text:'Comprar un regalo de cumpleaños para Mira', tag:'personal' },
+      { text:'Regar las plantas', tag:'Casa' },
+      { text:'Reservar cita con el dentista', tag:'Salud' },
+    ],
+    extra: ['Llevar la chaqueta a la tintorería', 'Llamar al contable',
+            'Hacer la compra semanal', 'Leer el capítulo para el lunes'],
   },
 };
 
@@ -303,12 +349,17 @@ let BASE;
   // изглед за таблет — на голям екран бележките се разпъват по цялата
   // ширина и горе остава голямо празно поле. Ако някога се направи
   // истински iPad изглед, снимките са на едно превключване разстояние.
-  // Два набора: български (за Google Play) и английски (за App Store,
-  // където листингът Е на английски — виж store/status.md). Всеки в своя
-  // папка, за да не се презаписват.
+  // Всичките 5 езика на приложението, всеки в своя папка (screenshots,
+  // screenshots-en, screenshots-ru, ...), за да не се презаписват.
+  // Текстовете около снимките (описание/What's New) остават само bg+en
+  // (виж store-listing-texts.md/release-notes) — тук иде реч само за САМИТЕ
+  // кадри, които вече говорят и петте езика на приложението.
   const LANGS = [
     { code: 'bg', dir: OUT,           locale: 'bg-BG', browserLang: 'bg_BG' },
     { code: 'en', dir: OUT + '-en',   locale: 'en-US', browserLang: 'en_US' },
+    { code: 'ru', dir: OUT + '-ru',   locale: 'ru-RU', browserLang: 'ru_RU' },
+    { code: 'de', dir: OUT + '-de',   locale: 'de-DE', browserLang: 'de_DE' },
+    { code: 'es', dir: OUT + '-es',   locale: 'es-ES', browserLang: 'es_ES' },
   ];
 
   // 430×932 @3 = 1290×2796 — приема се и от App Store (6.9"/6.7"), и от
