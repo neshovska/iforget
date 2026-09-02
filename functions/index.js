@@ -440,6 +440,126 @@ exports.sendBrandedEmailVerification = onCall(
 );
 
 // ═══════════════════════════════════════════════════════════
+// БРАНДИРАН ИМЕЙЛ ПРИ СМЯНА НА АДРЕСА
+//
+// Трети имейл със същия механизъм като горните два. Без него писмото
+// идваше от noreply@iforgetbg.firebaseapp.com — разминаване с останалите
+// две, които вече са от noreply@iforget.eu.
+//
+// Разликата от sendBrandedEmailVerification: линкът се генерира с
+// generateVerifyAndChangeEmailLink(СТАР, НОВ) и се праща до НОВИЯ адрес.
+// Точно това е проверката — акаунтът се мести само ако човекът наистина
+// стига до новата поща.
+//
+// Клиентът (index.html) вече е поискал текущата парола и е направил
+// reauthenticateWithCredential() ПРЕДИ да стигне дотук; тая функция е
+// вторият слой (иска request.auth), не единственият.
+const EMAIL_CHANGE_HOURLY_LIMIT = 5;
+
+exports.sendBrandedEmailChange = onCall(
+    {secrets: [resendApiKey]},
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Трябва да си логнат.");
+      }
+      const uid = request.auth.uid;
+      const currentEmail = request.auth.token.email;
+      const newEmail = String((request.data && request.data.newEmail) || "").trim();
+
+      if (!currentEmail) {
+        throw new HttpsError("failed-precondition", "Акаунтът няма имейл адрес.");
+      }
+      if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+        throw new HttpsError("invalid-argument", "Невалиден имейл адрес.");
+      }
+      if (newEmail.toLowerCase() === currentEmail.toLowerCase()) {
+        throw new HttpsError("invalid-argument", "Това е сегашният имейл.");
+      }
+
+      const now = Date.now();
+      const hourBucket = Math.floor(now / (60 * 60 * 1000));
+      const throttleRef = db.collection("email_change_throttle").doc(uid);
+
+      const allowed = await db.runTransaction(async (tx) => {
+        const snap = await tx.get(throttleRef);
+        const data = snap.exists ? snap.data() : {};
+        const count = data.hourBucket === hourBucket ? (data.count || 0) : 0;
+        if (count >= EMAIL_CHANGE_HOURLY_LIMIT) return false;
+        tx.set(throttleRef, {hourBucket, count: count + 1});
+        return true;
+      });
+
+      if (!allowed) {
+        // Тук НЕ е тих no-op (за разлика от verification-а): човекът чака
+        // писмо на нов адрес и мълчаливото "ок" би го оставило да гледа
+        // празна поща, без да разбере защо.
+        throw new HttpsError("resource-exhausted", "Твърде много опити. Опитай пак след час.");
+      }
+
+      const actionCodeSettings = {url: "https://iforget.eu/"};
+
+      let changeLink;
+      try {
+        changeLink = await admin.auth()
+            .generateVerifyAndChangeEmailLink(currentEmail, newEmail, actionCodeSettings);
+      } catch (e) {
+        console.error("generateVerifyAndChangeEmailLink failed:", e);
+        // Единственият случай, който потребителят МОЖЕ да поправи сам —
+        // затова се различава от общата грешка. Не е издайнически: човекът
+        // е логнат и пита за собствената си смяна, а Firebase клиентското
+        // SDK връща същото при verifyBeforeUpdateEmail().
+        if (e && e.code === "auth/email-already-exists") {
+          throw new HttpsError("already-exists", "Този имейл вече се ползва от друг акаунт.");
+        }
+        throw new HttpsError("internal", "Грешка при генериране на линка.");
+      }
+
+      const oobCode = new URL(changeLink).searchParams.get("oobCode");
+      if (!oobCode) {
+        console.error("generateVerifyAndChangeEmailLink не върна oobCode в линка.");
+        throw new HttpsError("internal", "Грешка при генериране на линка.");
+      }
+      const brandedLink = `https://iforget.eu/verify-email.html?mode=verifyAndChangeEmail&oobCode=${encodeURIComponent(oobCode)}`;
+
+      try {
+        const res = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${resendApiKey.value()}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: FROM_EMAIL,
+            // ДО НОВИЯ адрес — там е проверката.
+            to: newEmail,
+            subject: "iForget — потвърди новия си имейл",
+            text: `Здравей,\n\n` +
+              `Поискана е смяна на имейла за акаунта в iForget:\n` +
+              `${currentEmail} → ${newEmail}\n\n` +
+              `Натисни линка по-долу, за да потвърдиш новия адрес:\n${brandedLink}\n\n` +
+              `Докато не го натиснеш, акаунтът остава на стария имейл.\n\n` +
+              `Ако не си поискал/а тая смяна, просто игнорирай това писмо — ` +
+              `нищо няма да се промени.\n\n` +
+              `— Екипът на iForget`,
+          }),
+        });
+        if (!res.ok) {
+          const errText = await res.text().catch(() => "");
+          console.error("Resend API грешка:", res.status, errText);
+          throw new HttpsError("internal", "Грешка при изпращане на имейла.");
+        }
+        console.log(`Branded email change изпратен успешно за uid=${uid}.`);
+      } catch (e) {
+        if (e instanceof HttpsError) throw e;
+        console.error("Грешка при изпращане на имейл за смяна:", e);
+        throw new HttpsError("internal", "Грешка при изпращане на имейла.");
+      }
+
+      return {ok: true};
+    },
+);
+
+// ═══════════════════════════════════════════════════════════
 // ПОЧИСТВАНЕ СЛЕД ИЗТРИВАНЕ НА АКАУНТ
 //
 // Клиентът (index.html, renderDeleteAccountForm()) вече трие users/{uid}
