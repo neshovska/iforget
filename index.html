@@ -2316,7 +2316,7 @@ const STRINGS = {
     reminderDateFormatHint: 'дд.мм.гггг', reminderTimeFormatHint: 'чч:мм',
     reminderSaveBtn: 'Запази', reminderRemoveBtn: 'Премахни напомнянето',
     reminderRepeatLabel: 'Повторение', reminderRepeatNone: 'Веднъж',
-    reminderRepeatDaily: 'Всеки ден', reminderRepeatWeekly: 'Всяка седмица',
+    reminderRepeatDaily: 'Всеки ден', reminderRepeatWeekly: 'Всяка седмица', reminderRepeatMonthly: 'Всеки месец',
     tagDeleted: 'Изтрити',
     statsTitle: 'Статистика', statsLoading: 'Зареждане...',
     statsError: 'Неуспешно зареждане на статистиката.',
@@ -2442,7 +2442,7 @@ const STRINGS = {
     reminderDateFormatHint: 'mm/dd/yyyy', reminderTimeFormatHint: 'hh:mm',
     reminderSaveBtn: 'Save', reminderRemoveBtn: 'Remove reminder',
     reminderRepeatLabel: 'Repeat', reminderRepeatNone: 'Once',
-    reminderRepeatDaily: 'Every day', reminderRepeatWeekly: 'Every week',
+    reminderRepeatDaily: 'Every day', reminderRepeatWeekly: 'Every week', reminderRepeatMonthly: 'Every month',
     tagDeleted: 'Deleted',
     statsTitle: 'Statistics', statsLoading: 'Loading...',
     statsError: 'Failed to load statistics.',
@@ -2568,7 +2568,7 @@ const STRINGS = {
     reminderDateFormatHint: 'дд.мм.гггг', reminderTimeFormatHint: 'чч:мм',
     reminderSaveBtn: 'Сохранить', reminderRemoveBtn: 'Удалить напоминание',
     reminderRepeatLabel: 'Повтор', reminderRepeatNone: 'Один раз',
-    reminderRepeatDaily: 'Каждый день', reminderRepeatWeekly: 'Каждую неделю',
+    reminderRepeatDaily: 'Каждый день', reminderRepeatWeekly: 'Каждую неделю', reminderRepeatMonthly: 'Каждый месяц',
     tagDeleted: 'Удалённые',
     statsTitle: 'Статистика', statsLoading: 'Загрузка...',
     statsError: 'Не удалось загрузить статистику.',
@@ -2694,7 +2694,7 @@ const STRINGS = {
     reminderDateFormatHint: 'tt.mm.jjjj', reminderTimeFormatHint: 'hh:mm',
     reminderSaveBtn: 'Speichern', reminderRemoveBtn: 'Erinnerung entfernen',
     reminderRepeatLabel: 'Wiederholung', reminderRepeatNone: 'Einmalig',
-    reminderRepeatDaily: 'Täglich', reminderRepeatWeekly: 'Wöchentlich',
+    reminderRepeatDaily: 'Täglich', reminderRepeatWeekly: 'Wöchentlich', reminderRepeatMonthly: 'Monatlich',
     tagDeleted: 'Gelöscht',
     statsTitle: 'Statistik', statsLoading: 'Wird geladen...',
     statsError: 'Statistik konnte nicht geladen werden.',
@@ -2820,7 +2820,7 @@ const STRINGS = {
     reminderDateFormatHint: 'dd/mm/aaaa', reminderTimeFormatHint: 'hh:mm',
     reminderSaveBtn: 'Guardar', reminderRemoveBtn: 'Quitar recordatorio',
     reminderRepeatLabel: 'Repetición', reminderRepeatNone: 'Una vez',
-    reminderRepeatDaily: 'Cada día', reminderRepeatWeekly: 'Cada semana',
+    reminderRepeatDaily: 'Cada día', reminderRepeatWeekly: 'Cada semana', reminderRepeatMonthly: 'Cada mes',
     tagDeleted: 'Eliminadas',
     statsTitle: 'Estadísticas', statsLoading: 'Cargando...',
     statsError: 'No se pudieron cargar las estadísticas.',
@@ -3887,7 +3887,39 @@ function reminderOccursOnDate(reminderAt, reminderRepeat, dateKey){
     const [y, m, d] = dateKey.split('-').map(Number);
     return new Date(y, m - 1, d).getDay() === startDow;
   }
+  if(reminderRepeat === 'monthly'){
+    // Месеците НЯМАТ постоянна дължина, затова "същия ден от месеца" не е
+    // фиксирана крачка като daily/weekly — сравняваме директно спрямо
+    // ЦЕЛЕВИЯ месец, без да траверсираме напред. Ден 31 в по-къс месец се
+    // прихваща до последния му ден (виж clampedMonthDay()) — конвенцията,
+    // която ползват и повечето календарни приложения, вместо да прескочи
+    // месеца или да прелее в следващия.
+    const startDay = new Date(reminderAt).getDate();
+    const [y, m, d] = dateKey.split('-').map(Number);
+    return d === clampedMonthDay(y, m, startDay);
+  }
   return false;
+}
+// Денят от месеца, ограничен до реалната дължина на (y, m) — m е 1-базиран,
+// както в dateKey. `new Date(y, m, 0)` е стандартният JS трик за "последния
+// ден на месец m" (месец 0 на СЛЕДВАЩИЯ означава последния ден на текущия).
+function clampedMonthDay(y, m, day){
+  const lastDay = new Date(y, m, 0).getDate();
+  return Math.min(day, lastDay);
+}
+// k-тото месечно повторение на reminderAt (k=0 → самата начална дата).
+// Изчислено ВИНАГИ спрямо оригиналния старт, не верижно от предишното
+// повторение — иначе ден 31 би "изтекъл" завинаги на 28/30 след първия
+// по-къс месец (Fri, 31 Jan → 28 Feb → 28 Mar вместо обратно към 31 Mar).
+function nthMonthlyOccurrence(startTs, k){
+  const start = new Date(startTs);
+  const targetMonthIndex = start.getMonth() + k;
+  const y = start.getFullYear() + Math.floor(targetMonthIndex / 12);
+  const m = ((targetMonthIndex % 12) + 12) % 12; // 0-базиран месец, само за конструктора по-долу
+  const day = clampedMonthDay(y, m + 1, start.getDate());
+  const out = new Date(start);
+  out.setFullYear(y, m, day);
+  return out.getTime();
 }
 // Същите правила като remindableItems() (виж по-долу) — приключено или
 // изтрито напомняне вече не звъни, значи не бива да продължава да се
@@ -6248,6 +6280,7 @@ function renderCtxMenuReminder(noteId, subId){
     {val: 'none', label: s.reminderRepeatNone},
     {val: 'daily', label: s.reminderRepeatDaily},
     {val: 'weekly', label: s.reminderRepeatWeekly},
+    {val: 'monthly', label: s.reminderRepeatMonthly},
   ];
   menu.innerHTML = `
     <button type="button" class="reminder-back" data-ctx="reminder-back">${ICONS.arrowLeft}${s.onboardBack}</button>
@@ -6341,6 +6374,16 @@ function lastReminderOccurrence(item, now){
   if(!item.reminderAt || item.reminderAt > now) return null;
   const rep = item.reminderRepeat;
   if(!rep) return item.reminderAt;
+  if(rep === 'monthly'){
+    // Месеците не са фиксирана крачка — броим напред от k=0, докато не
+    // прехвърлим `now`, после се връщаме едно назад. Пазач срещу
+    // безкраен цикъл при повредени данни (напр. reminderAt в бъдещето
+    // след ръчно редактиран localStorage) — същия принцип като guard-а в
+    // phaseForDate() за месечния цикъл.
+    let k = 0, guard = 0;
+    while(nthMonthlyOccurrence(item.reminderAt, k + 1) <= now && guard++ < 2000) k++;
+    return nthMonthlyOccurrence(item.reminderAt, k);
+  }
   const DAY = 86400000;
   const step = rep === 'weekly' ? 7*DAY : DAY;
   // колко цели периода са минали от първоначалната дата
@@ -6450,6 +6493,11 @@ function nextReminderOccurrence(item, after){
   if(!item.reminderAt) return null;
   if(item.reminderAt > after) return item.reminderAt;
   if(!item.reminderRepeat) return null;
+  if(item.reminderRepeat === 'monthly'){
+    let k = 0, guard = 0;
+    while(nthMonthlyOccurrence(item.reminderAt, k) <= after && guard++ < 2000) k++;
+    return nthMonthlyOccurrence(item.reminderAt, k);
+  }
   const DAY = 86400000;
   const step = item.reminderRepeat === 'weekly' ? 7*DAY : DAY;
   const passed = Math.floor((after - item.reminderAt) / step) + 1;
@@ -6644,7 +6692,7 @@ function sanitizeImportedNote(raw, isSub){
     status: ['open','progress','done'].includes(raw.status) ? raw.status : 'open',
     color: raw.color == null ? null : str(raw.color),
     reminderAt: num(raw.reminderAt),
-    reminderRepeat: ['daily','weekly'].includes(raw.reminderRepeat) ? raw.reminderRepeat : null,
+    reminderRepeat: ['daily','weekly','monthly'].includes(raw.reminderRepeat) ? raw.reminderRepeat : null,
   };
   // Полета, които съществуват само понякога — добавят се само ако са смислени,
   // за да не се появят като null там, където кодът проверява за наличие.
