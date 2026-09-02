@@ -10,6 +10,12 @@
   // Документът users/{uid}, който loadFromCloud() ще прочете.
   const docData = window.__SEED_DOC || { notes: [], onboarded: true };
 
+  // window.__NO_USER — за скрийншота на екрана за вход/"Продължи без
+  // акаунт" (виж store/generate.js). Обикновено стъпва fалшив ВЛЯЗЪЛ
+  // потребител, но за тоя единствен кадър трябва точно обратното —
+  // onAuthStateChanged(null), за да излезе истинският .auth-screen.
+  const demoUser = window.__NO_USER ? null : { uid: 'demo', email: 'demo@iforget.eu', emailVerified: true };
+
   function docRef(){
     return {
       get: () => resolved({
@@ -25,11 +31,11 @@
   window.firebase = {
     initializeApp: noop,
     auth: Object.assign(() => ({
-      currentUser: { uid: 'demo', email: 'demo@iforget.eu', emailVerified: true },
+      currentUser: demoUser,
       onAuthStateChanged(cb){
         // Асинхронно, както прави истинският SDK — синхронен вик би
         // изпреварил деклариране на променливи по-долу във файла.
-        setTimeout(() => cb({ uid: 'demo', email: 'demo@iforget.eu', emailVerified: true }), 0);
+        setTimeout(() => cb(demoUser), 0);
         return noop;
       },
       signOut: () => resolved(),

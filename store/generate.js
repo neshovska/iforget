@@ -103,7 +103,7 @@ function buildSeed(code){
                     note({text:n[1].subs[1], status:'progress'}),
                     note({text:n[1].subs[2]}) ] }),
       note({ text:n[2].text, tag:n[2].tag,
-             reminderAt: at(0, 18, 30), createdAt: at(0, 9, 5) }),
+             reminderAt: at(0, 18, 30), reminderRepeat:'monthly', createdAt: at(0, 9, 5) }),
       note({ text:n[3].text, tag:n[3].tag, reminderAt: at(0, 20, 0),
              reminderRepeat:'daily', createdAt: at(0, 9, 20) }),
       note({ text:n[4].text, tag:n[4].tag,
@@ -164,6 +164,25 @@ async function newPage(ctx, code, extraNotes){
   return page;
 }
 
+// Отделен вариант БЕЗ влязъл потребител — за кадъра с "Продължи без
+// акаунт" (виж window.__NO_USER в fbstub.js). Не се стъпват бележки/
+// notes, значи не се чака '.note' — чака се самата auth карта.
+async function newAuthPage(ctx, code){
+  const page = await ctx.newPage();
+  await page.addInitScript(`try{ localStorage.setItem('lang', ${JSON.stringify(code)}); }catch(e){}\nwindow.__NO_USER = true;\n${STUB}`);
+  await page.route('**/www.gstatic.com/firebasejs/**', r => r.abort());
+  await page.route('**/fonts.googleapis.com/**', route => {
+    const url = route.request().url();
+    const woff = url.match(/([^/?]+\.woff2)/);
+    if(woff) return route.fulfill({ contentType:'font/woff2', body: fs.readFileSync(path.join(FONTS, woff[1])) });
+    return route.fulfill({ contentType:'text/css', body: fs.readFileSync(path.join(FONTS, 'fonts.css'), 'utf8') });
+  });
+  await page.goto(BASE, { waitUntil: 'load' });
+  await page.waitForSelector('#authGuestBtn', { timeout: 15000 });
+  await page.waitForTimeout(900); // шрифтове + анимации
+  return page;
+}
+
 
 // Взима .note-wrap на конкретна бележка по текста ѝ — по-надеждно от
 // "първата в списъка" (тя е приключената, а менюто ѝ показва рядкото
@@ -187,14 +206,22 @@ let BASE;
   // "21.08.2026 г. 18:30", както я вижда български потребител.
   // ПРОВЕРЕНО: само args:['--lang=bg-BG'] НЕ стига — решаващата е
   // env-променливата LANG; --lang остава, защото не пречи.
+  // РЕАЛЕН БЪГ (хванат при добавянето на "7-guest.png"): браузърът се
+  // стартираше ЕДИН път, винаги с LANG=bg_BG — датовото поле в АНГЛИЙСКИТЕ
+  // кадри (за App Store) показваше "02.09.2026 г." с българското "г."
+  // Затова браузърът вече се стартира ОТДЕЛНО за всеки език (виж
+  // launchBrowser() и цикъла по LANGS по-долу), с LANG, съответен на
+  // самия набор снимки.
   // PW_CHROMIUM — аварийна пътечка за среда, в която Playwright пакетът и
   // свалените браузъри са различни версии (тогава launch() гърми с
   // "Executable doesn't exist"). Празна е при нормална употреба.
-  const browser = await chromium.launch({
-    args: ['--lang=bg-BG'],
-    env: { ...process.env, LANG: 'bg_BG.UTF-8', LANGUAGE: 'bg_BG' },
-    ...(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {}),
-  });
+  function launchBrowser(langTag){
+    return chromium.launch({
+      args: [`--lang=${langTag.replace('_', '-')}`],
+      env: { ...process.env, LANG: langTag + '.UTF-8', LANGUAGE: langTag },
+      ...(process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {}),
+    });
+  }
   // Един и същ набор от пет кадъра се прави за два размера — виж SIZES
   // по-долу. Приложението е сглобено за iPhone И iPad
   // (`TARGETED_DEVICE_FAMILY = "1,2"` в iOS проекта), а App Store иска
@@ -258,6 +285,13 @@ let BASE;
     await page.waitForTimeout(700);
     await shot(page, '6-review.png');
     await page.close();
+
+    // 7. Екран за вход — бутонът "Продължи без акаунт". Новото в тая
+    // версия (виж release notes), затова получава собствен кадър — на
+    // главния списък/менюто нищо не намеква, че акаунт изобщо не е нужен.
+    page = await newAuthPage(ctx, code);
+    await shot(page, '7-guest.png');
+    await page.close();
   }
 
   // 430×932 @3 = 1290×2796 — приема се и от App Store (6.9"/6.7"), и от
@@ -273,8 +307,8 @@ let BASE;
   // където листингът Е на английски — виж store/status.md). Всеки в своя
   // папка, за да не се презаписват.
   const LANGS = [
-    { code: 'bg', dir: OUT,           locale: 'bg-BG' },
-    { code: 'en', dir: OUT + '-en',   locale: 'en-US' },
+    { code: 'bg', dir: OUT,           locale: 'bg-BG', browserLang: 'bg_BG' },
+    { code: 'en', dir: OUT + '-en',   locale: 'en-US', browserLang: 'en_US' },
   ];
 
   // 430×932 @3 = 1290×2796 — приема се и от App Store (6.9"/6.7"), и от
@@ -294,6 +328,7 @@ let BASE;
   }
 
   for(const l of LANGS){
+    const browser = await launchBrowser(l.browserLang);
     for(const s of SIZES){
       const ctx = await browser.newContext({
         viewport: s.viewport,
@@ -304,10 +339,14 @@ let BASE;
       await captureSet(ctx, l.dir + s.suffix, l.code);
       await ctx.close();
     }
+    await browser.close();
   }
 
   // --- Банер за Google Play (feature graphic, точно 1024×500) ---------
-  const bctx = await browser.newContext({ viewport:{width:1024, height:500}, deviceScaleFactor:1, locale:'bg-BG' });
+  // Банерът е само на български, значи си иска собствен bg_BG браузър —
+  // тия по-горе вече са затворени след цикъла им.
+  const banBrowser = await launchBrowser('bg_BG');
+  const bctx = await banBrowser.newContext({ viewport:{width:1024, height:500}, deviceScaleFactor:1, locale:'bg-BG' });
   const bpage = await bctx.newPage();
   await bpage.route('**/fonts.googleapis.com/**', route => {
     const woff = route.request().url().match(/([^/?]+\.woff2)/);
@@ -318,8 +357,8 @@ let BASE;
   await bpage.waitForTimeout(900);
   await bpage.screenshot({ path: path.join(__dirname, 'banner.png') });
   await bctx.close();
+  await banBrowser.close();
 
-  await browser.close();
   srv.close();
   console.log('Готово — скрийншоти в store/screenshots/, банер в store/banner.png');
 })().catch(e => { console.error(e); process.exit(1); });
