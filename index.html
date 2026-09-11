@@ -436,6 +436,39 @@
   }
   .tag-picker .sw{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
   .tag-picker hr{border:none;border-top:1px solid var(--border);margin:4px 0;}
+
+  /* "Скорошни тагове" — история на ВСИЧКИ потребителски тагове, някога
+     създадени (не само тия, ползвани в момента от жива бележка — виж
+     tagHistory/orderedCustomTags() в скрипта). Ред по дата на създаване.
+     Показват се компактно, максимум ~4 реда наведнъж — над това вътрешен
+     скрол (рамка горе/долу на .tag-hist-scroll го подсказва визуално). */
+  .tag-hist-label{
+    font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+    color:var(--text-dim);padding:6px 8px 2px;
+  }
+  .tag-hist-scroll{
+    max-height:120px;overflow-y:auto;
+    border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+    margin:2px 0;
+  }
+  .tag-hist-row{display:flex;align-items:center;}
+  /* .tag-picker button{width:100%} по-горе би спечелил и над двата бутона тук
+     по специфичност (тип+клас > самостоятелен клас) — !important чупи
+     конкретно тая надпревара, иначе хиксчето поглъща цялата ширина на реда
+     (виж git история за реалния бъг, хванат в мострата преди implementация). */
+  .tag-hist-row .tag-hist-pick{
+    width:auto!important;flex:1 1 auto;min-width:0;
+    padding-top:5px;padding-bottom:5px;font-size:12.5px;
+  }
+  .tag-hist-row .tag-hist-pick .name{
+    flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .tag-hist-row .tag-hist-del{
+    width:26px!important;flex:0 0 26px;height:26px;display:flex;align-items:center;justify-content:center;
+    background:none;border:none;border-radius:8px;color:var(--text-dim);cursor:pointer;padding:0;margin-right:4px;
+  }
+  .tag-hist-row .tag-hist-del:hover{background:var(--border);}
+  .tag-hist-row .tag-hist-del .ic{width:13px;height:13px;}
   /* Ред с полето за нов таг + бутон за потвърждение (тикче) до него — както
      всички останали "запази" бутони в приложението (edit-save, sub-save),
      вместо да разчитаме само на Enter. */
@@ -1892,6 +1925,16 @@ const PROGRESS_FILTER = '__progress__';
 // loadLocalCache()/loadFromCloud()/saveTagOrder()).
 let tagOrder = [];
 const TAG_ORDER_KEY = 'tagOrder';
+// История на ВСИЧКИ потребителски тагове, някога създадени — за разлика от
+// tagOrder (само за реда във filter-реда, извежда се от orderedCustomTags()
+// и губи таг, щом никоя бележка вече не го носи), tagHistory е ПОСТОЯНЕН
+// каталог: показва се в openTagPicker() ("Скорошни тагове"), за да можеш
+// да преизползваш стар таг, без да го пишеш наново. Ред по създаване —
+// нови се добавят В КРАЯ (виж setNoteTag()). Хиксчето в менюто маха таг
+// ОТТУК (виж removeTagFromHistory()) — НЕ пипа бележките, които вече го
+// носят (изрична заявка, различно от истинско изтриване на таг).
+let tagHistory = [];
+const TAG_HISTORY_KEY = 'tagHistory';
 // Дневно резюме на изчистените приключени бележки: { 'ГГГГ-ММ-ДД': {c,d} },
 // c = създадени през този ден, d = приключени през този ден. Пълни се в
 // purgeExpiredTrash() в момента, в който бележка напусне масива ЗАВИНАГИ, и
@@ -2235,6 +2278,7 @@ const STRINGS = {
     categoriesAria: 'Категории', catAll: 'Всички',
     tagPersonal: 'Лични', tagWork: 'Работни', addTag: '+ таг', noTag: 'Без таг',
     newTagPlaceholder: 'Нов таг...', noNotesForTag: 'Няма бележки в тази категория',
+    recentTagsLabel: 'Скорошни тагове', removeTagAria: 'Изтрий тага',
     settingsAria: 'Настройки', exportBackup: 'Запази резервно копие', importBackup: 'Възстанови от файл',
     backupHint: 'Safari на iPhone/iPad понякога изчиства данните на сайта (особено при икона на началния екран или дълго неотваряне). Пази резервно копие от време на време, за да не загубиш бележките си.',
     confirmImport: 'Възстановяването ще замени текущите бележки с тези от файла. Продължи?',
@@ -2366,6 +2410,7 @@ const STRINGS = {
     categoriesAria: 'Categories', catAll: 'All',
     tagPersonal: 'Personal', tagWork: 'Work', addTag: '+ tag', noTag: 'No tag',
     newTagPlaceholder: 'New tag...', noNotesForTag: 'No notes in this category',
+    recentTagsLabel: 'Recent tags', removeTagAria: 'Delete tag',
     settingsAria: 'Settings', exportBackup: 'Save backup', importBackup: 'Restore from file',
     backupHint: 'Safari on iPhone/iPad can sometimes clear site data (especially with a Home Screen icon or long periods without opening it). Keep an occasional backup so you never lose your notes.',
     confirmImport: 'Restoring will replace your current notes with the ones from the file. Continue?',
@@ -2492,6 +2537,7 @@ const STRINGS = {
     categoriesAria: 'Категории', catAll: 'Все',
     tagPersonal: 'Личное', tagWork: 'Работа', addTag: '+ тег', noTag: 'Без тега',
     newTagPlaceholder: 'Новый тег...', noNotesForTag: 'Нет заметок в этой категории',
+    recentTagsLabel: 'Недавние теги', removeTagAria: 'Удалить тег',
     settingsAria: 'Настройки', exportBackup: 'Сохранить резервную копию', importBackup: 'Восстановить из файла',
     backupHint: 'Safari на iPhone/iPad иногда очищает данные сайта (особенно при значке на главном экране или долгом отсутствии). Периодически сохраняй резервную копию, чтобы не потерять заметки.',
     confirmImport: 'Восстановление заменит текущие заметки данными из файла. Продолжить?',
@@ -2618,6 +2664,7 @@ const STRINGS = {
     categoriesAria: 'Kategorien', catAll: 'Alle',
     tagPersonal: 'Privat', tagWork: 'Arbeit', addTag: '+ Tag', noTag: 'Kein Tag',
     newTagPlaceholder: 'Neuer Tag...', noNotesForTag: 'Keine Notizen in dieser Kategorie',
+    recentTagsLabel: 'Letzte Tags', removeTagAria: 'Tag löschen',
     settingsAria: 'Einstellungen', exportBackup: 'Backup speichern', importBackup: 'Aus Datei wiederherstellen',
     backupHint: 'Safari auf iPhone/iPad löscht manchmal Website-Daten (besonders bei einem Symbol auf dem Home-Bildschirm oder langer Nichtnutzung). Erstelle ab und zu ein Backup, damit du deine Notizen nicht verlierst.',
     confirmImport: 'Die Wiederherstellung ersetzt deine aktuellen Notizen durch die aus der Datei. Fortfahren?',
@@ -2744,6 +2791,7 @@ const STRINGS = {
     categoriesAria: 'Categorías', catAll: 'Todas',
     tagPersonal: 'Personal', tagWork: 'Trabajo', addTag: '+ etiqueta', noTag: 'Sin etiqueta',
     newTagPlaceholder: 'Nueva etiqueta...', noNotesForTag: 'No hay notas en esta categoría',
+    recentTagsLabel: 'Etiquetas recientes', removeTagAria: 'Eliminar etiqueta',
     settingsAria: 'Ajustes', exportBackup: 'Guardar copia de seguridad', importBackup: 'Restaurar desde archivo',
     backupHint: 'Safari en iPhone/iPad a veces borra los datos del sitio (especialmente con un icono en la pantalla de inicio o tras mucho tiempo sin abrirlo). Guarda una copia de seguridad de vez en cuando para no perder tus notas.',
     confirmImport: 'Restaurar reemplazará tus notas actuales con las del archivo. ¿Continuar?',
@@ -3152,6 +3200,17 @@ function loadLocalCache(){
     const rawOrder = localStorage.getItem(TAG_ORDER_KEY);
     tagOrder = rawOrder ? JSON.parse(rawOrder) : [];
   }catch(e){ tagOrder = []; }
+  try{
+    const rawTagHist = localStorage.getItem(TAG_HISTORY_KEY);
+    tagHistory = rawTagHist ? JSON.parse(rawTagHist).filter(x => typeof x === 'string') : [];
+  }catch(e){ tagHistory = []; }
+  // Мигриране за съществуващи потребители: tagHistory е ново поле, значи
+  // при първото зареждане след тая версия е празно, макар потребителят вече
+  // да има тагове (по notes.tag). Без това "Скорошни тагове" би изглеждало
+  // празно/счупено, докато не създадеш НОВ таг — ensureTagHistorySeeded()
+  // допълва с всичко в момента ползвано (viж по-долу, извиква се и след
+  // loadFromCloud()).
+  ensureTagHistorySeeded();
   try{
     const rawHist = localStorage.getItem(DAY_HISTORY_KEY);
     dayHistory = rawHist ? JSON.parse(rawHist) : {};
@@ -3754,6 +3813,7 @@ function renderDeleteAccountForm(){
       // компютър това е реален остатък от изтрит акаунт.
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(TAG_ORDER_KEY);
+      localStorage.removeItem(TAG_HISTORY_KEY);
       localStorage.removeItem(DAY_HISTORY_KEY);
       localStorage.removeItem(CYCLE_DATA_KEY);
       localStorage.removeItem(CYCLE_OVERLAY_KEY);
@@ -4707,7 +4767,7 @@ function loadFromCloud(uid){
     // (enablePersistence()) ще го изпрати сама щом се върне връзката; ако
     // това е първо отваряне на устройството, гарантира, че документът не
     // остава съвсем празен.
-    if(notes.length) docRef.set({ notes, tagOrder, dayHistory }, { merge:true }).catch(err=>console.error('offline fallback upload failed', err));
+    if(notes.length) docRef.set({ notes, tagOrder, tagHistory, dayHistory }, { merge:true }).catch(err=>console.error('offline fallback upload failed', err));
   }, CLOUD_LOAD_TIMEOUT_MS);
 
   docRef.get().then(snap=>{
@@ -4742,6 +4802,14 @@ function loadFromCloud(uid){
       docRef.set({ notes }, { merge:true }).catch(err=>console.error('initial cloud upload failed', err));
     }
     if(snap.exists && Array.isArray(snap.data().tagOrder)) tagOrder = snap.data().tagOrder;
+    if(snap.exists && Array.isArray(snap.data().tagHistory)){
+      tagHistory = snap.data().tagHistory.filter(x => typeof x === 'string');
+    }
+    // Виж коментара в loadLocalCache() — облакът може все още да няма това
+    // поле (потребител отпреди тая версия) или да носи по-старо копие, ако
+    // само локалният кеш е получил нов таг междувременно (офлайн). И в двата
+    // случая допълваме с каквото в момента е закачено на бележка.
+    ensureTagHistorySeeded();
     if(snap.exists && snap.data().dayHistory) dayHistory = snap.data().dayHistory;
     if(snap.exists && snap.data().cycleData){
       const cd = snap.data().cycleData;
@@ -5304,6 +5372,33 @@ function saveTagOrder(){
       'cloud save tagOrder'
     );
   }
+}
+
+// Записва tagHistory (виж декларацията ѝ по-горе) — СЪЩИЯТ принцип като
+// saveTagOrder(), отделен запис от save(), защото се сменя само при
+// създаване/изтриване на таг от менюто, не при всяка промяна на бележка.
+function saveTagHistory(){
+  try{ localStorage.setItem(TAG_HISTORY_KEY, JSON.stringify(tagHistory)); }
+  catch(e){ console.error('save tagHistory failed', e); }
+  if(currentUser){
+    trackCloudWrite(
+      db.collection('users').doc(currentUser.uid).set({ tagHistory }, { merge:true }),
+      'cloud save tagHistory'
+    );
+  }
+}
+// Маха таг САМО от "Скорошни тагове" (менюто на бележката) — по изрична
+// заявка НЕ пипа бележките, които вече го носят (те си остават с тоя таг,
+// продължават да се филтрират нормално през горния ред с категории, който
+// чете orderedCustomTags()/notes директно, не tagHistory). Ако потребителят
+// напише същото име отново през полето "Нов таг...", setNoteTag() го
+// добавя обратно в историята — тя не е "забранен списък", а просто списък
+// за бърз достъп.
+function removeTagFromHistory(tag){
+  const idx = tagHistory.indexOf(tag);
+  if(idx === -1) return;
+  tagHistory.splice(idx, 1);
+  saveTagHistory();
 }
 
 function findNote(id){ return notes.find(n=>n.id===id); }
@@ -5913,6 +6008,15 @@ function setNoteTag(noteId, tag){
       n.archiveExempt = true;
     }
   }
+  // Нов (или преди премахнат от "Скорошни тагове") потребителски таг влиза в
+  // tagHistory тук — единственото място, което реално слага таг на бележка,
+  // значи е и единственото, което трябва да следи за нови имена. Вградените
+  // тагове (personal/work/Satori/DELETED_TAG) не влизат в историята — те си
+  // имат постоянни бутони в openTagPicker(), не са "скорошни".
+  if(n.tag && !BUILTIN_TAGS.includes(n.tag) && n.tag !== SATORI_TAG && n.tag !== DELETED_TAG && !tagHistory.includes(n.tag)){
+    tagHistory.push(n.tag);
+    saveTagHistory();
+  }
   save(); render();
 }
 
@@ -5985,6 +6089,20 @@ function openTagPicker(noteId, anchorEl){
   if(isSatoriUser()){
     html += `<button data-set="${SATORI_TAG}"><span class="sw" style="background:var(--tag-satori)"></span>Satori</button>`;
   }
+  // "Скорошни тагове" — виж tagHistory по-горе. Само ако има поне един,
+  // иначе секцията изобщо не се показва (гола заглавка над празен списък
+  // би изглеждала счупена). data-set по-долу е ХВАНАТ от общия querySelectorAll
+  // ('button[data-set]') веднага след innerHTML-а — не е нужен отделен
+  // слушател за самия избор, само за хиксчето.
+  if(tagHistory.length){
+    html += `<hr><div class="tag-hist-label">${t().recentTagsLabel}</div><div class="tag-hist-scroll">` +
+      tagHistory.map(tg => `
+        <div class="tag-hist-row">
+          <button class="tag-hist-pick" data-set="${escapeHtml(tg)}"><span class="sw" style="background:var(--tag-custom)"></span><span class="name">${escapeHtml(tg)}</span></button>
+          <button type="button" class="tag-hist-del" data-remove-tag="${escapeHtml(tg)}" aria-label="${t().removeTagAria}">${ICONS.close}</button>
+        </div>`).join('') +
+      `</div>`;
+  }
   html += `<hr><div class="tag-newrow">
       <input type="text" id="newTagInput" placeholder="${t().newTagPlaceholder}" maxlength="24" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
       <button type="button" class="tag-confirm" id="newTagConfirm" aria-label="${t().saveAria}">${ICONS.check}</button>
@@ -6017,6 +6135,22 @@ function openTagPicker(noteId, anchorEl){
       e.preventDefault();
       setNoteTag(activeTagNoteId, b.dataset.set);
       closeTagPicker();
+    });
+  });
+  // Хиксчето маха тага САМО от "Скорошни тагове" — без потвърждение, веднага
+  // (виж removeTagFromHistory()). e.stopPropagation() е задължителен: без
+  // него mousedown-ът би пропаднал и към .tag-hist-pick (бащата на реда е
+  // .tag-hist-row, но самото хиксче е СЪСЕД, не дете на .tag-hist-pick —
+  // все пак спираме bubbling нагоре изрично, за да не хване нещо друго
+  // делегиран слушател по-късно). Менюто остава отворено (повторен
+  // openTagPicker() презарежда списъка на място), за да може да се махнат
+  // няколко тага един след друг, без да се отваря наново.
+  picker.querySelectorAll('.tag-hist-del').forEach(b=>{
+    b.addEventListener('mousedown', e=>{
+      e.preventDefault();
+      e.stopPropagation();
+      removeTagFromHistory(b.dataset.removeTag);
+      openTagPicker(activeTagNoteId, tagPickerAnchor);
     });
   });
   const inp = document.getElementById('newTagInput');
@@ -6659,6 +6793,7 @@ function exportNotes(){
     exportedAt: Date.now(),
     notes,
     tagOrder,
+    tagHistory,
     dayHistory,
     cycleData,
   }, null, 2);
@@ -6743,6 +6878,10 @@ function importNotesFromFile(file){
           tagOrder = parsed.tagOrder.filter(x => typeof x === 'string');
           saveTagOrder();
         }
+        if(Array.isArray(parsed.tagHistory)){
+          tagHistory = parsed.tagHistory.filter(x => typeof x === 'string');
+          saveTagHistory();
+        }
         if(parsed.dayHistory && typeof parsed.dayHistory === 'object' && !Array.isArray(parsed.dayHistory)){
           const hist = {};
           Object.entries(parsed.dayHistory).forEach(([day, v])=>{
@@ -6762,6 +6901,10 @@ function importNotesFromFile(file){
           saveCycleData();
         }
       }
+      // Стар файл (гол масив) или нов файл без tagHistory (експортиран между
+      // добавянето на tagOrder и добавянето на tagHistory) — допълва от
+      // тags-а на внесените бележки, СЪЩИЯТ принцип като при зареждане.
+      ensureTagHistorySeeded();
       save(); render();
       closeProfilePanel();
       window.alert(t().importSuccess);
@@ -6815,6 +6958,19 @@ function orderedCustomTags(){
   const known = tagOrder.filter(tg=>inUse.has(tg));
   const unknown = [...inUse].filter(tg=>!tagOrder.includes(tg)).sort((a,b)=>a.localeCompare(b));
   return [...known, ...unknown];
+}
+// Мигриране/предпазна мрежа за tagHistory (виж декларацията ѝ по-горе) —
+// допълва с всеки таг, който в момента е закачен на жива бележка, но по
+// някаква причина липсва от историята (напр. потребител отпреди тая
+// версия, при когото tagHistory просто никога не се е пълнил). Извиква се
+// от loadLocalCache() и loadFromCloud(), след като notes/tagOrder вече са
+// заредени — идемпотентна е (втори вик без промяна не пипа нищо).
+function ensureTagHistorySeeded(){
+  let changed = false;
+  orderedCustomTags().forEach(tg=>{
+    if(!tagHistory.includes(tg)){ tagHistory.push(tg); changed = true; }
+  });
+  if(changed) saveTagHistory();
 }
 function tagPillHtml(item, noteId){
   const val = item.tag || '';
