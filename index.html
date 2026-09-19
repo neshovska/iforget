@@ -7065,7 +7065,11 @@ function itemRow(item, noteId, isSub){
             <button class="expand-toggle" data-action="toggle-expand" data-key="${key}" style="display:${isExpanded?'inline-flex':'none'}" aria-label="${isExpanded?t().collapseAria:t().expandAria}">${isExpanded?t().collapseAria:t().expandAria}${isExpanded?ICONS.chevronUp:ICONS.chevronDown}</button>
             ${!isSub && item.subs && item.subs.length ? (()=>{
               const subsHidden = collapsedSubs.has(item.id);
-              return `<button class="expand-toggle" data-action="toggle-subs" data-note="${item.id}" aria-label="${subsHidden?t().subsShowLabel:t().subsHideLabel}">${subsHidden?t().subsShowLabel:t().subsHideLabel}${subsHidden?ICONS.chevronDown:ICONS.chevronUp}</button>`;
+              // Само стрелка, без текст — по изрична заявка ("много е дълго
+              // името"). aria-label пази смисъла за екранни четци, макар
+              // визуално да остава чиста иконка (посоката ѝ казва всичко —
+              // надолу = свито/има още за показване, нагоре = разгънато).
+              return `<button class="expand-toggle" data-action="toggle-subs" data-note="${item.id}" aria-label="${subsHidden?t().subsShowLabel:t().subsHideLabel}">${subsHidden?ICONS.chevronDown:ICONS.chevronUp}</button>`;
             })() : ''}
           </div>
         </div>
