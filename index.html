@@ -1543,6 +1543,21 @@
      бележки (без десен margin тук) — тесният им вид идва само от ляв отстъп
      (margin+padding+border), не от асиметрично стесняване от двете страни. */
   .subs{margin:6px 0 0 15px;padding-left:9px;border-left:2px solid var(--border);}
+  /* Свито състояние на подбележките (виж collapsedSubs/subsBlock()) — НЕ
+     изчезват напълно, смаляват се до тънка ивица с малки цветни точки
+     (по статус на всяка подточка), приблизително висока колкото датата
+     ("да се виждат, че са там, но много по-компактно"). Същия
+     margin/border-left като .subs по-горе — визуално продължение на
+     групата, не отделен елемент. Тапваш → разгъва (СЪЩИЯТ
+     data-action="toggle-subs" като стрелката горе). */
+  .subs-compact{
+    margin:6px 0 0 15px;padding:2px 8px 2px 9px;border-left:2px solid var(--border);
+    display:flex;align-items:center;gap:4px;cursor:pointer;
+  }
+  .subs-compact .mini-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;box-sizing:border-box;}
+  .subs-compact .mini-dot.open{border:1.4px solid var(--text-dim);}
+  .subs-compact .mini-dot.progress{background:var(--gold);}
+  .subs-compact .mini-dot.done{background:var(--green);}
   /* Един-два нюанса по-светло от основните бележки (--card), за да си
      личат ясно като "по-леки" вложени елементи. */
   .subs .note{padding:6px 8px;background-color:#34415C;}
@@ -7109,8 +7124,18 @@ function subsBlock(note){
   // добави", полето за въвеждане се появява, а самите съществуващи
   // подточки остават невидими под него — изглежда счупено, не скрито.
   const hidden = collapsedSubs.has(note.id) && addingSubFor !== note.id;
-  if(note.subs && note.subs.length && !hidden){
-    html += `<div class="subs">${sortedSubs(note).map(s=>itemRow(s, note.id, true)).join('')}</div>`;
+  if(note.subs && note.subs.length){
+    if(hidden){
+      // Компактна ивица вместо пълен списък — по изрична заявка "да се
+      // виждат, че са там, но много по-компактно": по една малка точка на
+      // подточка (цвят = статус ѝ, СЪЩИЯТ ред като sortedSubs() по-долу),
+      // без текст. Тапваш → разгъва (същия data-action="toggle-subs" като
+      // стрелката горе в .meta — делегираният слушател го хваща еднакво).
+      const dots = sortedSubs(note).map(s => `<span class="mini-dot ${s.status || 'open'}"></span>`).join('');
+      html += `<div class="subs-compact" data-action="toggle-subs" data-note="${note.id}">${dots}</div>`;
+    }else{
+      html += `<div class="subs">${sortedSubs(note).map(s=>itemRow(s, note.id, true)).join('')}</div>`;
+    }
   }
   // Бутонът "+ подбележка" вече стои горе в .meta реда (до тага) — тук
   // остава само активното поле за въвеждане, докато трае добавянето.
