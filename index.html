@@ -1989,6 +1989,13 @@ let tagDragActive = false;
 let activeTagNoteId = null; // коя бележка е отворена в момента в tag-picker-а
 let tagPickerAnchor = null; // елементът, спрямо който е позициониран tag-picker-ът (за repositionTagPickerOnScroll())
 let expandedNotes = new Set(); // ключове (item.id или noteId::subId) на ръчно разгънати дълги бележки
+// Кои бележки имат РЪЧНО скрити подбележки (виж subsBlock()/toggle-subs) —
+// чисто сесийно, като expandedNotes: по подразбиране всички подбележки са
+// видими (без изненади за никого при тая промяна), потребителят решава
+// сам да свие конкретна бележка, ако подточките са ѝ много. НЕ се пази в
+// localStorage/облака — нулира се при презареждане, съзнателно (просто
+// UI удобство, не потребителски данни).
+let collapsedSubs = new Set();
 let ctxMenuNote = null; // {noteId, subId} на бележката с отворено long-press меню
 let ctxActiveWrap = null; // .note-wrap елементът, който в момента "изпъква" (виж openCtxMenu/closeCtxMenu)
 let ctxAnchorRect = null; // позицията му при отваряне, за преизчисляване при смяна на изгледа (виж positionCtxMenu())
@@ -2346,6 +2353,7 @@ const STRINGS = {
     emailChangeVerifySent: 'Изпратихме писмо до новия адрес. Отвори го и потвърди — чак тогава имейлът се сменя.',
     needsRecentLogin: 'За тази промяна трябва скорошен вход — излез и влез отново, после опитай пак.',
     expandAria: 'Разгъни', collapseAria: 'Свий',
+    subsShowLabel: 'Покажи подточки', subsHideLabel: 'Скрий подточки',
     deletedUndo: 'Бележката е изтрита.', undoBtn: 'Отмени', deleteAria: 'Изтрий',
     ctxEdit: 'Редактирай', ctxDelete: 'Изтрий', ctxAddSub: 'Добави подбележка',
     // Показват се само върху приключена бележка (виж renderCtxMenuMain());
@@ -2476,6 +2484,7 @@ const STRINGS = {
     emailChangeVerifySent: 'We sent a message to the new address. Open it and confirm — the email changes only then.',
     needsRecentLogin: 'This change needs a recent login — sign out, sign back in, then try again.',
     expandAria: 'Expand', collapseAria: 'Collapse',
+    subsShowLabel: 'Show subtasks', subsHideLabel: 'Hide subtasks',
     deletedUndo: 'Note deleted.', undoBtn: 'Undo', deleteAria: 'Delete',
     ctxEdit: 'Edit', ctxDelete: 'Delete', ctxAddSub: 'Add sub-note',
     ctxReopenProgress: 'Back to in progress', ctxReopenActive: 'Back to active',
@@ -2603,6 +2612,7 @@ const STRINGS = {
     emailChangeVerifySent: 'Мы отправили письмо на новый адрес. Откройте его и подтвердите — только тогда email изменится.',
     needsRecentLogin: 'Для этого изменения нужен недавний вход — выйди и войди снова, затем попробуй ещё раз.',
     expandAria: 'Развернуть', collapseAria: 'Свернуть',
+    subsShowLabel: 'Показать подпункты', subsHideLabel: 'Скрыть подпункты',
     deletedUndo: 'Заметка удалена.', undoBtn: 'Отменить', deleteAria: 'Удалить',
     ctxEdit: 'Редактировать', ctxDelete: 'Удалить', ctxAddSub: 'Добавить подзаметку',
     ctxReopenProgress: 'Вернуть в процесс', ctxReopenActive: 'Вернуть в активные',
@@ -2730,6 +2740,7 @@ const STRINGS = {
     emailChangeVerifySent: 'Wir haben eine Nachricht an die neue Adresse geschickt. Öffne sie und bestätige — erst dann ändert sich die E-Mail.',
     needsRecentLogin: 'Für diese Änderung ist eine kürzliche Anmeldung erforderlich — melde dich ab und wieder an und versuche es erneut.',
     expandAria: 'Ausklappen', collapseAria: 'Einklappen',
+    subsShowLabel: 'Unterpunkte anzeigen', subsHideLabel: 'Unterpunkte ausblenden',
     deletedUndo: 'Notiz gelöscht.', undoBtn: 'Rückgängig', deleteAria: 'Löschen',
     ctxEdit: 'Bearbeiten', ctxDelete: 'Löschen', ctxAddSub: 'Unternotiz hinzufügen',
     ctxReopenProgress: 'Zurück zu In Bearbeitung', ctxReopenActive: 'Zurück zu Aktiv',
@@ -2857,6 +2868,7 @@ const STRINGS = {
     emailChangeVerifySent: 'Enviamos un mensaje a la nueva dirección. Ábrelo y confírmalo: el correo cambia solo entonces.',
     needsRecentLogin: 'Este cambio requiere un inicio de sesión reciente — cierra sesión, vuelve a entrar y prueba de nuevo.',
     expandAria: 'Expandir', collapseAria: 'Contraer',
+    subsShowLabel: 'Mostrar subtareas', subsHideLabel: 'Ocultar subtareas',
     deletedUndo: 'Nota eliminada.', undoBtn: 'Deshacer', deleteAria: 'Eliminar',
     ctxEdit: 'Editar', ctxDelete: 'Eliminar', ctxAddSub: 'Añadir subnota',
     ctxReopenProgress: 'Volver a en curso', ctxReopenActive: 'Volver a activas',
@@ -7051,6 +7063,10 @@ function itemRow(item, noteId, isSub){
             ${!isSub ? tagPillHtml(item, noteId) : ''}
             ${!isSub && addingSubFor !== noteId ? `<button class="add-sub-link" data-action="sub-open" data-note="${noteId}">${t().addSubLink}</button>` : ''}
             <button class="expand-toggle" data-action="toggle-expand" data-key="${key}" style="display:${isExpanded?'inline-flex':'none'}" aria-label="${isExpanded?t().collapseAria:t().expandAria}">${isExpanded?t().collapseAria:t().expandAria}${isExpanded?ICONS.chevronUp:ICONS.chevronDown}</button>
+            ${!isSub && item.subs && item.subs.length ? (()=>{
+              const subsHidden = collapsedSubs.has(item.id);
+              return `<button class="expand-toggle" data-action="toggle-subs" data-note="${item.id}" aria-label="${subsHidden?t().subsShowLabel:t().subsHideLabel}">${subsHidden?t().subsShowLabel:t().subsHideLabel}${subsHidden?ICONS.chevronDown:ICONS.chevronUp}</button>`;
+            })() : ''}
           </div>
         </div>
       </div>
@@ -7075,7 +7091,12 @@ function sortedSubs(note){
 
 function subsBlock(note){
   let html = '';
-  if(note.subs && note.subs.length){
+  // Скрити (collapsedSubs) — но НЕ докато потребителят точно в тоя момент
+  // добавя нова подбележка (addingSubFor === note.id): иначе тапва "+
+  // добави", полето за въвеждане се появява, а самите съществуващи
+  // подточки остават невидими под него — изглежда счупено, не скрито.
+  const hidden = collapsedSubs.has(note.id) && addingSubFor !== note.id;
+  if(note.subs && note.subs.length && !hidden){
     html += `<div class="subs">${sortedSubs(note).map(s=>itemRow(s, note.id, true)).join('')}</div>`;
   }
   // Бутонът "+ подбележка" вече стои горе в .meta реда (до тага) — тук
@@ -7388,6 +7409,14 @@ function attachHandlers(){
       e.stopPropagation();
       const key = el.dataset.key;
       if(expandedNotes.has(key)) expandedNotes.delete(key); else expandedNotes.add(key);
+      render();
+    });
+  });
+  document.querySelectorAll('[data-action="toggle-subs"]').forEach(el=>{
+    el.addEventListener('click', e=>{
+      e.stopPropagation();
+      const noteId = el.dataset.note;
+      if(collapsedSubs.has(noteId)) collapsedSubs.delete(noteId); else collapsedSubs.add(noteId);
       render();
     });
   });
