@@ -69,6 +69,11 @@ const DEMO = {
     ],
     extra: ['Занеси якето на химическо', 'Обади се на счетоводителя',
             'Напазарувай за седмицата', 'Прочети главата за понеделник'],
+    // "Скорошни тагове" в менюто на бележка — виж index.html/tagHistory.
+    // Пътуване/Ремонт НЕ са закачени на никоя жива бележка нарочно, за да
+    // личи в кадъра, че историята пази тагове и след като никоя бележка
+    // вече не ги носи (точно смисълът на функцията).
+    tagHistory: ['Дом', 'Здраве', 'Пътуване', 'Ремонт'],
   },
   en: {
     tagOrder: ['Home', 'Health'],
@@ -83,6 +88,7 @@ const DEMO = {
     ],
     extra: ['Take the jacket to the cleaners', 'Call the accountant',
             'Do the weekly shopping', 'Read the chapter for Monday'],
+    tagHistory: ['Home', 'Health', 'Travel', 'Renovation'],
   },
 };
 
@@ -94,6 +100,7 @@ function buildSeed(code){
   return {
     onboarded: true,
     tagOrder: d.tagOrder,
+    tagHistory: d.tagHistory,
     notes: [
       note({ text:n[0].text, tag:n[0].tag, status:'done',
              completedAt: now - 2*3600e3, createdAt: at(0, 8, 10) }),
@@ -192,6 +199,10 @@ const WRAP_BY_TEXT_JS = `(() => {
     .find(el => el.querySelector('.txt') && el.querySelector('.txt').textContent.includes(__PINNED__));
   return w;
 })()`;
+// Същият принцип, но за произволен текст (не само DEMO[code].pinned) —
+// нужен за кадрите за скорошни тагове/скриване на подбележки, които сочат
+// КОНКРЕТНО бележката с подточки, не тая с "pinned" текста.
+const wrapByTextJs = txt => WRAP_BY_TEXT_JS.replace('__PINNED__', JSON.stringify(txt));
 
 let BASE;
 
@@ -291,6 +302,32 @@ let BASE;
     // главния списък/менюто нищо не намеква, че акаунт изобщо не е нужен.
     page = await newAuthPage(ctx, code);
     await shot(page, '7-guest.png');
+    await page.close();
+
+    // 8. "Скорошни тагове" в менюто за смяна на таг — отваряме picker-а на
+    // бележката с тага "Дом"/"Home" (същия таг като историята, за да личи
+    // визуално връзката), не pinned-бележката. Пътуване/Ремонт в кадъра
+    // показват, че историята пази тагове и без жива бележка да ги носи.
+    page = await newPage(ctx, code);
+    await page.evaluate(`(() => {
+      const w = ${wrapByTextJs(DEMO[code].notes[0].text)};
+      const pill = w.querySelector('[data-action="tag-open"]');
+      openTagPicker(pill.dataset.note, pill);
+    })()`);
+    await page.waitForTimeout(500);
+    await shot(page, '8-tags.png');
+    await page.close();
+
+    // 9. Скриване на подбележки — свиваме РЕАЛНАТА бележка с подточки
+    // (тапваме истинската стрелка, не пряк достъп до collapsedSubs), за да
+    // се вижда компактната ивица сред другите бележки в списъка.
+    page = await newPage(ctx, code);
+    await page.evaluate(`(() => {
+      const w = ${wrapByTextJs(DEMO[code].notes[1].text)};
+      w.querySelector('.subs-toggle').click();
+    })()`);
+    await page.waitForTimeout(400);
+    await shot(page, '9-subs.png');
     await page.close();
   }
 
